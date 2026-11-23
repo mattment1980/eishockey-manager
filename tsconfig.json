@@ -12,11 +12,19 @@
     "noEmit": true,
     "types": [
       "node"
+    ],
+    "jsx": "react-jsx",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable",
+      "WebWorker"
     ]
   },
   "include": [
     "packages/*/src/**/*.ts",
     "apps/*/src/**/*.ts",
+    "apps/*/src/**/*.tsx",
     "tests/**/*.ts"
   ]
 }

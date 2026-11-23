@@ -5,7 +5,9 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "sim": "tsx apps/sim-cli/src/main.ts"
+    "sim": "tsx apps/sim-cli/src/main.ts",
+    "dev": "pnpm --filter @ehm/web dev",
+    "build": "pnpm --filter @ehm/web build"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

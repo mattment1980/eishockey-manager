@@ -855,13 +855,14 @@ class MatchSim {
       t: Math.round(this.t), period: this.period, clock: Math.round(this.elapsed), type, team,
       strength: this.strengthLabel(team), result, players, xg, location,
       line: es ? this.teams[team].curF : null, pair: es ? this.teams[team].curD : null,
+      oppLine: es ? this.teams[1 - team].curF : null, oppPair: es ? this.teams[1 - team].curD : null,
     });
   }
 
   private tick(type: TickerLine['type'], text: string, team?: Side) {
     const s = Math.min(Math.round(this.elapsed), this.periodLength);
     const clock = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
-    this.ticker.push({ period: this.period, clock, type, team, text });
+    this.ticker.push({ t: Math.round(this.t), period: this.period, clock, type, team, text });
   }
 }
 

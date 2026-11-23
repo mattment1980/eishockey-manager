@@ -43,6 +43,9 @@ export interface MatchEvent {
   /** Sturmreihe/Verteidigerpaar von `team` (nur bei 5-gegen-5) */
   line?: number | null;
   pair?: number | null;
+  /** Reihe/Paar des Gegners (nur bei 5-gegen-5) */
+  oppLine?: number | null;
+  oppPair?: number | null;
 }
 
 export interface PlayerGameStats {
@@ -116,6 +119,8 @@ export interface TeamLineStats {
 }
 
 export interface TickerLine {
+  /** Spielsekunde seit Spielbeginn */
+  t: number;
   period: number;
   clock: string;
   type: 'goal' | 'penalty' | 'save' | 'period' | 'info' | 'shootout' | 'chance';
