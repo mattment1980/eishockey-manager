@@ -1,0 +1,54 @@
+import { WorldSchema, type World } from '@ehm/schema';
+
+/** Welt als JSON exportieren (Grundlage für Datenpakete und Spielstände). */
+export function exportWorldJson(world: World): string {
+  return JSON.stringify(world, null, 2);
+}
+
+export type ImportResult =
+  | { ok: true; world: World }
+  | { ok: false; errors: string[] };
+
+/** Welt aus JSON importieren und gegen das Schema prüfen. */
+export function importWorldJson(json: string): ImportResult {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(json);
+  } catch (e) {
+    return { ok: false, errors: [`Ungültiges JSON: ${(e as Error).message}`] };
+  }
+  const parsed = WorldSchema.safeParse(raw);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      errors: parsed.error.issues.slice(0, 50).map((i) => `${i.path.join('.') || '(Wurzel)'}: ${i.message}`),
+    };
+  }
+  const world = parsed.data;
+  const errors = checkReferences(world);
+  return errors.length ? { ok: false, errors } : { ok: true, world };
+}
+
+/** Querverweise prüfen (Vereine, Ligen, Verträge, Aufstellungen). */
+export function checkReferences(world: World): string[] {
+  const errors: string[] = [];
+  const leagueIds = new Set(world.leagues.map((l) => l.id));
+  const countryIds = new Set(world.countries.map((c) => c.id));
+  const clubIds = new Set(world.clubs.map((c) => c.id));
+  const playerIds = new Set<string>();
+  for (const p of world.players) {
+    if (playerIds.has(p.id)) errors.push(`Spieler-ID doppelt: ${p.id}`);
+    playerIds.add(p.id);
+    if (p.contract && !clubIds.has(p.contract.clubId)) errors.push(`Spieler ${p.id}: unbekannter Verein ${p.contract.clubId}`);
+    if (p.position === 'G' && !p.goalie) errors.push(`Torhüter ${p.id} ohne Torhüterwerte`);
+  }
+  for (const l of world.leagues) if (!countryIds.has(l.countryId)) errors.push(`Liga ${l.id}: unbekanntes Land ${l.countryId}`);
+  for (const c of world.clubs) {
+    if (!leagueIds.has(c.leagueId)) errors.push(`Verein ${c.id}: unbekannte Liga ${c.leagueId}`);
+    if (c.matchplan) {
+      const ids = [...c.matchplan.forwardLines.flat(), ...c.matchplan.defensePairs.flat(), ...c.matchplan.goalies];
+      for (const id of ids) if (!playerIds.has(id)) errors.push(`Verein ${c.id}: Aufstellung enthält unbekannten Spieler ${id}`);
+    }
+  }
+  return errors;
+}

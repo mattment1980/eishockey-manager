@@ -1,0 +1,7 @@
+{
+  "name": "@ehm/sim-cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": { "@ehm/core": "workspace:*", "@ehm/data": "workspace:*", "@ehm/schema": "workspace:*" }
+}
