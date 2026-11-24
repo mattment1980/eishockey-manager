@@ -11,7 +11,8 @@ Fantasienamen, ereignisbasierte Match-Engine mit Text-Ticker und Live-Statistike
 | 2 Engine v0 + Kalibrierung | Ereignisbasierte Simulation, Ticker, Statistiken, Massensimulation | ✅ |
 | 3 Oberfläche | Vereinswahl, Kader, Reihen, Taktik, Spiel mit Live-Ticker, Live-Stats und Schusskarte | ✅ |
 | 4 Saison | Spielplan, Spieltage, Tabelle, Pre-Playoffs, Playoffs, Playdowns, Statistiken, KI-Torhüterrotation und Spielstile | ✅ |
-| 5 Markt & Geld | Transfers, Verträge, Scouting, Wirtschaft | offen |
+| 5a Kalender, Wirtschaft, Scouting | Spieltermine, Wechselfrist, Monatsbuch, Zuschauer, Sponsoren, Vorstand, Liquiditätsprognose, Scouting mit Kenntnisstufen | ✅ |
+| 5b Markt & Verträge | Wettbieten um Vertragsspieler, Perks, Klauseln, Versprechen, Kaderplaner | offen |
 | 6 Coaching & Chemie | Coaching-Regeln, Matchups, Traits, Moral | offen |
 | 7 Saisonwechsel & Daten | Entwicklung, Nachwuchs, Import/Export, Editor | offen |
 

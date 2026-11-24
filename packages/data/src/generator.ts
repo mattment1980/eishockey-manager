@@ -3,7 +3,7 @@ import {
   type World, type Player, type Position, type Staff, type Club, type Trait, type TraitId,
   type SkaterAttribute, type GoalieAttribute, type StaffRole, type Manager,
 } from '@ehm/schema';
-import { Rng, clamp, autoMatchplan, createCompetition, prepareNextDay } from '@ehm/core';
+import { Rng, clamp, autoMatchplan, beginSeason } from '@ehm/core';
 import { DEFAULT_TACTICS, type Tactics } from '@ehm/schema';
 import { NAMES, IMPORT_ORIGINS } from './names.ts';
 import { COUNTRY_DE, LEAGUE_DEL2_MODEL, CLUBS_DEL2_MODEL, BUDGET_BY_PROFILE } from './del2.ts';
@@ -104,7 +104,8 @@ export class WorldGenerator {
         colors: { primary: tpl.colors[0], secondary: tpl.colors[1] },
         profile: tpl.profile,
         arena: { name: `Eisarena ${tpl.city}`, capacity: tpl.capacity },
-        finances: { budget, balance: Math.round(budget * this.rng.float(0.08, 0.22)) },
+        finances: { budget, balance: Math.round(budget * this.rng.float(0.08, 0.22)), ticketPrice: 20, sponsorIncome: 0, mediaIncome: 0, salaryBudget: 0, ledger: [], attendance: [] },
+        seasonGoal: null,
         fanBase: clamp(Math.round(tpl.capacity / 80 + this.rng.normal(0, 5)), 10, 100),
         boardConfidence: 60,
         controller: { type: 'ai', managerId },
@@ -139,8 +140,9 @@ export class WorldGenerator {
       staff,
       managers,
       competition: null,
+      scouting: {},
     };
-    return prepareNextDay({ ...base, competition: createCompetition(base, LEAGUE_DEL2_MODEL.id, this.opts.seed) });
+    return beginSeason(base, this.opts.seed);
   }
 
   private generateRoster(clubId: string, base: number, imports: number): Player[] {

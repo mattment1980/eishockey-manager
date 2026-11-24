@@ -6,3 +6,6 @@ export * from './engine/types.ts';
 export { simulateMatch } from './engine/match.ts';
 export { C as ENGINE_CONSTANTS } from './engine/constants.ts';
 export * from './competition.ts';
+export * from './calendar.ts';
+export * from './economy.ts';
+export * from './scouting.ts';

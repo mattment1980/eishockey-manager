@@ -120,3 +120,48 @@ describe('Wettbewerb', () => {
     expect(world.competition!.fixtures.find((x) => x.id === f.id)!.result).toBeTruthy();
   });
 });
+
+import { initScouting, playerView, levelOf, liquidityForecast, payrollOf } from '@ehm/core';
+
+describe('Kalender, Wirtschaft, Scouting', () => {
+  it('vergibt Termine und eine Wechselfrist vor den Playoffs', () => {
+    const w = generateWorld(21);
+    const c = w.competition!;
+    const first = c.fixtures.find((f) => f.day === 1)!;
+    expect(first.date >= '2026-09-12' && first.date < '2026-09-20').toBe(true);
+    const lastRegular = c.fixtures.filter((f) => f.stage === 'regular').map((f) => f.date).sort().pop()!;
+    expect(c.transferDeadline < lastRegular).toBe(true);
+  });
+  it('bucht Einnahmen und Ausgaben über die Saison', () => {
+    const w = playDays(generateWorld(22), 1000);
+    for (const club of w.clubs) {
+      const months = club.finances.ledger.map((m) => m.month);
+      expect(months[0]).toBe('2026-08');
+      expect(months[months.length - 1]).toBe('2027-07');
+      expect(club.finances.attendance.length).toBeGreaterThanOrEqual(26);
+      const salaries = club.finances.ledger.reduce((s, m) => s + (m.items.salaries ?? 0), 0);
+      expect(Math.round(-salaries)).toBe(Math.round(payrollOf(w, club.id).players));
+    }
+  });
+  it('Liquiditätsprognose reicht bis Juli', () => {
+    const w = playDays(generateWorld(23), 10);
+    const f = liquidityForecast(w, w.clubs[0].id);
+    expect(f[f.length - 1].month).toBe('2027-07');
+  });
+  it('Scouting: Kenntnis steigt durch Spiele und Scouts', () => {
+    let w = generateWorld(24);
+    const me = w.clubs[0].id;
+    w = initScouting(w, me);
+    const foreignFree = w.players.find((p) => !p.contract && !p.nationalities.includes('DE'))!;
+    const leaguePlayer = w.players.find((p) => p.contract && p.contract.clubId !== me)!;
+    expect(levelOf(w.scouting[me].knowledge[foreignFree.id])).toBe(1);
+    expect(levelOf(w.scouting[me].knowledge[leaguePlayer.id])).toBe(2);
+    expect(playerView(w, me, leaguePlayer, 25).overall).toHaveProperty('category');
+    w = playDays(w, 30);
+    const before = 40, after = w.scouting[me].knowledge[foreignFree.id] ?? 0;
+    const anyForeignProgress = w.players.filter((p) => !p.contract).some((p) => (w.scouting[me].knowledge[p.id] ?? 0) > before + 50);
+    expect(anyForeignProgress || after > before).toBe(true);
+    const own = w.players.find((p) => p.contract?.clubId === me)!;
+    expect(playerView(w, me, own, 25).overall).toHaveProperty('exact');
+  });
+});

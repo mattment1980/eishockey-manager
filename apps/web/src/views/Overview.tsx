@@ -1,11 +1,26 @@
 import { useMemo } from 'react';
-import { teamStrength, overall, toDisplay, ageOn, regularTable, nextFixtureOf } from '@ehm/core';
+import { teamStrength, overall, toDisplay, ageOn, regularTable, nextFixtureOf, GOAL_LABEL, formatDate } from '@ehm/core';
 import { useStore } from '../store.tsx';
 import { Crest } from '../components/Crest.tsx';
 import { PROFILE_LABEL, euro } from '../labels.ts';
 import type { Tab } from '../App.tsx';
+import { Finances } from './Finances.tsx';
+import { useState } from 'react';
 
 export function Overview({ go }: { go: (t: Tab) => void }) {
+  const [mode, setMode] = useState<'club' | 'finances'>('club');
+  return (
+    <div className="stack">
+      <div className="tabs">
+        <button className={mode === 'club' ? 'on' : ''} onClick={() => setMode('club')}>Übersicht</button>
+        <button className={mode === 'finances' ? 'on' : ''} onClick={() => setMode('finances')}>Finanzen</button>
+      </div>
+      {mode === 'club' ? <ClubOverview go={go} /> : <Finances />}
+    </div>
+  );
+}
+
+function ClubOverview({ go }: { go: (t: Tab) => void }) {
   const { world, club, players, byId, clubById, newGame } = useStore();
   const ranking = useMemo(
     () => world.clubs.map((c) => ({ c, s: teamStrength(c.matchplan!, byId) })).sort((a, b) => b.s - a.s),
@@ -43,6 +58,8 @@ export function Overview({ go }: { go: (t: Tab) => void }) {
         <div className="kpi"><span>Ausländer</span><strong>{imports} / {world.countries[0].rules.importSlotsRoster}</strong></div>
         <div className="kpi"><span>Ø Alter</span><strong>{avgAge.toFixed(1).replace('.', ',')} Jahre</strong></div>
         <div className="kpi"><span>Vorstand</span><strong>{club.boardConfidence} % Vertrauen</strong></div>
+        <div className="kpi"><span>Saisonziel</span><strong>{club.seasonGoal ? GOAL_LABEL[club.seasonGoal] : '–'}</strong></div>
+        <div className="kpi"><span>Datum</span><strong>{formatDate(world.date)}</strong></div>
       </section>
 
       <section className="card">
@@ -67,7 +84,7 @@ export function Overview({ go }: { go: (t: Tab) => void }) {
           <div className="kpi"><span>Punkte</span><strong>{row?.pts ?? 0} aus {row?.gp ?? 0} Spielen</strong></div>
         </div>
         {next && (
-          <p className="small">Nächstes Spiel: <b>{clubById.get(next.home)!.shortName} – {clubById.get(next.away)!.shortName}</b> {next.home === club.id ? '(Heim)' : '(Auswärts)'}</p>
+          <p className="small">Nächstes Spiel ({formatDate(next.date, true)}): <b>{clubById.get(next.home)!.shortName} – {clubById.get(next.away)!.shortName}</b> {next.home === club.id ? '(Heim)' : '(Auswärts)'}</p>
         )}
         {played.length === 0 && <p className="muted">Noch keine Spiele. Stelle deine Reihen auf und starte den ersten Spieltag.</p>}
         <ul className="plain">

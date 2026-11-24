@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { World, Club, Player, Matchplan } from '@ehm/schema';
 import { WorldSchema } from '@ehm/schema';
-import { createCompetition, prepareNextDay } from '@ehm/core';
+import { beginSeason, initScouting } from '@ehm/core';
 import { generateWorld, migrateWorld } from '@ehm/data';
 
 const KEY = 'ehm.save.v1';
@@ -23,13 +23,20 @@ interface Store {
   applyWorld: (w: World) => void;
   newSeason: () => void;
   newGame: () => void;
+  toggleWatch: (playerId: string) => void;
+  setScoutRegion: (scoutId: string, region: string) => void;
 }
 
 const Ctx = createContext<Store | null>(null);
 
 function withCompetition(world: World): World {
   if (world.competition) return world;
-  return prepareNextDay({ ...world, competition: createCompetition(world, world.leagues[0].id, world.seed) });
+  return beginSeason(world, world.seed);
+}
+
+function withScouting(world: World, clubId: string | null): World {
+  if (!clubId || world.scouting[clubId]) return world;
+  return initScouting(world, clubId);
 }
 
 function load(): SaveGame | null {
@@ -39,7 +46,7 @@ function load(): SaveGame | null {
     const data = JSON.parse(raw);
     const parsed = WorldSchema.safeParse(migrateWorld(data.world));
     if (!parsed.success) return null;
-    return { world: withCompetition(parsed.data), clubId: data.clubId ?? null };
+    return { world: withScouting(withCompetition(parsed.data), data.clubId ?? null), clubId: data.clubId ?? null };
   } catch {
     return null;
   }
@@ -75,7 +82,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setSave((s) => ({
           ...s,
           clubId: id,
-          world: { ...s.world, clubs: s.world.clubs.map((c) => (c.id === id ? { ...c, controller: { type: 'human' as const } } : c)) },
+          world: withScouting({ ...s.world, clubs: s.world.clubs.map((c) => (c.id === id ? { ...c, controller: { type: 'human' as const } } : c)) }, id),
         })),
       setMatchplan: (plan) =>
         setSave((s) => ({
@@ -86,14 +93,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setSave((s) => {
           // Aufstellung des Managers aus dem aktuellen Stand übernehmen (falls während der Simulation geändert)
           const mine = s.world.clubs.find((c) => c.id === s.clubId);
-          return { ...s, world: { ...w, clubs: w.clubs.map((c) => (mine && c.id === mine.id ? { ...c, matchplan: mine.matchplan } : c)) } };
+          const sc = s.clubId ? s.world.scouting[s.clubId] : undefined;
+          const scouting = sc && s.clubId && w.scouting[s.clubId] ? { ...w.scouting, [s.clubId]: { ...w.scouting[s.clubId], watch: sc.watch } } : w.scouting;
+          const staff = w.staff.map((x) => {
+            const cur = s.world.staff.find((y) => y.id === x.id);
+            return cur && cur.region !== x.region ? { ...x, region: cur.region } : x;
+          });
+          return { ...s, world: { ...w, scouting, staff, clubs: w.clubs.map((c) => (mine && c.id === mine.id ? { ...c, matchplan: mine.matchplan } : c)) } };
         }),
       newSeason: () =>
         setSave((s) => {
-          const w = { ...s.world, season: s.world.season + 1, date: `${s.world.season + 1}-08-01`, competition: null };
-          return { ...s, world: prepareNextDay({ ...w, competition: createCompetition(w, w.leagues[0].id, w.seed + w.season) }) };
+          const w = { ...s.world, season: s.world.season + 1, competition: null };
+          return { ...s, world: beginSeason(w, w.seed + w.season) };
         }),
       newGame: () => setSave(fresh()),
+      toggleWatch: (playerId) =>
+        setSave((s) => {
+          if (!s.clubId) return s;
+          const st = s.world.scouting[s.clubId];
+          const watch = st.watch.includes(playerId) ? st.watch.filter((x) => x !== playerId) : [...st.watch, playerId];
+          return { ...s, world: { ...s.world, scouting: { ...s.world.scouting, [s.clubId]: { ...st, watch } } } };
+        }),
+      setScoutRegion: (scoutId, region) =>
+        setSave((s) => ({ ...s, world: { ...s.world, staff: s.world.staff.map((x) => (x.id === scoutId ? { ...x, region } : x)) } })),
     };
   }, [save]);
 

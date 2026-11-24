@@ -3,6 +3,7 @@ import type { Player } from '@ehm/schema';
 import { overall, toDisplay, ageOn, offenseRating, defenseRating } from '@ehm/core';
 import { useStore } from '../store.tsx';
 import { PlayerSheet } from '../components/PlayerSheet.tsx';
+import { Scouting } from './Scouting.tsx';
 import { TRAIT_LABEL, euro } from '../labels.ts';
 
 const GROUPS: { title: string; pos: Player['position'][] }[] = [
@@ -14,6 +15,19 @@ const GROUPS: { title: string; pos: Player['position'][] }[] = [
 type Sort = 'overall' | 'age' | 'salary' | 'off' | 'def';
 
 export function Roster() {
+  const [mode, setMode] = useState<'roster' | 'scouting'>('roster');
+  return (
+    <div className="stack">
+      <div className="tabs">
+        <button className={mode === 'roster' ? 'on' : ''} onClick={() => setMode('roster')}>Kader</button>
+        <button className={mode === 'scouting' ? 'on' : ''} onClick={() => setMode('scouting')}>Scouting & Markt</button>
+      </div>
+      {mode === 'roster' ? <RosterList /> : <Scouting />}
+    </div>
+  );
+}
+
+function RosterList() {
   const { players, world, club } = useStore();
   const [sel, setSel] = useState<Player | null>(null);
   const [sort, setSort] = useState<Sort>('overall');
@@ -27,7 +41,7 @@ export function Roster() {
   return (
     <div className="stack">
       <div className="row-between">
-        <h2>Kader</h2>
+        <h2>Kader <span className="muted small">{players.length}/{world.countries[0].rules.maxRoster}</span></h2>
         <select className="select" value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sortierung">
           <option value="overall">nach Stärke</option>
           <option value="off">nach Offensive</option>

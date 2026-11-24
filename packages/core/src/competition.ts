@@ -5,6 +5,9 @@ import { Rng } from './rng.ts';
 import { roundRobinSchedule, standings, type StandingRow } from './season.ts';
 import { simulateMatch } from './engine/match.ts';
 import type { MatchInput, MatchResult, TeamInput } from './engine/types.ts';
+import { addDays, onOrAfter } from './calendar.ts';
+import { beginSeasonFinances, bookFixture, closeMonthsBetween, evaluateSeason } from './economy.ts';
+import { updateScouting } from './scouting.ts';
 
 /**
  * Saisonablauf nach Ligaformat: Hauptrunde → Pre-Playoffs → Playoffs (mit Neusetzen)
@@ -21,11 +24,16 @@ export function createCompetition(world: World, leagueId: string, seed: number):
   const league = world.leagues.find((l) => l.id === leagueId)!;
   const ids = world.clubs.filter((c) => c.leagueId === leagueId).map((c) => c.id);
   const schedule = roundRobinSchedule(ids, league.format.roundRobins, new Rng(`${seed}:spielplan`));
+  // Spieltage freitags und sonntags ab Mitte September
+  const start = onOrAfter(`${world.season}-09-12`, 5);
+  const dateOf = (day: number) => addDays(start, Math.floor((day - 1) / 2) * 7 + ((day - 1) % 2 ? 2 : 0));
+  const lastRegular = dateOf(Math.max(...schedule.map((f) => f.round)));
   const comp: Competition = {
     leagueId,
     year: world.season,
     day: 0,
-    fixtures: schedule.map((f, i) => ({ id: `h${f.round}-${i}`, stage: 'regular' as Stage, day: f.round, home: f.home, away: f.away })),
+    transferDeadline: addDays(lastRegular, 3 - 61),
+    fixtures: schedule.map((f, i) => ({ id: `h${f.round}-${i}`, stage: 'regular' as Stage, day: f.round, date: dateOf(f.round), home: f.home, away: f.away })),
     series: [],
     finalStandings: null,
     stats: { regular: {}, post: {} },
@@ -144,13 +152,15 @@ export function prepareNextDay(world: World): World {
     comp.relegated = s.winner === s.high ? s.low : s.high;
   }
 
-  // Spiele für offene Serien
+  // Spiele für offene Serien (Abstand 2–3 Tage)
+  const lastDate = comp.fixtures.filter((f) => f.day === comp.day).map((f) => f.date).sort().pop() ?? world.date;
+  const gameDate = addDays(lastDate, comp.fixtures.some((f) => f.day === comp.day && f.stage === 'regular') ? 5 : next % 2 ? 2 : 3);
   for (const s of comp.series) {
     if (s.winner) continue;
     const gameNo = s.winsHigh + s.winsLow + 1;
     const highHome = gameNo % 2 === 1;
     comp.fixtures.push({
-      id: `${s.id}-g${gameNo}`, stage: s.stage, day: next,
+      id: `${s.id}-g${gameNo}`, stage: s.stage, day: next, date: gameDate,
       home: highHome ? s.high : s.low, away: highHome ? s.low : s.high, seriesId: s.id, gameNo,
     });
   }
@@ -234,14 +244,43 @@ export function playDay(world: World, preplayed: Record<string, MatchResult> = {
   const day = comp.day + 1;
   const byId = new Map(w.players.map((p) => [p.id, p]));
   const results: Record<string, MatchResult> = {};
-  for (const f of comp.fixtures.filter((x) => x.day === day && !x.result)) {
+  const todays = comp.fixtures.filter((x) => x.day === day && !x.result);
+  const date = todays[0]?.date ?? w.date;
+  // Monatsabschlüsse bis zum Spieltag
+  const placeBefore = placeLookup(w);
+  w = closeMonthsBetween(w, w.date, date, placeBefore);
+  for (const f of todays) {
     const res = preplayed[f.id] ?? simulateMatch(matchInputFor(w, f));
     results[f.id] = res;
     record(comp, f, res, byId);
   }
   comp.day = day;
-  w = prepareNextDay({ ...w, competition: comp });
+  w = { ...w, competition: comp, date };
+  // Einnahmen/Ausgaben der Spiele
+  const placeNow = placeLookup(w);
+  for (const f of todays) w = bookFixture(w, f, f.stage === 'regular' ? placeNow(f.home) : null);
+  // Scouting
+  w = updateScouting(w, date, todays.map((f) => ({ home: f.home, away: f.away, result: results[f.id] })));
+  w = prepareNextDay(w);
+  if (w.competition!.finished) {
+    w = evaluateSeason(w);
+    // restliche Monate der Saison bis Ende Juli abrechnen
+    w = closeMonthsBetween(w, w.date, `${w.competition!.year + 1}-08-01`, () => null);
+  }
   return { world: w, results };
+}
+
+function placeLookup(world: World): (clubId: string) => number | null {
+  const comp = world.competition!;
+  if (comp.day < 6 || comp.finalStandings) return () => null;
+  const order = regularTable(world).map((r) => r.clubId);
+  return (id) => order.indexOf(id) + 1;
+}
+
+/** Neue Saison anlegen: Spielplan, Finanzplanung, erste Spiele. */
+export function beginSeason(world: World, seed: number): World {
+  const w = { ...world, date: `${world.season}-08-01`, competition: createCompetition(world, world.leagues[0].id, seed) };
+  return prepareNextDay(beginSeasonFinances(w));
 }
 
 /** Mehrere Spieltage am Stück (z. B. bis Hauptrundenende). */

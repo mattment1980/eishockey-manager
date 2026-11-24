@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Fixture, Series, StatLine } from '@ehm/schema';
-import { regularTable, regularDays, fixturesOfDay } from '@ehm/core';
+import { regularTable, regularDays, fixturesOfDay, formatDate } from '@ehm/core';
 import { useStore } from '../store.tsx';
 import { Crest } from '../components/Crest.tsx';
 
@@ -76,7 +76,7 @@ function Games() {
       <section className="card flush">
         <div className="day-nav">
           <button className="btn" onClick={() => setDay((d) => Math.max(1, d - 1))} disabled={day <= 1}>‹</button>
-          <strong>{label}</strong>
+          <strong>{label}<br /><span className="muted small">{list[0] ? formatDate(list[0].date, true) : ''}</span></strong>
           <button className="btn" onClick={() => setDay((d) => Math.min(maxDay, d + 1))} disabled={day >= maxDay}>›</button>
         </div>
         <FixtureList list={list} />

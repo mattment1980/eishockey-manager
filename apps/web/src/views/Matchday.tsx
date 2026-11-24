@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Club, Fixture } from '@ehm/schema';
 import {
-  nextFixtureOf, matchInputFor, stageLabel, fixturesOfDay, regularTable, teamStrength, isImport, toDisplay,
+  nextFixtureOf, matchInputFor, stageLabel, fixturesOfDay, regularTable, teamStrength, isImport, toDisplay, formatDate,
   type MatchResult, type Side,
 } from '@ehm/core';
 import { useStore } from '../store.tsx';
@@ -107,7 +107,7 @@ export function Matchday() {
     <div className="stack">
       <div className="row-between">
         <h2>Spieltag</h2>
-        <span className="muted small">{stageLabel(comp)}</span>
+        <span className="muted small right">{stageLabel(comp)}<br />{formatDate(comp.fixtures.find((f) => f.day === comp.day + 1)?.date ?? world.date, true)}</span>
       </div>
 
       {next ? (
@@ -152,7 +152,7 @@ export function Matchday() {
 
       {lastResults.length > 0 && (
         <section className="card flush">
-          <h3 className="card-title">Ergebnisse {lastResults[0].stage === 'regular' ? `Spieltag ${lastDay}` : 'letzter Spieltag'}</h3>
+          <h3 className="card-title">Ergebnisse {lastResults[0].stage === 'regular' ? `Spieltag ${lastDay}` : 'letzter Spieltag'} <span className="muted small">· {formatDate(lastResults[0].date)}</span></h3>
           <ul className="results">
             {lastResults.map((f) => {
               const h = clubById.get(f.home)!, a = clubById.get(f.away)!;
@@ -189,7 +189,7 @@ function NextGame({ fixture, club, seriesInfo }: { fixture: Fixture; club: Club;
   }
   return (
     <section className="card versus-card">
-      <div className="muted small center">{seriesText || `Spieltag ${fixture.day} · ${home.id === club.id ? 'Heimspiel' : 'Auswärtsspiel'}`}</div>
+      <div className="muted small center">{seriesText || `Spieltag ${fixture.day} · ${home.id === club.id ? 'Heimspiel' : 'Auswärtsspiel'}`} · {formatDate(fixture.date, true)}</div>
       <div className="versus">
         <div className="vs-team"><Crest club={home} size={60} /><strong>{home.shortName}</strong><small className="muted">{rank(home.id)}. Platz</small></div>
         <div className="vs-mid">

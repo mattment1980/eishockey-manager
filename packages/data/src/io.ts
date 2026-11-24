@@ -8,6 +8,16 @@ export function migrateWorld(raw: unknown): unknown {
     w.schemaVersion = 2;
     w.competition = null;
   }
+  if (w.schemaVersion === 2) {
+    w.schemaVersion = 3;
+    w.competition = null; // Saison wird mit Terminen neu angelegt
+    w.scouting = {};
+    if (Array.isArray(w.clubs)) w.clubs = ((w.clubs as Record<string, unknown>[])).map((c) => ({
+      ...c,
+      seasonGoal: null,
+      finances: { ticketPrice: 20, sponsorIncome: 0, mediaIncome: 0, salaryBudget: 0, ledger: [], attendance: [], ...(c.finances as object) },
+    }));
+  }
   void SCHEMA_VERSION;
   return w;
 }

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Version des Spielstand-Formats. Bei Änderungen erhöhen und Migration ergänzen. */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 /** Interne Attributskala 1–200 (Anzeige 1–20). */
 export const Rating = z.number().int().min(1).max(200);
@@ -191,11 +191,24 @@ export const ClubSchema = z.object({
   profile: ClubProfileSchema,
   arena: z.object({ name: z.string(), capacity: z.number().int().positive() }),
   finances: z.object({
-    /** Saisonetat in Euro */
+    /** Saisonetat in Euro (geplante Gesamtausgaben) */
     budget: z.number().int(),
     /** Kontostand in Euro */
     balance: z.number().int(),
+    /** Durchschnittlicher Ticketpreis in Euro */
+    ticketPrice: z.number(),
+    /** Sponsoreneinnahmen der laufenden Saison (gesamt) */
+    sponsorIncome: z.number().int(),
+    /** Medieneinnahmen der laufenden Saison (gesamt) */
+    mediaIncome: z.number().int(),
+    /** Gehaltsetat (Spieler + Staff) der laufenden Saison */
+    salaryBudget: z.number().int(),
+    /** Monatsbuch der laufenden Saison */
+    ledger: z.array(z.object({ month: z.string(), items: z.record(z.number()) })),
+    /** Zuschauer der Heimspiele der laufenden Saison */
+    attendance: z.array(z.number().int()),
   }),
+  seasonGoal: z.enum(['title', 'semifinal', 'quarterfinal', 'prePlayoffs', 'survival']).nullable(),
   fanBase: Percent,
   boardConfidence: Percent,
   controller: ControllerSchema,
@@ -276,6 +289,8 @@ export const FixtureSchema = z.object({
   day: z.number().int(),
   home: z.string(),
   away: z.string(),
+  /** Spieldatum (ISO yyyy-mm-dd) */
+  date: z.string(),
   seriesId: z.string().optional(),
   gameNo: z.number().int().optional(),
   result: FixtureResultSchema.optional(),
@@ -323,6 +338,8 @@ export const CompetitionSchema = z.object({
   day: z.number().int(),
   fixtures: z.array(FixtureSchema),
   series: z.array(SeriesSchema),
+  /** Ende der Wechselfrist für Sofortwechsel (ISO-Datum) */
+  transferDeadline: z.string(),
   /** Plätze nach der Hauptrunde (Vereins-IDs), gesetzt sobald diese beendet ist */
   finalStandings: z.array(z.string()).nullable(),
   stats: z.object({
@@ -334,6 +351,20 @@ export const CompetitionSchema = z.object({
   finished: z.boolean(),
 });
 export type Competition = z.infer<typeof CompetitionSchema>;
+
+// ---------- Scouting ----------
+
+export const ScoutingStateSchema = z.object({
+  /** Kenntnispunkte je Spieler (0–400 → Stufe 1–4) */
+  knowledge: z.record(z.number()),
+  /** Beobachtungsliste (werden von Scouts bevorzugt) */
+  watch: z.array(z.string()),
+  /** angesparte Scouting-Punkte je Scout */
+  bank: z.record(z.number()),
+  /** letztes Datum der Aktualisierung */
+  lastUpdate: z.string(),
+});
+export type ScoutingState = z.infer<typeof ScoutingStateSchema>;
 
 export const WorldSchema = z.object({
   schemaVersion: z.literal(SCHEMA_VERSION),
@@ -349,5 +380,7 @@ export const WorldSchema = z.object({
   staff: z.array(StaffSchema),
   managers: z.array(ManagerSchema),
   competition: CompetitionSchema.nullable(),
+  /** Scouting-Stand je menschlich geführtem Verein */
+  scouting: z.record(ScoutingStateSchema),
 });
 export type World = z.infer<typeof WorldSchema>;

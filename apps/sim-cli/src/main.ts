@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import type { World, Club, Player } from '@ehm/schema';
 import {
-  simulateMatch, roundRobinSchedule, teamStrength, overall, toDisplay, Rng, playDays, regularTable,
+  simulateMatch, roundRobinSchedule, teamStrength, overall, toDisplay, Rng, playDays, regularTable, INCOME, EXPENSE,
   type MatchResult, type TeamInput,
 } from '@ehm/core';
 import { generateWorld, exportWorldJson } from '@ehm/data';
@@ -199,6 +199,17 @@ function cmdSeason() {
     console.log(`${pad(s.roundName, 16)} ${pad(name(s.high), 28)} ${s.winsHigh}:${s.winsLow}  ${pad(name(s.low), 28)} → ${name(s.winner!)}`);
   }
   console.log(`\nMeister: ${name(comp.champion!)}   Absteiger: ${comp.relegated ? name(comp.relegated) : '–'}`);
+  console.log('\nFinanzen (Saison komplett, Aug–Jul)');
+  console.log(`${pad('Verein', 28)} ${lpad('Ø Zuschauer', 12)} ${lpad('Einnahmen', 12)} ${lpad('Ausgaben', 12)} ${lpad('Ergebnis', 11)} ${lpad('Konto', 11)}  Ziel / Vorstand`);
+  for (const r of table) {
+    const c = world.clubs.find((x) => x.id === r.clubId)!;
+    const sum = (cats: string[]) => c.finances.ledger.reduce((t, m) => t + cats.reduce((u, k) => u + (m.items[k] ?? 0), 0), 0);
+    const inc = sum(INCOME), exp = sum(EXPENSE);
+    const att = c.finances.attendance;
+    const avg = att.length ? Math.round(att.reduce((a, b) => a + b, 0) / att.length) : 0;
+    const k = (x: number) => `${(x / 1e6).toFixed(2).replace('.', ',')} Mio`;
+    console.log(`${pad(c.name, 28)} ${lpad(avg.toLocaleString('de-DE'), 12)} ${lpad(k(inc), 12)} ${lpad(k(-exp), 12)} ${lpad(k(inc + exp), 11)} ${lpad(k(c.finances.balance), 11)}  ${c.seasonGoal} / ${c.boardConfidence}`);
+  }
   const byId = new Map(world.players.map((p) => [p.id, p]));
   const nm = (id: string) => { const p = byId.get(id)!; return `${p.firstName} ${p.lastName}`; };
   const stats = Object.entries(comp.stats.regular);
