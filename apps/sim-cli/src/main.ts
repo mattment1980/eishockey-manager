@@ -1,8 +1,8 @@
 import { writeFileSync } from 'node:fs';
 import type { World, Club, Player } from '@ehm/schema';
 import {
-  simulateMatch, roundRobinSchedule, standings, teamStrength, overall, toDisplay, Rng,
-  type MatchResult, type TeamInput, type GameOutcome, type PlayerGameStats,
+  simulateMatch, roundRobinSchedule, teamStrength, overall, toDisplay, Rng, playDays, regularTable,
+  type MatchResult, type TeamInput,
 } from '@ehm/core';
 import { generateWorld, exportWorldJson } from '@ehm/data';
 
@@ -180,47 +180,39 @@ function cmdCalibrate() {
 
 // ---------------------------------------------------------------- season
 function cmdSeason() {
-  const seed = num(0, 7);
-  const world = generateWorld(num(1, 2026));
-  const fmtL = world.leagues[0].format;
-  const inputs = new Map(world.clubs.map((c) => [c.id, teamInput(world, c)]));
-  const rng = new Rng(seed);
-  const games: GameOutcome[] = [];
-  const totals = new Map<string, PlayerGameStats & { gp: number }>();
-  for (const f of roundRobinSchedule(world.clubs.map((c) => c.id), fmtL.roundRobins, rng)) {
-    const r = simulateMatch({ home: inputs.get(f.home)!, away: inputs.get(f.away)!, seed: rng.int(0, 2 ** 31), phase: 'regular', format: fmtL, keepEvents: false });
-    games.push({ home: f.home, away: f.away, score: r.score, decidedIn: r.decidedIn });
-    for (const s of r.playerStats) {
-      if (s.toi === 0) continue;
-      const t = totals.get(s.playerId) ?? { ...s, gp: 0, goals: 0, assists: 0, shotsOnGoal: 0, plusMinus: 0, toi: 0, saves: 0, shotsAgainst: 0, goalsAgainst: 0, pim: 0, xg: 0 };
-      t.gp++; t.goals += s.goals; t.assists += s.assists; t.shotsOnGoal += s.shotsOnGoal; t.plusMinus += s.plusMinus; t.toi += s.toi;
-      t.saves += s.saves; t.shotsAgainst += s.shotsAgainst; t.goalsAgainst += s.goalsAgainst; t.pim += s.pim; t.xg += s.xg;
-      totals.set(s.playerId, t);
-    }
-  }
+  const world0 = generateWorld(num(0, 2026));
+  const t0 = Date.now();
+  const world = playDays(world0, 1000);
+  const comp = world.competition!;
   const clubById = new Map(world.clubs.map((c) => [c.id, c]));
-  const table = standings(world.clubs.map((c) => c.id), games, fmtL.points);
-  console.log(`\nAbschlusstabelle Hauptrunde (${games.length} Spiele)\n`);
+  const name = (id: string) => clubById.get(id)!.name;
+  const table = regularTable(world);
+  console.log(`\nSaison komplett simuliert: ${comp.fixtures.length} Spiele, ${comp.day} Spieltage in ${((Date.now() - t0) / 1000).toFixed(1)} s\n`);
   console.log(`${lpad('#', 2)}  ${pad('Verein', 28)} ${lpad('Sp', 3)} ${lpad('S', 3)} ${lpad('SnV', 4)} ${lpad('NnV', 4)} ${lpad('N', 3)} ${lpad('Tore', 8)} ${lpad('Pkt', 4)}  Stärke`);
   table.forEach((r, i) => {
     const c = clubById.get(r.clubId)!;
     const zone = i < 6 ? 'VF ' : i < 10 ? 'PPO' : 'PD ';
     console.log(`${lpad(i + 1, 2)}  ${pad(c.name, 28)} ${lpad(r.gp, 3)} ${lpad(r.w, 3)} ${lpad(r.otw, 4)} ${lpad(r.otl, 4)} ${lpad(r.l, 3)} ${lpad(`${r.gf}:${r.ga}`, 8)} ${lpad(r.pts, 4)}  ${fmt(strengthOf(world, c) / 10, 1)}  ${zone}`);
   });
+  console.log('\nNachsaison');
+  for (const s of comp.series) {
+    console.log(`${pad(s.roundName, 16)} ${pad(name(s.high), 28)} ${s.winsHigh}:${s.winsLow}  ${pad(name(s.low), 28)} → ${name(s.winner!)}`);
+  }
+  console.log(`\nMeister: ${name(comp.champion!)}   Absteiger: ${comp.relegated ? name(comp.relegated) : '–'}`);
   const byId = new Map(world.players.map((p) => [p.id, p]));
   const nm = (id: string) => { const p = byId.get(id)!; return `${p.firstName} ${p.lastName}`; };
-  const club = (id: string) => clubById.get(byId.get(id)!.contract!.clubId)!.shortName;
-  console.log('\nTopscorer');
-  [...totals.values()].filter((t) => byId.get(t.playerId)!.position !== 'G')
-    .sort((a, b) => b.goals + b.assists - (a.goals + a.assists) || b.goals - a.goals).slice(0, 12)
-    .forEach((t, i) => {
-      const p = byId.get(t.playerId)!;
-      console.log(`${lpad(i + 1, 2)}. ${pad(nm(t.playerId), 24)} ${pad(club(t.playerId), 4)} ${pad(p.position, 3)} ${pad(p.nationalities.join('/'), 6)} ${lpad(t.gp, 2)} Sp  ${lpad(t.goals, 2)} T  ${lpad(t.assists, 2)} A  ${lpad(t.goals + t.assists, 3)} P  (Gesamt ${toDisplay(overall(p))})`);
+  const stats = Object.entries(comp.stats.regular);
+  console.log('\nTopscorer Hauptrunde');
+  stats.filter(([id]) => byId.get(id)!.position !== 'G')
+    .sort(([, a], [, b]) => b.g + b.a - (a.g + a.a) || b.g - a.g).slice(0, 12)
+    .forEach(([id, t], i) => {
+      const p = byId.get(id)!;
+      console.log(`${lpad(i + 1, 2)}. ${pad(nm(id), 24)} ${pad(clubById.get(t.clubId)!.shortName, 4)} ${pad(p.position, 3)} ${pad(p.nationalities.join('/'), 6)} ${lpad(t.gp, 2)} Sp  ${lpad(t.g, 2)} T  ${lpad(t.a, 2)} A  ${lpad(t.g + t.a, 3)} P  (Gesamt ${toDisplay(overall(p))})`);
     });
-  console.log('\nTorhüter (mind. 20 Spiele)');
-  [...totals.values()].filter((t) => byId.get(t.playerId)!.position === 'G' && t.gp >= 20)
-    .sort((a, b) => b.saves / b.shotsAgainst - a.saves / a.shotsAgainst).slice(0, 8)
-    .forEach((t) => console.log(`${pad(nm(t.playerId), 24)} ${pad(club(t.playerId), 4)} ${lpad(t.gp, 2)} Sp  Fangquote ${pct(t.saves / t.shotsAgainst)}  GAA ${fmt((t.goalsAgainst * 3600) / t.toi)}`));
+  console.log('\nTorhüter Hauptrunde (mind. 15 Spiele)');
+  stats.filter(([id, t]) => byId.get(id)!.position === 'G' && t.gs >= 15)
+    .sort(([, a], [, b]) => (b.sa - b.ga) / b.sa - (a.sa - a.ga) / a.sa).slice(0, 10)
+    .forEach(([id, t]) => console.log(`${pad(nm(id), 24)} ${pad(clubById.get(t.clubId)!.shortName, 4)} ${lpad(t.gs, 2)} Sp  Fangquote ${pct((t.sa - t.ga) / t.sa)}  GAA ${fmt((t.ga * 3600) / t.toi)}  Shutouts ${t.so}`));
 }
 
 switch (cmd) {
@@ -233,6 +225,6 @@ switch (cmd) {
 
   pnpm sim generate [seed] [datei]   Welt erzeugen und als JSON speichern
   pnpm sim match [seed] [weltSeed]    Ein Spiel mit Ticker und Statistik
-  pnpm sim season [seed] [weltSeed]   Komplette Hauptrunde mit Tabelle und Topscorern
+  pnpm sim season [weltSeed]          Komplette Saison inkl. Playoffs und Playdowns
   pnpm sim calibrate [saisons] [weltSeed]  Massensimulation mit Richtwerten`);
 }

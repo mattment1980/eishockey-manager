@@ -3,7 +3,8 @@ import {
   type World, type Player, type Position, type Staff, type Club, type Trait, type TraitId,
   type SkaterAttribute, type GoalieAttribute, type StaffRole, type Manager,
 } from '@ehm/schema';
-import { Rng, clamp, autoMatchplan } from '@ehm/core';
+import { Rng, clamp, autoMatchplan, createCompetition, prepareNextDay } from '@ehm/core';
+import { DEFAULT_TACTICS, type Tactics } from '@ehm/schema';
 import { NAMES, IMPORT_ORIGINS } from './names.ts';
 import { COUNTRY_DE, LEAGUE_DEL2_MODEL, CLUBS_DEL2_MODEL, BUDGET_BY_PROFILE } from './del2.ts';
 
@@ -41,6 +42,16 @@ const PLAYER_TRAITS: TraitId[] = [
 const STAFF_TRAITS: TraitId[] = ['disziplinfanatiker', 'spielerversteher', 'motivator', 'ausbilder', 'taktikfuchs'];
 
 const r200 = (v: number) => clamp(Math.round(v), 1, 200);
+
+/** Spielstile der KI-Trainer, damit sich die Gegner unterschiedlich anfühlen. */
+const TACTIC_STYLES: (() => Tactics)[] = [
+  () => ({ ...DEFAULT_TACTICS }),
+  () => ({ ...DEFAULT_TACTICS, forecheck: '2-1-2', forecheckIntensity: 'aggressive', tempo: 'high', entry: 'controlled' }),
+  () => ({ ...DEFAULT_TACTICS, forecheck: '1-3-1', forecheckIntensity: 'passive', gap: 'loose', tempo: 'slow', breakout: 'boards' }),
+  () => ({ ...DEFAULT_TACTICS, physicality: 'hard', entry: 'dump', offensiveZone: 'netFront', forecheckIntensity: 'aggressive' }),
+  () => ({ ...DEFAULT_TACTICS, forecheck: 'leftWingLock', offensiveZone: 'point', defensiveZone: 'swarm' }),
+  () => ({ ...DEFAULT_TACTICS, breakout: 'stretch', offensiveZone: 'slot', gap: 'tight', tempo: 'high' }),
+];
 
 /** Faktor für die Stärkeunterschiede zwischen den Vereinen (1 = Vorlagenwerte) */
 export const LEAGUE_SPREAD = 0.6;
@@ -100,7 +111,7 @@ export class WorldGenerator {
         leagueId: LEAGUE_DEL2_MODEL.id,
         matchplan: null,
       };
-      club.matchplan = autoMatchplan(roster, { countryCode: COUNTRY_DE.code, importSlotsGame: COUNTRY_DE.rules.importSlotsGame });
+      club.matchplan = autoMatchplan(roster, { countryCode: COUNTRY_DE.code, importSlotsGame: COUNTRY_DE.rules.importSlotsGame, tactics: this.rng.pick(TACTIC_STYLES)() });
       clubs.push(club);
     }
 
@@ -114,7 +125,7 @@ export class WorldGenerator {
       players.push(this.generatePlayer({ position: pos, quality: this.rng.normal(imp ? 96 : 86, 8), age: this.rng.int(19, 34), nationality: nat, clubId: null }));
     }
 
-    const world: World = {
+    const base: World = {
       schemaVersion: SCHEMA_VERSION,
       id: `world-${this.opts.seed}`,
       name: 'Testwelt (DEL2-Modell)',
@@ -127,8 +138,9 @@ export class WorldGenerator {
       players,
       staff,
       managers,
+      competition: null,
     };
-    return world;
+    return prepareNextDay({ ...base, competition: createCompetition(base, LEAGUE_DEL2_MODEL.id, this.opts.seed) });
   }
 
   private generateRoster(clubId: string, base: number, imports: number): Player[] {

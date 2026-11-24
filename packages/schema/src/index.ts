@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Version des Spielstand-Formats. Bei Änderungen erhöhen und Migration ergänzen. */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 /** Interne Attributskala 1–200 (Anzeige 1–20). */
 export const Rating = z.number().int().min(1).max(200);
@@ -257,6 +257,84 @@ export const ManagerSchema = z.object({
 });
 export type Manager = z.infer<typeof ManagerSchema>;
 
+// ---------- Wettbewerb (Saison) ----------
+
+export const StageSchema = z.enum(['regular', 'prePlayoffs', 'playoffs', 'playdowns']);
+export type Stage = z.infer<typeof StageSchema>;
+
+export const FixtureResultSchema = z.object({
+  score: z.tuple([z.number().int(), z.number().int()]),
+  decidedIn: z.enum(['REG', 'OT', 'SO']),
+  shots: z.tuple([z.number().int(), z.number().int()]),
+});
+export type FixtureResult = z.infer<typeof FixtureResultSchema>;
+
+export const FixtureSchema = z.object({
+  id: z.string(),
+  stage: StageSchema,
+  /** Spieltag (fortlaufend über die ganze Saison) */
+  day: z.number().int(),
+  home: z.string(),
+  away: z.string(),
+  seriesId: z.string().optional(),
+  gameNo: z.number().int().optional(),
+  result: FixtureResultSchema.optional(),
+});
+export type Fixture = z.infer<typeof FixtureSchema>;
+
+export const SeriesSchema = z.object({
+  id: z.string(),
+  stage: StageSchema,
+  /** z. B. "Pre-Playoffs", "Viertelfinale", "Playdown-Finale" */
+  roundName: z.string(),
+  roundNo: z.number().int(),
+  bestOf: z.number().int(),
+  /** besser platzierter Verein (Heimrecht in Spiel 1, 3, 5, 7) */
+  high: z.string(),
+  low: z.string(),
+  winsHigh: z.number().int(),
+  winsLow: z.number().int(),
+  winner: z.string().nullable(),
+});
+export type Series = z.infer<typeof SeriesSchema>;
+
+export const StatLineSchema = z.object({
+  clubId: z.string(),
+  gp: z.number().int(),
+  g: z.number().int(),
+  a: z.number().int(),
+  pim: z.number().int(),
+  pm: z.number().int(),
+  sog: z.number().int(),
+  toi: z.number(),
+  // Torhüter
+  gs: z.number().int(),
+  sa: z.number().int(),
+  ga: z.number().int(),
+  w: z.number().int(),
+  so: z.number().int(),
+});
+export type StatLine = z.infer<typeof StatLineSchema>;
+
+export const CompetitionSchema = z.object({
+  leagueId: z.string(),
+  year: z.number().int(),
+  /** zuletzt gespielter Spieltag (0 = noch keiner) */
+  day: z.number().int(),
+  fixtures: z.array(FixtureSchema),
+  series: z.array(SeriesSchema),
+  /** Plätze nach der Hauptrunde (Vereins-IDs), gesetzt sobald diese beendet ist */
+  finalStandings: z.array(z.string()).nullable(),
+  stats: z.object({
+    regular: z.record(StatLineSchema),
+    post: z.record(StatLineSchema),
+  }),
+  champion: z.string().nullable(),
+  relegated: z.string().nullable(),
+  finished: z.boolean(),
+});
+export type Competition = z.infer<typeof CompetitionSchema>;
+
 export const WorldSchema = z.object({
   schemaVersion: z.literal(SCHEMA_VERSION),
   id: z.string(),
@@ -270,5 +348,6 @@ export const WorldSchema = z.object({
   players: z.array(PlayerSchema),
   staff: z.array(StaffSchema),
   managers: z.array(ManagerSchema),
+  competition: CompetitionSchema.nullable(),
 });
 export type World = z.infer<typeof WorldSchema>;

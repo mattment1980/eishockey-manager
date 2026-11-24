@@ -1,28 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Club } from '@ehm/schema';
-import { simulateMatch, teamStrength, isImport, toDisplay, type MatchInput, type MatchResult, type Side, type TeamInput } from '@ehm/core';
+import { useEffect, useMemo, useState } from 'react';
+import type { Club, LeagueFormat, Matchplan } from '@ehm/schema';
+import type { MatchResult, Side } from '@ehm/core';
 import { useStore } from '../store.tsx';
-import { Crest } from '../components/Crest.tsx';
-import { Rink } from '../components/Rink.tsx';
+import { Crest } from './Crest.tsx';
+import { Rink } from './Rink.tsx';
 import { computeLive, cutIndex, type LiveUnit } from '../live.ts';
 import { mmss, pct } from '../labels.ts';
 
 type Speed = 'slow' | 'normal' | 'fast';
 const SPEED: Record<Speed, number> = { slow: 20, normal: 45, fast: 150 }; // Spielsekunden pro Sekunde
 type LiveTab = 'ticker' | 'team' | 'lines' | 'players' | 'map';
-
-function runInWorker(input: MatchInput): Promise<MatchResult> {
-  return new Promise((resolve) => {
-    try {
-      const w = new Worker(new URL('../sim.worker.ts', import.meta.url), { type: 'module' });
-      w.onmessage = (e: MessageEvent<MatchResult>) => { resolve(e.data); w.terminate(); };
-      w.onerror = () => { w.terminate(); resolve(simulateMatch(input)); };
-      w.postMessage(input);
-    } catch {
-      resolve(simulateMatch(input));
-    }
-  });
-}
 
 function luminance(hex: string): number {
   const n = parseInt(hex.slice(1), 16);
@@ -31,31 +18,31 @@ function luminance(hex: string): number {
 }
 const visible = (c: Club) => (luminance(c.colors.primary) < 0.12 ? c.colors.secondary : c.colors.primary);
 
-export function MatchView() {
-  const { world, club, players, byId, addResult } = useStore();
-  const opponents = world.clubs.filter((c) => c.id !== club?.id);
-  const [oppId, setOppId] = useState(opponents[0]?.id ?? '');
-  const [home, setHome] = useState(true);
-  const [result, setResult] = useState<MatchResult | null>(null);
-  const [sides, setSides] = useState<[Club, Club] | null>(null);
+interface Props {
+  result: MatchResult;
+  sides: [Club, Club];
+  mySide: Side;
+  plan: Matchplan;
+  format: LeagueFormat;
+  playoff: boolean;
+  subtitle?: string;
+  doneLabel: string;
+  onDone: () => void;
+  busy?: boolean;
+}
+
+export function LiveMatch({ result, sides, mySide, plan, format, playoff, subtitle, doneLabel, onDone, busy }: Props) {
+  const { byId } = useStore();
   const [now, setNow] = useState(0);
-  const [playing, setPlaying] = useState(false);
+  const [playing, setPlaying] = useState(true);
   const [speed, setSpeed] = useState<Speed>('normal');
   const [tab, setTab] = useState<LiveTab>('ticker');
-  const [loading, setLoading] = useState(false);
-  const saved = useRef(false);
 
-  const opp = world.clubs.find((c) => c.id === oppId)!;
-  const plan = club?.matchplan;
-  const rules = world.countries[0].rules;
-  const importsDressed = plan ? [...plan.forwardLines.flat(), ...plan.defensePairs.flat(), ...plan.goalies].filter((id) => isImport(byId.get(id)!, 'DE')).length : 0;
+  const endT = useMemo(() => Math.max(...result.events.map((e) => e.t), ...result.ticker.map((t) => t.t)), [result]);
+  const finished = now >= endT;
 
-  const endT = result ? Math.max(...result.events.map((e) => e.t), ...result.ticker.map((t) => t.t)) : 0;
-  const finished = !!result && now >= endT;
-
-  // Wiedergabe
   useEffect(() => {
-    if (!playing || !result) return;
+    if (!playing || finished) return;
     let last = performance.now();
     let raf = 0;
     const loop = (ts: number) => {
@@ -66,95 +53,27 @@ export function MatchView() {
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [playing, speed, result, endT]);
+  }, [playing, speed, endT, finished]);
 
-  useEffect(() => {
-    if (finished && result && sides && !saved.current) {
-      saved.current = true;
-      setPlaying(false);
-      addResult({ date: world.date, homeId: sides[0].id, awayId: sides[1].id, score: result.score, decidedIn: result.decidedIn });
-    }
-  }, [finished, result, sides, addResult, world.date]);
+  const evCut = cutIndex(result.events, now);
+  const live = useMemo(() => computeLive(result.events, evCut), [result, evCut]);
 
-  const evCut = result ? cutIndex(result.events, now) : 0;
-  const live = useMemo(() => (result ? computeLive(result.events, evCut) : null), [result, evCut]);
-
-  if (!club || !plan) return null;
-
-  async function start() {
-    if (!club || !plan) return;
-    const mine: TeamInput = { clubId: club.id, name: club.name, shortName: club.shortName, plan, players };
-    const theirs: TeamInput = { clubId: opp.id, name: opp.name, shortName: opp.shortName, plan: opp.matchplan!, players: world.players.filter((p) => p.contract?.clubId === opp.id) };
-    setLoading(true);
-    const res = await runInWorker({
-      home: home ? mine : theirs, away: home ? theirs : mine,
-      seed: Math.floor(Math.random() * 2 ** 31), phase: 'regular', format: world.leagues[0].format,
-    });
-    saved.current = false;
-    setSides(home ? [club, opp] : [opp, club]);
-    setResult(res);
-    setNow(0);
-    setTab('ticker');
-    setPlaying(true);
-    setLoading(false);
-  }
-
-  // ---------------------------------------------------------- Vorbereitung
-  if (!result || !sides || !live) {
-    const sMine = teamStrength(plan, byId), sOpp = teamStrength(opp.matchplan!, byId);
-    return (
-      <div className="stack">
-        <h2>Testspiel</h2>
-        <section className="card">
-          <label className="field">
-            <span>Gegner</span>
-            <select className="select" value={oppId} onChange={(e) => setOppId(e.target.value)}>
-              {opponents.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </label>
-          <div className="segmented" style={{ marginTop: 12 }}>
-            <button className={home ? 'on' : ''} onClick={() => setHome(true)}>Heimspiel</button>
-            <button className={!home ? 'on' : ''} onClick={() => setHome(false)}>Auswärtsspiel</button>
-          </div>
-        </section>
-        <section className="card versus">
-          <div className="vs-team"><Crest club={home ? club : opp} size={64} /><strong>{(home ? club : opp).shortName}</strong></div>
-          <div className="vs-mid">
-            <div className="muted small">Kaderstärke</div>
-            <div className="vs-bars">
-              <span>{toDisplay(home ? sMine : sOpp)}</span>
-              <div className="duo"><div style={{ width: `${50 + ((home ? sMine - sOpp : sOpp - sMine) / 2)}%` }} /></div>
-              <span>{toDisplay(home ? sOpp : sMine)}</span>
-            </div>
-            <div className="muted small">{home ? 'Heim' : 'Gast'} gegen {home ? 'Gast' : 'Heim'}</div>
-          </div>
-          <div className="vs-team"><Crest club={home ? opp : club} size={64} /><strong>{(home ? opp : club).shortName}</strong></div>
-        </section>
-        {importsDressed > rules.importSlotsGame ? (
-          <div className="alert">Zu viele Ausländer aufgestellt ({importsDressed}/{rules.importSlotsGame}). Bitte unter „Reihen“ korrigieren.</div>
-        ) : (
-          <button className="btn primary big block" onClick={start} disabled={loading}>{loading ? 'Simuliere …' : 'Anpfiff'}</button>
-        )}
-      </div>
-    );
-  }
-
-  // ---------------------------------------------------------- Live
-  const mySide: Side = sides[0].id === club.id ? 0 : 1;
   const starts = result.events.filter((e) => e.type === 'periodStart');
   const current = [...starts].reverse().find((e) => e.t <= now) ?? starts[0];
   const periodNo = current?.period ?? 1;
-  const periodLen = periodNo > 3 ? world.leagues[0].format.regularOvertime.minutes * 60 : 1200;
+  const periodLen = periodNo > 3 && !playoff ? format.regularOvertime.minutes * 60 : 1200;
   const elapsed = Math.min(periodLen, Math.max(0, now - (current?.t ?? 0)));
-  const periodName = periodNo <= 3 ? `${periodNo}. Drittel` : 'Verlängerung';
+  const periodName = periodNo <= 3 ? `${periodNo}. Drittel` : playoff ? `${periodNo - 3}. Verlängerung` : 'Verlängerung';
   const shownScore: [number, number] = finished ? result.score : [live.teams[0].goals, live.teams[1].goals];
   const tickerNow = result.ticker.slice(0, cutIndex(result.ticker, now)).reverse();
   const colors: [string, string] = mySide === 0 ? [visible(sides[0]), '#94a3b8'] : ['#94a3b8', visible(sides[1])];
   const nameOf = (id: string) => { const p = byId.get(id); return p ? `${p.firstName[0]}. ${p.lastName}` : id; };
+  const me = sides[mySide];
 
   return (
     <div className="stack">
       <section className="scoreboard">
+        {subtitle && <div className="sb-sub">{subtitle}</div>}
         <div className="sb-team"><Crest club={sides[0]} size={48} /><span>{sides[0].shortName}</span></div>
         <div className="sb-mid">
           <div className="sb-score">{shownScore[0]}<span>:</span>{shownScore[1]}</div>
@@ -165,18 +84,19 @@ export function MatchView() {
         <div className="sb-team"><Crest club={sides[1]} size={48} /><span>{sides[1].shortName}</span></div>
       </section>
 
-      <div className="controls">
-        {!finished && <button className="btn" onClick={() => setPlaying((p) => !p)}>{playing ? 'Pause' : 'Weiter'}</button>}
-        {!finished && (
+      {!finished ? (
+        <div className="controls">
           <div className="segmented small-seg">
             {(['slow', 'normal', 'fast'] as Speed[]).map((s) => (
               <button key={s} className={speed === s ? 'on' : ''} onClick={() => setSpeed(s)}>{s === 'slow' ? 'Langsam' : s === 'normal' ? 'Normal' : 'Schnell'}</button>
             ))}
           </div>
-        )}
-        {!finished && <button className="btn ghost" onClick={() => setNow(endT)}>Ergebnis</button>}
-        {finished && <button className="btn primary" onClick={() => { setResult(null); setSides(null); }}>Neues Spiel</button>}
-      </div>
+          <button className="btn" onClick={() => setPlaying((p) => !p)}>{playing ? 'Pause' : 'Weiter'}</button>
+          <button className="btn ghost" onClick={() => setNow(endT)}>Zum Ergebnis</button>
+        </div>
+      ) : (
+        <button className="btn primary big block" onClick={onDone} disabled={busy}>{busy ? 'Simuliere übrige Spiele …' : doneLabel}</button>
+      )}
 
       <div className="tabs">
         {([['ticker', 'Ticker'], ['team', 'Team'], ['lines', 'Reihen'], ['players', 'Spieler'], ['map', 'Schüsse']] as [LiveTab, string][]).map(([id, l]) => (
@@ -202,7 +122,7 @@ export function MatchView() {
 
       {tab === 'lines' && (
         <section className="card">
-          <h3>{club.shortName}: Reihen bei 5-gegen-5</h3>
+          <h3>{me.shortName}: Reihen bei 5-gegen-5</h3>
           <UnitTable title="Sturm" units={live.lines[mySide]} labels={plan.forwardLines.map((l, i) => `${i + 1}: ${l.map((id) => byId.get(id)?.lastName).join(' – ')}`)} toi={finished ? result.lineStats[mySide].lines.map((u) => u.toi) : null} />
           <UnitTable title="Verteidigung" units={live.pairs[mySide]} labels={plan.defensePairs.map((l, i) => `${i + 1}: ${l.map((id) => byId.get(id)?.lastName).join(' – ')}`)} toi={finished ? result.lineStats[mySide].pairs.map((u) => u.toi) : null} />
           <p className="muted small">Corsi = Schussversuche für:gegen, xG = erwartete Tore, während die Einheit auf dem Eis ist.</p>
@@ -246,7 +166,7 @@ export function MatchView() {
   );
 }
 
-function TeamTable({ live, names, result }: { live: NonNullable<ReturnType<typeof computeLive>>; names: [string, string]; result: MatchResult | null }) {
+function TeamTable({ live, names, result }: { live: ReturnType<typeof computeLive>; names: [string, string]; result: MatchResult | null }) {
   const [a, b] = live.teams;
   const rows: [string, string | number, string | number, number?, number?][] = [
     ['Tore', a.goals, b.goals],

@@ -47,7 +47,7 @@ export const C = {
   DUMP_RECOVER_BASE: -0.55,
 
   // --- Angriffszone ---
-  SHOT_PER_ACTION: 0.36,
+  SHOT_PER_ACTION: 0.335,
   TURNOVER_BASE: 0.22,
   STOPPAGE_PER_ACTION: 0.035,
 

@@ -1,4 +1,16 @@
-import { WorldSchema, type World } from '@ehm/schema';
+import { WorldSchema, SCHEMA_VERSION, type World } from '@ehm/schema';
+
+/** Ältere Spielstände auf das aktuelle Format heben. */
+export function migrateWorld(raw: unknown): unknown {
+  if (!raw || typeof raw !== 'object') return raw;
+  const w = { ...(raw as Record<string, unknown>) };
+  if (w.schemaVersion === 1) {
+    w.schemaVersion = 2;
+    w.competition = null;
+  }
+  void SCHEMA_VERSION;
+  return w;
+}
 
 /** Welt als JSON exportieren (Grundlage für Datenpakete und Spielstände). */
 export function exportWorldJson(world: World): string {
@@ -17,7 +29,7 @@ export function importWorldJson(json: string): ImportResult {
   } catch (e) {
     return { ok: false, errors: [`Ungültiges JSON: ${(e as Error).message}`] };
   }
-  const parsed = WorldSchema.safeParse(raw);
+  const parsed = WorldSchema.safeParse(migrateWorld(raw));
   if (!parsed.success) {
     return {
       ok: false,

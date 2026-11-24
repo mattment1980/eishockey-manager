@@ -45,7 +45,7 @@ ul.plain li:last-child { border-bottom: 0; }
 .topbar-title span { font-size: 0.78rem; color: var(--muted); }
 .content { flex: 1; padding: 14px 14px 96px; max-width: 760px; width: 100%; margin: 0 auto; }
 .tabbar {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 6; display: grid; grid-template-columns: repeat(5, 1fr);
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 6; display: grid; grid-template-columns: repeat(6, 1fr);
   background: rgba(10, 16, 32, 0.96); backdrop-filter: blur(8px); border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -209,3 +209,45 @@ td.good { color: var(--good); font-weight: 700; } td.bad { color: #fca5a5; font-
 .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; align-items: center; }
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: -1px; }
 .dot.ring { border: 2px solid; background: transparent; }
+
+/* Saison */
+.btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.center { text-align: center; }
+.versus-card .versus { margin-top: 10px; }
+.kpis.inner { margin: 6px 0 10px; }
+.kpis.inner .kpi { background: var(--panel-2); }
+.champion { display: flex; gap: 16px; align-items: center; background: linear-gradient(120deg, #3a2f0b 0%, var(--panel) 70%); border-color: #8a6d1f; }
+.sb-sub { grid-column: 1 / -1; text-align: center; font-size: 0.78rem; color: var(--muted); margin-bottom: 6px; }
+.results { list-style: none; margin: 0; padding: 0; }
+.results li { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 8px 14px; border-top: 1px solid var(--line); font-size: 0.9rem; }
+.results li.mine { background: color-mix(in srgb, var(--ice) 10%, transparent); }
+.res-team { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.res-team.right { justify-content: flex-end; }
+.res-score { font-variant-numeric: tabular-nums; text-align: center; min-width: 64px; }
+.res-series { grid-column: 1 / -1; text-align: center; font-size: 0.75rem; }
+.day-nav { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; padding: 10px 14px; text-align: center; }
+.day-nav .btn { padding: 6px 14px; }
+table.league td, table.league th { padding: 7px 4px; }
+table.league td:first-child, table.league th:first-child { padding-left: 10px; width: 26px; }
+table.league tr.z-po td:first-child { box-shadow: inset 3px 0 0 var(--good); }
+table.league tr.z-pre td:first-child { box-shadow: inset 3px 0 0 var(--ice); }
+table.league tr.z-pd td:first-child { box-shadow: inset 3px 0 0 var(--goal); }
+tr.me td { background: color-mix(in srgb, var(--ice) 12%, transparent); }
+.tteam { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+table.league td:nth-child(2), table.league th:nth-child(2) { text-align: left; }
+.zone { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; }
+.zone.z-po { background: var(--good); } .zone.z-pre { background: var(--ice); } .zone.z-pd { background: var(--goal); }
+.pad { padding: 10px 14px; margin: 0; }
+.series { display: grid; grid-template-columns: 1fr; gap: 4px; padding: 8px 0; border-top: 1px solid var(--line); }
+.series:first-of-type { border-top: 0; }
+.series-team { display: grid; grid-template-columns: 24px 1fr auto; gap: 8px; align-items: center; }
+.series-team b { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.series-team.winner { font-weight: 700; }
+.series-team.loser { opacity: 0.5; }
+.series-team.me span { color: var(--ice); }
+.form-strip { list-style: none; display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 4px 14px 0; }
+.form-strip li { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 5px; font-size: 0.7rem; font-weight: 800; }
+.form-strip li.w { background: color-mix(in srgb, var(--good) 45%, transparent); }
+.form-strip li.l { background: color-mix(in srgb, var(--goal) 40%, transparent); }
+.form-strip li.otl { background: color-mix(in srgb, var(--warn) 40%, transparent); }
+.tabbar button span { font-size: 0.68rem; }

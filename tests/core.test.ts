@@ -92,3 +92,31 @@ describe('Saison', () => {
 function fmt0() {
   return world.leagues[0].format.points;
 }
+
+import { playDays, regularTable, nextFixtureOf, playDay } from '@ehm/core';
+
+describe('Wettbewerb', () => {
+  it('spielt eine komplette Saison mit Playoffs und Playdowns', () => {
+    const w = playDays(generateWorld(11), 1000);
+    const c = w.competition!;
+    expect(c.finished).toBe(true);
+    expect(c.champion).toBeTruthy();
+    expect(c.relegated).toBeTruthy();
+    expect(c.fixtures.filter((f) => f.stage === 'regular' && f.result)).toHaveLength(364);
+    expect(regularTable(w)[0].gp).toBe(52);
+    const final = c.series.find((s) => s.roundName === 'Finale')!;
+    expect(final.winner).toBe(c.champion);
+    expect(Math.max(final.winsHigh, final.winsLow)).toBe(4);
+    for (const s of c.series) expect(Math.max(s.winsHigh, s.winsLow)).toBe(Math.ceil(s.bestOf / 2));
+    expect(c.fixtures.filter((f) => f.stage !== 'regular').every((f) => f.result!.decidedIn !== 'SO')).toBe(true);
+  });
+  it('übernimmt live gespielte Partien', () => {
+    const w0 = generateWorld(12);
+    const clubId = w0.clubs[0].id;
+    const f = nextFixtureOf(w0.competition!, clubId)!;
+    const { world, results } = playDay(w0);
+    expect(world.competition!.day).toBe(1);
+    expect(results[f.id]).toBeTruthy();
+    expect(world.competition!.fixtures.find((x) => x.id === f.id)!.result).toBeTruthy();
+  });
+});
