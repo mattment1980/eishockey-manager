@@ -11,8 +11,8 @@ const ORDER: StaffRole[] = ['headCoach', 'assistantCoach', 'goalieCoach', 'youth
 
 const RATINGS: { key: keyof Staff['ratings']; label: string; effect: string; active: boolean }[] = [
   { key: 'tactics', label: 'Taktik', effect: 'Coaching-Regeln und Einüben neuer Systeme', active: false },
-  { key: 'motivation', label: 'Motivation', effect: 'Moral und Teamklima', active: false },
-  { key: 'discipline', label: 'Disziplin', effect: 'weniger Strafen', active: false },
+  { key: 'motivation', label: 'Motivation', effect: 'Moral und Teamklima', active: true },
+  { key: 'discipline', label: 'Disziplin', effect: 'weniger Strafen', active: true },
   { key: 'development', label: 'Entwicklung', effect: 'Fortschritt junger Spieler', active: false },
   { key: 'scouting', label: 'Scouting', effect: 'Tempo und Genauigkeit der Berichte', active: true },
 ];

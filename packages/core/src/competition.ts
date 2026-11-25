@@ -10,6 +10,8 @@ import { beginSeasonFinances, bookFixture, closeMonthsBetween, evaluateSeason } 
 import { updateScouting } from './scouting.ts';
 import { marketTick } from './market.ts';
 import { coachingCapacity, defaultRules } from './coaching.ts';
+import { updateAfterGames, unitChemistry, teamClimate, captainOf, hasTrait } from './chemistry.ts';
+import { toDisplay } from './ratings.ts';
 
 /**
  * Saisonablauf nach Ligaformat: Hauptrunde → Pre-Playoffs → Playoffs (mit Neusetzen)
@@ -196,7 +198,18 @@ export function matchInputFor(world: World, fixture: Fixture): MatchInput {
     const c = world.clubs.find((x) => x.id === id)!;
     let plan = planFor(world, c, fixture);
     if (c.controller.type === 'ai' && !(plan.rules ?? []).length) plan = { ...plan, rules: defaultRules() };
-    return { clubId: c.id, name: c.name, shortName: c.shortName, plan, players: world.players.filter((p) => p.contract?.clubId === c.id), coach: coachingCapacity(world, c.id) };
+    const players = world.players.filter((p) => p.contract?.clubId === c.id);
+    const byId = new Map(players.map((p) => [p.id, p]));
+    const staff = world.staff.filter((s) => s.contract?.clubId === c.id);
+    const head = staff.find((s) => s.role === 'headCoach');
+    const penaltyFactor = (head ? 1.08 - (toDisplay(head.ratings.discipline) - 5) * 0.016 : 1) * (staff.some((s) => s.traits.some((t) => t.id === 'disziplinfanatiker')) ? 0.88 : 1);
+    return {
+      clubId: c.id, name: c.name, shortName: c.shortName, plan, players,
+      coach: { ...coachingCapacity(world, c.id), penaltyFactor },
+      chemistry: { lines: plan.forwardLines.map((l) => unitChemistry(world, l, byId)), pairs: plan.defensePairs.map((l) => unitChemistry(world, l, byId)) },
+      climate: teamClimate(world, c.id),
+      captainId: captainOf(world, c)?.id,
+    };
   };
   return {
     home: team(fixture.home),
@@ -263,6 +276,8 @@ export function playDay(world: World, preplayed: Record<string, MatchResult> = {
   // Einnahmen/Ausgaben der Spiele
   const placeNow = placeLookup(w);
   for (const f of todays) w = bookFixture(w, f, f.stage === 'regular' ? placeNow(f.home) : null);
+  // Moral und Chemie
+  w = updateAfterGames(w, todays.map((f) => ({ fixture: f, result: results[f.id] })));
   // Scouting
   w = updateScouting(w, date, todays.map((f) => ({ home: f.home, away: f.away, result: results[f.id] })));
   // Markt (Entscheidungen, KI-Angebote, Versprechen)

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Version des Spielstand-Formats. Bei Änderungen erhöhen und Migration ergänzen. */
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 /** Interne Attributskala 1–200 (Anzeige 1–20). */
 export const Rating = z.number().int().min(1).max(200);
@@ -291,6 +291,8 @@ export const MatchplanSchema = z.object({
   matchups: z.array(MatchupSchema).default([]),
   /** Coaching-Regeln in Prioritätsreihenfolge (oben = wichtiger) */
   rules: z.array(CoachingRuleSchema).default([]),
+  /** Kapitän (null = automatisch der Spieler mit der meisten Führungsstärke) */
+  captain: z.string().nullable().default(null),
 });
 export type Matchplan = z.infer<typeof MatchplanSchema>;
 
@@ -555,5 +557,7 @@ export const WorldSchema = z.object({
   /** Scouting-Stand je menschlich geführtem Verein */
   scouting: z.record(ScoutingStateSchema),
   market: MarketSchema.default(EMPTY_MARKET),
+  /** Chemie zwischen zwei Spielern (Schlüssel "idA|idB", sortiert), 0–100 */
+  chemistry: z.record(z.number()).default({}),
 });
 export type World = z.infer<typeof WorldSchema>;

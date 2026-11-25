@@ -137,7 +137,7 @@ export function PlayerSheet({ player, date, onClose, view, clubName, watch, acti
           <div className="attr-group">
             <h4>Zustand & Vertrag</h4>
             <div className="row-between small"><span>Form</span><b>{p.condition.form}</b></div>
-            <div className="row-between small"><span>Moral</span><b>{p.condition.morale}</b></div>
+            <div className="row-between small"><span>Moral</span><b>{Math.round(p.condition.morale)}</b></div>
             <div className="row-between small"><span>Fitness</span><b>{p.condition.fitness} %</b></div>
             {p.contract && (
               <>

@@ -271,3 +271,38 @@ describe('Coaching, Matchups, Special Teams', () => {
     expect(r.rules.filter((x) => x.team === 0)).toHaveLength(4);
   });
 });
+
+describe('Chemie & Moral', () => {
+  it('Reihenchemie wächst, Moral reagiert auf Ergebnisse und Tribüne', async () => {
+    const { updateAfterGames, pairKey, unitChemistry } = await import('@ehm/core');
+    const home = world.clubs[0], away = world.clubs[1];
+    const plan = home.matchplan!;
+    const [a, b] = plan.forwardLines[0];
+    const before = world.chemistry[pairKey(a, b)] ?? 30;
+    const r = simulateMatch({ home: input(home.id), away: input(away.id), seed: 1, phase: 'regular', format: world.leagues[0].format, keepEvents: false } as never);
+    const fixture = { id: 'f', day: 1, home: home.id, away: away.id } as never;
+    const w2 = updateAfterGames(world, [{ fixture, result: r }]);
+    expect(w2.chemistry[pairKey(a, b)]).toBeGreaterThan(before);
+    const byId = new Map(w2.players.map((p) => [p.id, p]));
+    expect(unitChemistry(w2, plan.forwardLines[0], byId)).toBeGreaterThan(0);
+    const won = r.score[0] > r.score[1];
+    const dressed = new Set([...plan.forwardLines.flat(), ...plan.defensePairs.flat(), ...plan.goalies]);
+    const scratched = world.players.filter((p) => p.contract?.clubId === home.id && !dressed.has(p.id));
+    for (const p of scratched) expect(byId.get(p.id)!.condition.morale).toBeLessThanOrEqual(Math.max(p.condition.morale, 60) + (won ? 2 : 0) + 0.1);
+  });
+  it('Leader-Bonus wird im Ticker angekündigt, Hitzkopf kassiert mehr Strafen', () => {
+    const base = input(world.clubs[0].id);
+    const lead = base.plan.forwardLines[0][0];
+    const withTrait = (t: string) => ({ ...base, players: base.players.map((p) => (p.position === 'G' ? p : { ...p, traits: [{ id: t as never, strength: 100 }] })) });
+    let announced = 0, pimHot = 0, pimNormal = 0;
+    for (let s = 0; s < 30; s++) {
+      const arg = (h: TeamInput) => ({ home: h, away: input(world.clubs[1].id), seed: s, phase: 'playoff', format: world.leagues[0].format, keepEvents: false } as never);
+      const r = simulateMatch(arg({ ...withTrait('leader'), captainId: lead }));
+      if (r.ticker.some((t) => t.text.includes('Leader-Bonus'))) announced++;
+      pimHot += simulateMatch(arg(withTrait('hitzkopf'))).teamStats[0].pim;
+      pimNormal += simulateMatch(arg(base)).teamStats[0].pim;
+    }
+    expect(announced).toBeGreaterThan(3);
+    expect(pimHot).toBeGreaterThan(pimNormal);
+  });
+});

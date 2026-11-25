@@ -11,7 +11,12 @@ export interface TeamInput {
   plan: Matchplan;
   players: Player[];
   /** Fähigkeiten des Trainerteams (Regelplätze, Reaktion, Matchups) */
-  coach?: { slots: number; fastReaction: boolean; matchupSkill: number };
+  coach?: { slots: number; fastReaction: boolean; matchupSkill: number; penaltyFactor?: number };
+  /** Chemie der Sturmreihen und Verteidigerpaare (0–100) */
+  chemistry?: { lines: number[]; pairs: number[] };
+  /** Teamklima (0–100) */
+  climate?: number;
+  captainId?: string;
 }
 
 export interface MatchInput {

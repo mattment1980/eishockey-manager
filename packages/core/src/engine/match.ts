@@ -1,4 +1,4 @@
-import type { Player, Tactics, SkaterAttribute, CoachingRule, RuleCondition } from '@ehm/schema';
+import type { Player, Tactics, SkaterAttribute, CoachingRule, RuleCondition, TraitId } from '@ehm/schema';
 import { describeAction, ONCE_ACTIONS } from '../coaching.ts';
 import { Rng, sigmoid, logit, clamp } from '../rng.ts';
 import { weightedSkater, weightedGoalie, W } from '../ratings.ts';
@@ -49,6 +49,12 @@ interface TeamState {
   matchupsOn: boolean;
   timeoutUsed: boolean;
   goalsAgainstAt: number[];
+  // Chemie & Charakter
+  traits: Map<string, Partial<Record<TraitId, number>>>;
+  unitChem: Map<string, number>;
+  unitLeader: Map<string, number>;
+  penaltyFactor: number;
+  leaderAnnounced: boolean;
 }
 
 interface OnIce { F: string[]; D: string[] }
@@ -102,6 +108,9 @@ class MatchSim {
     this.keepEvents = input.keepEvents ?? true;
     this.teams = [this.initTeam(0), this.initTeam(1)];
     this.dayForm = [this.rng.normal(0, C.DAY_FORM_SD), this.rng.normal(0, C.DAY_FORM_SD)];
+    // Teamklima verschiebt die Tagesform leicht
+    this.dayForm[0] += ((input.home.climate ?? 60) - 60) * C.CLIMATE_FORM;
+    this.dayForm[1] += ((input.away.climate ?? 60) - 60) * C.CLIMATE_FORM;
     this.goalieForm = [this.rng.normal(0, C.GOALIE_FORM_SD), this.rng.normal(0, C.GOALIE_FORM_SD)];
     this.ls = [0, 1].map(() => ({ lines: [0, 1, 2, 3].map(emptyUnit), pairs: [0, 1, 2].map(emptyUnit) })) as [TeamLineStats, TeamLineStats];
   }
@@ -124,6 +133,25 @@ class MatchSim {
       });
     }
     const coach = ti.coach ?? { slots: 6, fastReaction: true, matchupSkill: 0 };
+    const traits = new Map<string, Partial<Record<TraitId, number>>>();
+    for (const id of ids) {
+      const t: Partial<Record<TraitId, number>> = {};
+      for (const tr of byId.get(id)!.traits) if (tr.strength >= 50) t[tr.id] = tr.strength / 100;
+      traits.set(id, t);
+    }
+    const unitChem = new Map<string, number>();
+    const unitLeader = new Map<string, number>();
+    const units: [string[], number | undefined][] = [
+      ...plan.forwardLines.map((l, i) => [l, ti.chemistry?.lines[i]] as [string[], number | undefined]),
+      ...plan.defensePairs.map((l, i) => [l, ti.chemistry?.pairs[i]] as [string[], number | undefined]),
+    ];
+    for (const [unit, chem] of units) {
+      const lead = Math.max(0, ...unit.map((id) => (traits.get(id)?.leader ?? 0) + (id === ti.captainId ? 0.3 : 0)));
+      for (const id of unit) {
+        if (chem !== undefined) unitChem.set(id, chem);
+        unitLeader.set(id, Math.min(1, lead));
+      }
+    }
     const rules = (plan.rules ?? []).filter((r) => r.enabled).slice(0, coach.slots);
     const ruleState = new Map(rules.map((r) => [r.id, {
       active: false, pending: false, fired: false,
@@ -135,6 +163,7 @@ class MatchSim {
       goalieId: plan.goalies[0], otUnit: 0, otShift: 0, allForwards, allDefense,
       baseTactics: { ...plan.tactics }, rules, ruleState, coach, goaliePulled: false, benched: new Set(),
       shares: [...plan.forwardShares], matchupsOn: (plan.matchups ?? []).length > 0, timeoutUsed: false, goalsAgainstAt: [],
+      traits, unitChem, unitLeader, penaltyFactor: coach.penaltyFactor ?? 1, leaderAnnounced: false,
     };
   }
 
@@ -518,7 +547,39 @@ class MatchSim {
     const p = tm.byId.get(id)!;
     const f = tm.fresh.get(id) ?? 100;
     const fat = C.FATIGUE_FLOOR + (1 - C.FATIGUE_FLOOR) * (f / 100);
-    return fat * (1 + (p.condition.form - 50) / 1000 + (p.condition.morale - 50) / 1500);
+    let mod = (p.condition.form - 50) / 1000 + (p.condition.morale - 50) / 1500 + this.characterMod(side, id);
+    mod = Math.max(-C.CHARACTER_CAP, Math.min(C.CHARACTER_CAP, mod));
+    return fat * (1 + mod);
+  }
+
+  /** Situative Trait-Boni und Reihenchemie (Anteil, z. B. 0.03 = +3 %) */
+  private characterMod(side: Side, id: string): number {
+    const tm = this.teams[side];
+    const t = tm.traits.get(id)!;
+    let m = 0;
+    const chem = tm.unitChem.get(id);
+    if (chem !== undefined) m += ((chem - 50) / 50) * C.CHEM_EFFECT;
+    const diff = this.score[side] - this.score[1 - side];
+    const late = this.period >= 3;
+    const playoff = this.input.phase === 'playoff';
+    const big = playoff || this.period > 3;
+    if (t.bigGame && big) m += 0.05 * t.bigGame;
+    if (t.nervenbuendel && big) m -= 0.05 * t.nervenbuendel;
+    if (t.kaempfer && diff < 0) m += 0.04 * t.kaempfer;
+    if (t.schoenwetter) m += diff > 0 ? 0.03 * t.schoenwetter : diff < 0 ? -0.04 * t.schoenwetter : 0;
+    if (t.heimstark && side === 0) m += 0.03 * t.heimstark;
+    if (t.freigeist) m += 0.015 * t.freigeist;
+    const lead = tm.unitLeader.get(id) ?? 0;
+    if (lead > 0 && diff < 0 && (late || playoff)) {
+      m += 0.03 * lead;
+      if (!tm.leaderAnnounced) {
+        tm.leaderAnnounced = true;
+        const unit = [...tm.plan.forwardLines, ...tm.plan.defensePairs].find((u) => u.includes(id)) ?? [id];
+        const leader = unit.reduce((b, x) => ((tm.traits.get(x)?.leader ?? 0) > (tm.traits.get(b)?.leader ?? 0) ? x : b), unit[0]);
+        this.tick('coach', `${this.name(side, leader)} treibt seine Reihe an – Leader-Bonus für ${tm.shortName} aktiv.`, side);
+      }
+    }
+    return m;
   }
 
   private group(side: Side, ids: string[], w: Partial<Record<SkaterAttribute, number>>): number {
@@ -784,6 +845,7 @@ class MatchSim {
       let w = Math.pow(weightedSkater(p, W.shooting) / 100, 2) * (isD ? 0.55 : 1);
       if (isD && ta.offensiveZone === 'point') w *= 1.6;
       if (rebound && isD) w *= 0.3;
+      if (tmA.traits.get(id)?.egoist) w *= 1 + 0.3 * tmA.traits.get(id)!.egoist!;
       return w;
     }));
     const sp = tmA.byId.get(shooter)!;
@@ -1031,7 +1093,7 @@ class MatchSim {
     const phys = ({ fair: 0.7, normal: 1, hard: 1.45 } as const)[tm.tactics.physicality];
     const offender = this.pickWeighted(side, ids, (p) => (220 - p.skater.discipline) * (0.5 + p.skater.bodyChecking / 200));
     const p = tm.byId.get(offender)!;
-    const disc = 1 + (100 - p.skater.discipline) / 120;
+    const disc = (1 + (100 - p.skater.discipline) / 120) * tm.penaltyFactor * (1 + 0.35 * (tm.traits.get(offender)?.hitzkopf ?? 0));
     const fatigue = 1 + (100 - (tm.fresh.get(offender) ?? 100)) / 250;
     if (!this.rng.chance(C.PENALTY_PER_DUEL * weight * phys * disc * fatigue)) return;
     const opp = (1 - side) as Side;

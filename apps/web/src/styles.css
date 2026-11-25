@@ -339,3 +339,6 @@ table.stats.roster-table td .tag:first-child { margin-left: 0; }
 table.matrix td, table.matrix th { text-align: center; }
 table.matrix td:first-child, table.matrix th:first-child { text-align: left; }
 table.stats td.bad, table.stats td.good { background: none; }
+.row-gap { display: inline-flex; align-items: center; gap: 8px; }
+li.neg { color: #fecaca; }
+h3.row-between { display: flex; justify-content: space-between; align-items: center; gap: 8px; }

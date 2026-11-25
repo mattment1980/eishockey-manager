@@ -1,5 +1,5 @@
 import { WorldSchema, SCHEMA_VERSION, type World } from '@ehm/schema';
-import { defaultRules } from '@ehm/core';
+import { defaultRules, seedChemistry, Rng } from '@ehm/core';
 
 /** Ältere Spielstände auf das aktuelle Format heben. */
 export function migrateWorld(raw: unknown): unknown {
@@ -33,8 +33,19 @@ export function migrateWorld(raw: unknown): unknown {
       });
     }
   }
+  if (w.schemaVersion === 5) {
+    // Kapitän über Standardwert; Chemie wird nach dem Parsen gesät
+    w.schemaVersion = 6;
+  }
   void SCHEMA_VERSION;
   return w;
+}
+
+/** Alte Spielstände (vor v6): Reihen bekommen eine Anfangschemie */
+export function ensureChemistry(world: World): World {
+  if (Object.keys(world.chemistry).length > 0) return world;
+  const rng = new Rng(world.seed + 606);
+  return seedChemistry(world, () => rng.next());
 }
 
 /** Welt als JSON exportieren (Grundlage für Datenpakete und Spielstände). */
@@ -61,7 +72,7 @@ export function importWorldJson(json: string): ImportResult {
       errors: parsed.error.issues.slice(0, 50).map((i) => `${i.path.join('.') || '(Wurzel)'}: ${i.message}`),
     };
   }
-  const world = parsed.data;
+  const world = ensureChemistry(parsed.data);
   const errors = checkReferences(world);
   return errors.length ? { ok: false, errors } : { ok: true, world };
 }

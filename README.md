@@ -14,7 +14,7 @@ Fantasienamen, ereignisbasierte Match-Engine mit Text-Ticker und Live-Statistike
 | 5a Kalender, Wirtschaft, Scouting | Spieltermine, Wechselfrist, Monatsbuch, Zuschauer, Sponsoren, Vorstand, Liquiditätsprognose, Scouting mit Kenntnisstufen | ✅ |
 | 5b Markt & Verträge | Wettbieten um Vertragsspieler, Vorverträge, Perks, Prämien, Klauseln, Versprechen, Kaderplaner, KI-Markt, Saisonwechsel der Verträge | ✅ |
 | 6a Taktik je Situation | Special-Teams-Formationen, Torhüter raus, Matchups mit letztem Wechsel, Coaching-Regeln mit Regelplätzen, Coaching-Report | ✅ |
-| 6b Chemie & Moral | Traits im Spiel, Moral, Teamklima, Reihenchemie | offen |
+| 6b Chemie & Moral | Traits im Spiel, Moral, Teamklima, Reihenchemie, Kapitän, Kabine | ✅ |
 | 7 Saisonwechsel & Daten | Entwicklung, Nachwuchs, Import/Export, Editor | offen |
 
 ## Schnellstart

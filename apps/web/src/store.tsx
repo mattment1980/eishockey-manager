@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import type { World, Club, Player, Matchplan, Terms } from '@ehm/schema';
 import { WorldSchema } from '@ehm/schema';
 import { beginSeason, initScouting, submitOffer, withdrawOffer, type OfferResponse } from '@ehm/core';
-import { generateWorld, migrateWorld, seasonTransition } from '@ehm/data';
+import { generateWorld, migrateWorld, seasonTransition, ensureChemistry } from '@ehm/data';
 
 const KEY = 'ehm.save.v1';
 
@@ -48,7 +48,7 @@ function load(): SaveGame | null {
     const data = JSON.parse(raw);
     const parsed = WorldSchema.safeParse(migrateWorld(data.world));
     if (!parsed.success) return null;
-    return { world: withScouting(withCompetition(parsed.data), data.clubId ?? null), clubId: data.clubId ?? null };
+    return { world: withScouting(withCompetition(ensureChemistry(parsed.data)), data.clubId ?? null), clubId: data.clubId ?? null };
   } catch {
     return null;
   }

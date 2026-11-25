@@ -1,42 +1,46 @@
 # Kalibrierung Match-Engine
 
-Stand: 25.11.2026 (Meilenstein 6a: Special Teams, Torhüter raus, Matchups, Coaching-Regeln) – erzeugt mit `pnpm sim calibrate 10` (Welt-Seed 2026). Richtwerte sind Orientierungsgrößen für europäisches Profi-Eishockey, keine offiziellen Ligastatistiken.
+Stand: 25.11.2026 (Meilenstein 6b: Chemie & Moral – Traits im Spiel, Reihenchemie, Teamklima, Trainer-Disziplin) – erzeugt mit `pnpm sim calibrate 10` (Welt-Seed 2026). Richtwerte sind Orientierungsgrößen für europäisches Profi-Eishockey, keine offiziellen Ligastatistiken.
 
 ```
-
-Kalibrierung: 3640 Spiele (10 Saisons à 52 Spieltage) in 34.0 s (9,34 ms/Spiel)
+Kalibrierung: 3640 Spiele (10 Saisons à 52 Spieltage) in 41.8 s (11,48 ms/Spiel)
 
 Kennzahl (je Team und Spiel)             Engine   Richtwert
-Tore                                       3,08   2,8 – 3,3
+Tore                                       3,09   2,8 – 3,3
 Schüsse aufs Tor                           31,0   27 – 32
-Schussversuche (Corsi)                     59,4   50 – 60
+Schussversuche (Corsi)                     59,5   50 – 60
 davon geblockt                             15,1   12 – 16
 davon vorbei                               13,4   10 – 14
-Fangquote                                90,1 %   90,5 – 91,5 %
-xG                                         3,08   ≈ Tore
-Überzahlspiele                             3,61   3,0 – 4,0
-Überzahlquote                            16,7 %   17 – 22 %
-Strafminuten                                7,2   6 – 9
+Fangquote                                90,0 %   90,5 – 91,5 %
+xG                                         3,09   ≈ Tore
+Tore ins leere Tor (je Spiel)              0,15   0,3 – 0,5
+Überzahlspiele                             3,65   3,0 – 4,0
+Überzahlquote                            16,9 %   17 – 22 %
+Strafminuten                                7,3   6 – 9
 Checks                                     17,9   15 – 25
-Breakout sauber                          56,7 %   (beobachten)
-kontrollierte Eintritte erfolgreich      60,7 %   (beobachten)
+Breakout sauber                          56,8 %   (beobachten)
+kontrollierte Eintritte erfolgreich      60,9 %   (beobachten)
 Dump-ins zurückerobert                   37,3 %   25 – 40 %
 
-Spiele mit Verlängerung                  19,8 %   20 – 25 %
-davon Penaltyschießen                    50,1 %   40 – 55 %
-Heimsiege                                55,2 %   52 – 56 %
-Ein-Tor-Spiele (reguläre Zeit)           24,1 %   25 – 32 %
-Spiele mit Corsi > 2:1                    9,6 %   < 5 %
+Spiele mit Verlängerung                  20,0 %   20 – 25 %
+davon Penaltyschießen                    47,9 %   40 – 55 %
+Heimsiege                                55,6 %   52 – 56 %
+Ein-Tor-Spiele (reguläre Zeit)           23,4 %   25 – 32 %
+Spiele mit Corsi > 2:1                    9,7 %   < 5 %
 
 Siegquote des Favoriten (Stärkeunterschied in Anzeigepunkten)
-ausgeglichen (< 0,3)                     49,8 %   (1320 Spiele)
-leichter Favorit (0,3–0,8)               58,1 %   (1720 Spiele)
-Favorit (0,8–1,5)                        69,1 %   (560 Spiele)
-klarer Favorit (> 1,5)                   75,0 %   (40 Spiele)
+ausgeglichen (< 0,3)                     49,0 %   (1320 Spiele)
+leichter Favorit (0,3–0,8)               56,6 %   (1720 Spiele)
+Favorit (0,8–1,5)                        66,4 %   (560 Spiele)
+klarer Favorit (> 1,5)                   77,5 %   (40 Spiele)
 Ziel klarer Favorit                               ca. 65 – 70 %
 ```
 
 ## Offene Punkte
+
+Neue Parameter in 6b: `CLIMATE_FORM` 0,002 (Teamklima → Tagesform), `CHEM_EFFECT` 0,03 (Reihenchemie ±3 %), `CHARACTER_CAP` 0,08 (Deckel für Form + Moral + Traits + Chemie). Die Ligakennzahlen bleiben gegenüber 6a praktisch unverändert; Charaktereffekte verschieben Einzelspiele, nicht den Liga-Schnitt.
+
+- Tore ins leere Tor (≈ 0,15 je Spiel) unter Richtwert → KI zieht den Torhüter zu selten/zu spät
 
 - Überzahlquote (≈ 17 %) am unteren Rand
 - Fangquote (≈ 90 %) leicht unter Richtwert; enthält Tore ins leere Tor

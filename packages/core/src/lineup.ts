@@ -9,7 +9,7 @@ export interface LineupOptions {
   importSlotsGame: number;
   tactics?: Tactics;
   /** bestehende Einstellungen (Special Teams, Matchups, Regeln) übernehmen */
-  keep?: Pick<Matchplan, 'specialTeams' | 'matchups' | 'rules'>;
+  keep?: Pick<Matchplan, 'specialTeams' | 'matchups' | 'rules'> & { captain?: string | null };
 }
 
 export const isImport = (p: Player, countryCode: string) => !p.nationalities.includes(countryCode);
@@ -92,6 +92,7 @@ export function autoMatchplan(players: Player[], opts: LineupOptions): Matchplan
     specialTeams: opts.keep?.specialTeams ?? { ...DEFAULT_SPECIAL_TEAMS },
     matchups: opts.keep?.matchups ?? [],
     rules: opts.keep?.rules ?? defaultRules(),
+    captain: opts.keep?.captain ?? null,
   };
 }
 

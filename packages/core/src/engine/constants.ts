@@ -88,4 +88,12 @@ export const C = {
   // --- Penaltyschießen ---
   SHOOTOUT_BASE: 0.33,
   SHOOTOUT_ROUNDS: 5,
+  // Chemie & Charakter (M6b)
+  /** Verschiebung der Tagesform je Punkt Teamklima über/unter 60 */
+  CLIMATE_FORM: 0.002,
+  /** Maximaler Effekt der Reihenchemie (±) */
+  CHEM_EFFECT: 0.03,
+  /** Deckel für Form + Moral + Traits + Chemie (±) */
+  CHARACTER_CAP: 0.08,
 } as const;
+

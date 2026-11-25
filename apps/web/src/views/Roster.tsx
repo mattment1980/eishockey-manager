@@ -6,6 +6,7 @@ import { PlayerSheet } from '../components/PlayerSheet.tsx';
 import { Scouting } from './Scouting.tsx';
 import { Market } from './Market.tsx';
 import { Planner } from './Planner.tsx';
+import { Locker } from './Locker.tsx';
 import { TRAIT_LABEL, SKATER_LABEL, GOALIE_LABEL, euro, mmss } from '../labels.ts';
 
 const GROUPS: { title: string; pos: Player['position'][] }[] = [
@@ -17,16 +18,18 @@ const GROUPS: { title: string; pos: Player['position'][] }[] = [
 type Sort = 'overall' | 'age' | 'salary' | 'off' | 'def' | 'points';
 
 export function Roster() {
-  const [mode, setMode] = useState<'roster' | 'planner' | 'market' | 'scouting'>('roster');
+  const [mode, setMode] = useState<'roster' | 'locker' | 'planner' | 'market' | 'scouting'>('roster');
   return (
     <div className="stack">
       <div className="tabs">
         <button className={mode === 'roster' ? 'on' : ''} onClick={() => setMode('roster')}>Kader</button>
+        <button className={mode === 'locker' ? 'on' : ''} onClick={() => setMode('locker')}>Kabine</button>
         <button className={mode === 'planner' ? 'on' : ''} onClick={() => setMode('planner')}>Planer</button>
         <button className={mode === 'market' ? 'on' : ''} onClick={() => setMode('market')}>Markt</button>
         <button className={mode === 'scouting' ? 'on' : ''} onClick={() => setMode('scouting')}>Scouting</button>
       </div>
       {mode === 'roster' && <RosterList />}
+      {mode === 'locker' && <Locker />}
       {mode === 'planner' && <Planner />}
       {mode === 'market' && <Market />}
       {mode === 'scouting' && <Scouting />}

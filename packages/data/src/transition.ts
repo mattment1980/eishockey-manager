@@ -1,7 +1,7 @@
 import type { World, Player, News, Position } from '@ehm/schema';
 import { makeContract, EMPTY_MARKET } from '@ehm/schema';
 import {
-  Rng, overall, toDisplay, ageOn, beginSeason, refreshLineup, standardTerms, contractCost, TARGET,
+  Rng, overall, toDisplay, ageOn, beginSeason, seedChemistry, refreshLineup, standardTerms, contractCost, TARGET,
   regionOf,
 } from '@ehm/core';
 import { WorldGenerator } from './generator.ts';
@@ -140,6 +140,10 @@ export function seasonTransition(world: World): World {
   }
   w = { ...w, scouting };
 
+  // Sommerpause: Moral pendelt sich ein, neue Reihen bekommen Vorbereitungs-Chemie
+  w = { ...w, players: w.players.map((p) => ({ ...p, condition: { ...p.condition, morale: Math.round((p.condition.morale + 60) / 2) } })) };
+  const seedRng = new Rng(w.seed + next * 7);
+  w = seedChemistry(w, () => seedRng.next());
   return beginSeason(w, w.seed + next);
 }
 
