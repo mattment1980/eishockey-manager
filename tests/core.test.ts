@@ -223,3 +223,51 @@ describe('Markt und Verträge', () => {
     expect(w.players.every((p) => !p.contract || p.contract.untilSeason >= 2027)).toBe(true);
   });
 });
+
+import { simulateMatch as sim2 } from '@ehm/core';
+import type { Matchplan } from '@ehm/schema';
+
+describe('Coaching, Matchups, Special Teams', () => {
+  const w = generateWorld(41);
+  const team = (i: number, patch: Partial<Matchplan> = {}) => {
+    const c = w.clubs[i];
+    return { clubId: c.id, name: c.name, shortName: c.shortName, plan: { ...c.matchplan!, ...patch }, players: w.players.filter((p) => p.contract?.clubId === c.id) };
+  };
+  const fmt = w.leagues[0].format;
+  it('Torhüter raus führt zu Toren ins leere Tor', () => {
+    let en = 0, pulls = 0;
+    for (let s = 0; s < 120; s++) {
+      const r = sim2({ home: team(0), away: team(1), seed: s, phase: 'regular', format: fmt });
+      en += r.emptyNetGoals[0] + r.emptyNetGoals[1];
+      if (r.ticker.some((t) => t.text.includes('Torhüter raus'))) pulls++;
+    }
+    expect(pulls).toBeGreaterThan(10);
+    expect(en).toBeGreaterThan(5);
+  });
+  it('Matchup-Anweisung erhöht die gemeinsame Eiszeit der Reihen', () => {
+    const toi = (patch: Partial<Matchplan>) => {
+      let t00 = 0, all = 0;
+      for (let s = 0; s < 30; s++) {
+        const r = sim2({ home: team(0, patch), away: team(1), seed: s, phase: 'regular', format: fmt });
+        t00 += r.lineMatrix.toi[3][0];
+        all += r.lineMatrix.toi.flat().reduce((a, b) => a + b, 0);
+      }
+      return t00 / all;
+    };
+    const without = toi({ matchups: [] });
+    const withM = toi({ matchups: [{ unit: 'line', mine: 3, vs: 0 }] });
+    expect(withM).toBeGreaterThan(without * 1.3);
+  });
+  it('Regel-Report zählt Aktivierungen', () => {
+    const rule = { id: 'r1', name: 'Immer aggressiv', enabled: true, conditions: [{ type: 'time' as const, fromMinute: 0 }], actions: [{ type: 'tactic' as const, key: 'tempo' as const, value: 'high' }] };
+    const r = sim2({ home: team(0, { rules: [rule] }), away: team(1, { rules: [] }), seed: 3, phase: 'regular', format: fmt });
+    const rep = r.rules.find((x) => x.ruleId === 'r1')!;
+    expect(rep.activations).toBeGreaterThanOrEqual(1);
+    expect(rep.activeSeconds).toBeGreaterThan(3000);
+  });
+  it('Regelplätze begrenzen die Anzahl aktiver Regeln', () => {
+    const many = Array.from({ length: 12 }, (_, i) => ({ id: `x${i}`, name: `R${i}`, enabled: true, conditions: [{ type: 'time' as const, fromMinute: 0 }], actions: [{ type: 'topLines' as const }] }));
+    const r = sim2({ home: { ...team(0, { rules: many }), coach: { slots: 4, fastReaction: true, matchupSkill: 0 } }, away: team(1, { rules: [] }), seed: 4, phase: 'regular', format: fmt });
+    expect(r.rules.filter((x) => x.team === 0)).toHaveLength(4);
+  });
+});

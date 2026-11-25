@@ -1,10 +1,11 @@
-import type { Player, Tactics, SkaterAttribute } from '@ehm/schema';
+import type { Player, Tactics, SkaterAttribute, CoachingRule, RuleCondition } from '@ehm/schema';
+import { describeAction, ONCE_ACTIONS } from '../coaching.ts';
 import { Rng, sigmoid, logit, clamp } from '../rng.ts';
 import { weightedSkater, weightedGoalie, W } from '../ratings.ts';
 import { C } from './constants.ts';
 import type {
   MatchInput, MatchResult, MatchEvent, PlayerGameStats, TeamStats, TeamLineStats, UnitStats,
-  TickerLine, Side, ShotLocation, ShootoutAttempt, EventType,
+  TickerLine, Side, ShotLocation, ShootoutAttempt, EventType, RuleReport, LineMatrix,
 } from './types.ts';
 
 type Quality = 'controlled' | 'dump' | 'rush' | 'turnover';
@@ -37,6 +38,17 @@ interface TeamState {
   otShift: number;
   allForwards: string[];
   allDefense: string[];
+  // Coaching
+  baseTactics: Tactics;
+  rules: CoachingRule[];
+  ruleState: Map<string, { active: boolean; pending: boolean; fired: boolean; report: RuleReport }>;
+  coach: { slots: number; fastReaction: boolean; matchupSkill: number };
+  goaliePulled: boolean;
+  benched: Set<string>;
+  shares: number[];
+  matchupsOn: boolean;
+  timeoutUsed: boolean;
+  goalsAgainstAt: number[];
 }
 
 interface OnIce { F: string[]; D: string[] }
@@ -79,6 +91,11 @@ class MatchSim {
   /** Tagesform je Team (Logit) und Torhüter-Tagesform */
   private dayForm: [number, number];
   private goalieForm: [number, number];
+  private matrix: LineMatrix = {
+    toi: [0, 1, 2, 3].map(() => [0, 0, 0, 0]), shotsHome: [0, 1, 2, 3].map(() => [0, 0, 0, 0]), shotsAway: [0, 1, 2, 3].map(() => [0, 0, 0, 0]),
+    goalsHome: [0, 1, 2, 3].map(() => [0, 0, 0, 0]), goalsAway: [0, 1, 2, 3].map(() => [0, 0, 0, 0]),
+  };
+  private emptyNet: [number, number] = [0, 0];
 
   constructor(private input: MatchInput) {
     this.rng = new Rng(input.seed);
@@ -106,10 +123,18 @@ class MatchSim {
         pim: 0, plusMinus: 0, toi: 0, ppToi: 0, shToi: 0, xg: 0, shotsAgainst: 0, goalsAgainst: 0, saves: 0,
       });
     }
+    const coach = ti.coach ?? { slots: 6, fastReaction: true, matchupSkill: 0 };
+    const rules = (plan.rules ?? []).filter((r) => r.enabled).slice(0, coach.slots);
+    const ruleState = new Map(rules.map((r) => [r.id, {
+      active: false, pending: false, fired: false,
+      report: { team: side, ruleId: r.id, name: r.name, activations: 0, activeSeconds: 0, goalsFor: 0, goalsAgainst: 0, shotsFor: 0, shotsAgainst: 0 },
+    }]));
     return {
-      side, name: ti.name, shortName: ti.shortName, byId, tactics: plan.tactics, plan, fresh,
+      side, name: ti.name, shortName: ti.shortName, byId, tactics: { ...plan.tactics }, plan, fresh,
       curF: 0, curD: 0, shiftF: 0, shiftD: 0, toiF: [0, 0, 0, 0], toiD: [0, 0, 0],
       goalieId: plan.goalies[0], otUnit: 0, otShift: 0, allForwards, allDefense,
+      baseTactics: { ...plan.tactics }, rules, ruleState, coach, goaliePulled: false, benched: new Set(),
+      shares: [...plan.forwardShares], matchupsOn: (plan.matchups ?? []).length > 0, timeoutUsed: false, goalsAgainstAt: [],
     };
   }
 
@@ -147,6 +172,9 @@ class MatchSim {
       ticker: this.ticker,
       events: this.events,
       shootout,
+      rules: this.teams.flatMap((tm) => [...tm.ruleState.values()].map((r) => r.report)),
+      lineMatrix: this.matrix,
+      emptyNetGoals: this.emptyNet,
     };
   }
 
@@ -160,6 +188,7 @@ class MatchSim {
     for (const tm of this.teams) {
       for (const id of tm.fresh.keys()) tm.fresh.set(id, 100);
       tm.shiftF = 0; tm.shiftD = 0; tm.curF = 0; tm.curD = 0; tm.otUnit = 0; tm.otShift = 0;
+      tm.goaliePulled = false;
       this.ts[tm.side].shotsByPeriod.push(0);
     }
     const label = this.periodLabel();
@@ -167,7 +196,9 @@ class MatchSim {
     this.emit('periodStart', 0, {});
     let next: Next = { k: 'faceoff', defTeam: null };
     while (this.elapsed < this.periodLength) {
-      this.lineChanges(next.k === 'faceoff');
+      const stoppage = next.k === 'faceoff';
+      this.coaching(stoppage, next);
+      this.lineChanges(stoppage);
       next = this.step(next);
       if (next.k === 'end') break;
       if (suddenDeath && this.goalThisPeriod) break;
@@ -218,8 +249,10 @@ class MatchSim {
         this.ls[tm.side].lines[tm.curF].toi += dt;
         this.ls[tm.side].pairs[tm.curD].toi += dt;
       }
-      this.ps.get(tm.goalieId)!.toi += dt;
+      if (!tm.goaliePulled) this.ps.get(tm.goalieId)!.toi += dt;
+      for (const r of tm.ruleState.values()) if (r.active) r.report.activeSeconds += dt;
     }
+    if (es) this.matrix.toi[this.teams[0].curF][this.teams[1].curF] += dt;
     // Strafen
     for (const pen of this.penalties) pen.remaining -= dt;
     const expired = this.penalties.filter((p) => p.remaining <= 0);
@@ -240,12 +273,19 @@ class MatchSim {
 
   private skaters(side: Side): number {
     const own = this.penCount(side), opp = this.penCount((1 - side) as Side);
-    if (this.ot3v3) return Math.min(5, 3 + Math.max(0, opp - own));
-    return Math.max(3, 5 - own);
+    const extra = this.teams[side].goaliePulled ? 1 : 0;
+    if (this.ot3v3) return Math.min(6, 3 + Math.max(0, opp - own) + extra);
+    return Math.max(3, 5 - own) + extra;
+  }
+
+  /** Spielstärke ohne gezogenen Torhüter (für Situationen wie Über-/Unterzahl) */
+  private penaltySituation(side: Side): 'EV' | 'PP' | 'PK' {
+    const own = this.penCount(side), opp = this.penCount((1 - side) as Side);
+    return own === opp ? 'EV' : own < opp ? 'PP' : 'PK';
   }
 
   private isEvenStrength5(): boolean {
-    return !this.ot3v3 && this.skaters(0) === 5 && this.skaters(1) === 5;
+    return !this.ot3v3 && this.skaters(0) === 5 && this.skaters(1) === 5 && !this.teams[0].goaliePulled && !this.teams[1].goaliePulled;
   }
 
   private strengthLabel(side: Side): string {
@@ -272,7 +312,7 @@ class MatchSim {
     const plan = tm.plan;
     const n = this.skaters(side);
     const opp = this.skaters((1 - side) as Side);
-    const boxed = this.boxed();
+    const boxed = new Set([...this.boxed(), ...tm.benched]);
     const taken = new Set<string>();
     let fPref: string[], dPref: string[], nF: number, nD: number;
 
@@ -306,7 +346,8 @@ class MatchSim {
   }
 
   private lineChanges(stoppage: boolean) {
-    for (const tm of this.teams) {
+    // Gast wechselt zuerst, Heimteam hat den letzten Wechsel
+    for (const tm of [this.teams[1], this.teams[0]]) {
       if (this.ot3v3) {
         if (tm.otShift >= 40 && (stoppage || this.rng.chance(C.ON_THE_FLY_CHANCE))) {
           tm.otUnit++; tm.otShift = 0;
@@ -316,12 +357,156 @@ class MatchSim {
       const tempoFactor = tm.tactics.tempo === 'high' ? 0.9 : tm.tactics.tempo === 'slow' ? 1.1 : 1;
       const canChange = stoppage || this.rng.chance(C.ON_THE_FLY_CHANCE);
       if (tm.shiftF >= C.SHIFT_F * tempoFactor && canChange) {
-        tm.curF = pickNext(tm.toiF, tm.plan.forwardShares, tm.curF);
+        tm.curF = pickNext(tm.toiF, tm.shares, tm.curF);
         tm.shiftF = 0;
       }
       if (tm.shiftD >= C.SHIFT_D * tempoFactor && canChange) {
         tm.curD = pickNext(tm.toiD, tm.plan.defenseShares, tm.curD);
         tm.shiftD = 0;
+      }
+      this.applyMatchups(tm, stoppage);
+    }
+  }
+
+  /** Matchup-Anweisungen umsetzen (nur 5-gegen-5): Heimteam bei Unterbrechungen im Vorteil. */
+  private applyMatchups(tm: TeamState, stoppage: boolean) {
+    if (!tm.matchupsOn || this.ot3v3 || !this.isEvenStrength5()) return;
+    const opp = this.teams[1 - tm.side];
+    for (const m of tm.plan.matchups ?? []) {
+      if (opp.curF !== m.vs) continue;
+      const already = m.unit === 'line' ? tm.curF === m.mine : tm.curD === m.mine;
+      if (already) continue;
+      const ids = m.unit === 'line' ? tm.plan.forwardLines[m.mine] : tm.plan.defensePairs[m.mine];
+      if (!ids) continue;
+      const rested = ids.reduce((s, id) => s + (tm.fresh.get(id) ?? 100), 0) / ids.length;
+      if (rested < 60) continue;
+      const base = stoppage ? (tm.side === 0 ? C.MATCHUP_HOME : C.MATCHUP_AWAY) : C.MATCHUP_ON_THE_FLY;
+      if (!this.rng.chance(clamp(base + tm.coach.matchupSkill, 0.05, 0.97))) continue;
+      if (m.unit === 'line') { tm.curF = m.mine; tm.shiftF = 0; } else { tm.curD = m.mine; tm.shiftD = 0; }
+    }
+  }
+
+  // ------------------------------------------------------------------ Coaching-Regeln
+
+  private gameMinute(): number {
+    return (Math.min(this.period, 4) - 1) * 20 + this.elapsed / 60;
+  }
+
+  private conditionMet(tm: TeamState, c: RuleCondition): boolean {
+    const s = tm.side, o = (1 - s) as Side;
+    const diff = this.score[s] - this.score[o];
+    switch (c.type) {
+      case 'score': return c.state === 'tied' ? diff === 0 : c.state === 'leading' ? diff >= c.min && diff <= c.max : -diff >= c.min && -diff <= c.max;
+      case 'time': return this.gameMinute() >= c.fromMinute;
+      case 'lastMinutes': return (this.periodLength - this.elapsed) / 60 <= c.minutes;
+      case 'period': return c.period === 'OT' ? this.period > 3 : String(this.period) === c.period;
+      case 'situation': return this.penaltySituation(s) === c.situation;
+      case 'shots': {
+        const d = this.ts[s].shotsOnGoal - this.ts[o].shotsOnGoal;
+        return c.state === 'ahead' ? d >= c.diff : -d >= c.diff;
+      }
+      case 'goalieSave': {
+        const g = this.ps.get(tm.goalieId)!;
+        return g.shotsAgainst >= c.minShots && (g.saves / g.shotsAgainst) * 100 < c.below;
+      }
+      case 'goalsAgainst': return tm.goalsAgainstAt.filter((t) => this.t - t <= c.withinMinutes * 60).length >= c.goals;
+      case 'playerPenalties': return [...tm.allForwards, ...tm.allDefense].some((id) => !tm.benched.has(id) && this.ps.get(id)!.pim / 2 >= c.count);
+      case 'playoffs': return this.input.phase === 'playoff';
+    }
+  }
+
+  /** Regeln prüfen und Wirkungen setzen (Wirkung bei Unterbrechung; Torhüter raus auch bei Puckbesitz). */
+  private coaching(stoppage: boolean, next: Next) {
+    for (const tm of this.teams) {
+      if (!tm.rules.length) continue;
+      const possession = (next.k === 'offense' || next.k === 'neutral') && next.team === tm.side;
+      let changed = false;
+      for (const rule of tm.rules) {
+        const st = tm.ruleState.get(rule.id)!;
+        const met = rule.conditions.every((c) => this.conditionMet(tm, c));
+        const pullOnly = rule.actions.every((a) => a.type === 'pullGoalie');
+        const canApply = stoppage || (pullOnly && possession);
+        if (met && !st.active) {
+          if (!canApply) continue;
+          if (!tm.coach.fastReaction && !st.pending && !pullOnly) { st.pending = true; continue; }
+          st.pending = false;
+          const once = rule.actions.every((a) => ONCE_ACTIONS.includes(a.type));
+          if (once && st.fired) continue;
+          st.active = true;
+          st.fired = true;
+          st.report.activations++;
+          changed = true;
+          this.tick('coach', `${tm.shortName}: Regel „${rule.name}“ greift – ${rule.actions.map(describeAction).join(', ')}`, tm.side);
+          this.fireOnce(tm, rule);
+        } else if (!met && st.active && (stoppage || pullOnly)) {
+          st.active = false;
+          st.pending = false;
+          changed = true;
+        } else if (!met) {
+          st.pending = false;
+        }
+      }
+      if (changed) this.applyRuleEffects(tm);
+    }
+  }
+
+  private fireOnce(tm: TeamState, rule: CoachingRule) {
+    for (const a of rule.actions) {
+      if (a.type === 'switchGoalie' && tm.goalieId === tm.plan.goalies[0]) {
+        tm.goalieId = tm.plan.goalies[1];
+        this.tick('coach', `Torhüterwechsel bei ${tm.shortName}: ${this.name(tm.side, tm.goalieId)} kommt ins Tor.`, tm.side);
+      }
+      if (a.type === 'timeout' && !tm.timeoutUsed) {
+        tm.timeoutUsed = true;
+        for (const [id, f] of tm.fresh) tm.fresh.set(id, Math.min(100, f + 25));
+        this.dayForm[tm.side] += 0.04;
+        this.tick('coach', `Auszeit ${tm.shortName}.`, tm.side);
+      }
+      if (a.type === 'benchPenalized') {
+        const cond = rule.conditions.find((c) => c.type === 'playerPenalties');
+        const n = cond && cond.type === 'playerPenalties' ? cond.count : 2;
+        for (const id of [...tm.allForwards, ...tm.allDefense]) {
+          if (!tm.benched.has(id) && this.ps.get(id)!.pim / 2 >= n) {
+            tm.benched.add(id);
+            this.tick('coach', `${this.name(tm.side, id)} (${tm.shortName}) muss auf der Bank Platz nehmen.`, tm.side);
+          }
+        }
+      }
+    }
+  }
+
+  /** Wirkungen aller aktiven Regeln zusammenführen (höhere Priorität = weiter oben = gewinnt). */
+  private applyRuleEffects(tm: TeamState) {
+    const tactics: Tactics = { ...tm.baseTactics };
+    let shares = [...tm.plan.forwardShares];
+    let pull = false;
+    let matchups = (tm.plan.matchups ?? []).length > 0;
+    const active = tm.rules.filter((r) => tm.ruleState.get(r.id)!.active);
+    for (const rule of [...active].reverse()) {
+      for (const a of rule.actions) {
+        if (a.type === 'tactic') (tactics as Record<string, string>)[a.key] = a.value;
+        if (a.type === 'shortBench') shares = [0.38, 0.34, 0.28, 0];
+        if (a.type === 'topLines') shares = [0.4, 0.33, 0.2, 0.07];
+        if (a.type === 'pullGoalie') pull = true;
+        if (a.type === 'matchups') matchups = a.on;
+      }
+    }
+    tm.tactics = tactics;
+    tm.shares = shares;
+    tm.matchupsOn = matchups;
+    if (pull !== tm.goaliePulled) {
+      tm.goaliePulled = pull;
+      this.tick('coach', pull ? `Torhüter raus! ${tm.shortName} spielt mit sechs Feldspielern.` : `${tm.shortName}: Torhüter wieder im Tor.`, tm.side);
+    }
+  }
+
+  /** Statistik für aktive Regeln */
+  private ruleShot(a: Side, goal: boolean) {
+    for (const tm of this.teams) {
+      for (const r of tm.ruleState.values()) {
+        if (!r.active) continue;
+        if (tm.side === a) { r.report.shotsFor++; if (goal) r.report.goalsFor++; }
+        else { r.report.shotsAgainst++; if (goal) r.report.goalsAgainst++; }
       }
     }
   }
@@ -441,6 +626,7 @@ class MatchSim {
       }
       this.ts[a].breakoutsClean++;
       this.emit('breakout', a, {}, 'clean');
+      if (this.teams[b].goaliePulled && this.rng.chance(C.EMPTY_NET_ATTEMPT)) return this.emptyNetShot(a);
       const rushChance = (ta.breakout === 'stretch' ? 0.35 : 0.08) + (aggressive ? 0.12 : 0);
       if (this.rng.chance(rushChance)) {
         this.emit('entry', a, {}, 'rush');
@@ -551,8 +737,19 @@ class MatchSim {
     const adv = this.adv(a);
     const open = this.ot3v3 ? C.OT_OPEN_ICE : 1;
     const scoreFx = this.scoreEffect(a);
-    const pShot = C.SHOT_PER_ACTION * tempo * ozMult * (q === 'dump' && n === 0 ? 0.6 : 1) * (1 + C.ADV_SHOT_RATE * adv) * open * scoreFx;
-    const pTurn = sigmoid(C.K * ((dz - cycle) / 20) + logit(C.TURNOVER_BASE) + dzMod + (ta.offensiveZone === 'slot' ? 0.15 : 0) - (a === 0 ? C.HOME : -C.HOME) - C.DAY_FORM_POSSESSION * (this.dayForm[a] - this.dayForm[b]) - C.ADV_TURNOVER * adv);
+    const pShotBase = C.SHOT_PER_ACTION * tempo * ozMult * (q === 'dump' && n === 0 ? 0.6 : 1) * (1 + C.ADV_SHOT_RATE * adv) * open * scoreFx;
+    let stShot = 1, stTurn = 0;
+    if (adv > 0) {
+      const pp = this.teams[a].plan.specialTeams?.ppFormation ?? 'umbrella';
+      const pk = this.teams[b].plan.specialTeams?.pkFormation ?? 'box';
+      if (pp === 'umbrella') stShot *= 1.12;
+      if (pp === 'overload') stTurn -= 0.15;
+      if (pp === 'spread') stTurn += 0.1;
+      if (pk === 'aggressive') stTurn += 0.3;
+      if (pk === 'box') stShot *= 0.95;
+    }
+    const pTurn = sigmoid(C.K * ((dz - cycle) / 20) + logit(C.TURNOVER_BASE) + dzMod + stTurn + (ta.offensiveZone === 'slot' ? 0.15 : 0) - (a === 0 ? C.HOME : -C.HOME) - C.DAY_FORM_POSSESSION * (this.dayForm[a] - this.dayForm[b]) - C.ADV_TURNOVER * adv);
+    const pShot = pShotBase * stShot;
     const r = this.rng.next();
     if (r < C.STOPPAGE_PER_ACTION) return { k: 'faceoff', defTeam: b };
     if (r < C.STOPPAGE_PER_ACTION + pShot) return this.shot(a, q === 'dump' ? 'controlled' : q);
@@ -563,6 +760,10 @@ class MatchSim {
       this.ps.get(taker)!.takeaways++; this.ts[b].takeaways++;
       this.maybeHit(b, ob);
       this.emit('turnover', a, { giver, taker });
+      // aggressive Unterzahl: Chance auf Konter in Unterzahl
+      if (adv > 0 && this.teams[b].plan.specialTeams?.pkFormation === 'aggressive' && this.rng.chance(0.2)) {
+        return { k: 'offense', team: b, q: 'rush', n: 0 };
+      }
       return { k: 'breakout', team: b };
     }
     return { k: 'offense', team: a, q: 'controlled', n: n + 1 };
@@ -597,9 +798,18 @@ class MatchSim {
         cycle: [0.32, 0.45, 0.23], point: [0.25, 0.4, 0.35], slot: [0.42, 0.4, 0.18], netFront: [0.42, 0.38, 0.2],
       } as const)[ta.offensiveZone];
       let slot: number = dist[0];
+      let point: number = dist[2];
       if (q === 'rush' || q === 'turnover') slot += 0.15;
       if (tb.defensiveZone === 'man') slot += 0.04;
-      loc = this.rng.weighted(['slot', 'circle', 'point'] as ShotLocation[], [slot, dist[1], dist[2]]);
+      if (this.adv(a) > 0) {
+        const pp = tmA.plan.specialTeams?.ppFormation ?? 'umbrella';
+        const pk = tmB.plan.specialTeams?.pkFormation ?? 'box';
+        if (pp === 'umbrella') point += 0.08;
+        if (pp === 'overload') slot += 0.06;
+        if (pk === 'box') { slot *= 0.8; point += 0.05; }
+        if (pk === 'diamond') { point *= 0.7; slot *= 1.12; }
+      }
+      loc = this.rng.weighted(['slot', 'circle', 'point'] as ShotLocation[], [slot, dist[1], point]);
     }
 
     let qs = loc === 'slot' ? C.Q_SLOT : loc === 'circle' ? C.Q_CIRCLE : loc === 'point' ? C.Q_POINT : C.Q_REBOUND;
@@ -609,6 +819,11 @@ class MatchSim {
     if (this.ot3v3) qs *= C.OT_OPEN_ICE;
     if (loc === 'point' && ta.offensiveZone === 'netFront') qs += 0.012;
     if (loc === 'point' && tb.defensiveZone === 'swarm') qs += 0.01;
+    if (this.adv(a) > 0) {
+      if ((tmA.plan.specialTeams?.ppFormation ?? 'umbrella') === 'spread') qs *= 1.1;
+      if ((tmB.plan.specialTeams?.pkFormation ?? 'box') === 'box') qs *= 0.93;
+      if ((tmB.plan.specialTeams?.pkFormation ?? 'box') === 'aggressive') qs *= 1.12;
+    }
     // Passqualität
     const passers = cand.filter((id) => id !== shooter);
     const passer = passers.length ? passers.reduce((best, id) => (tmA.byId.get(id)!.skater.passing > tmA.byId.get(best)!.skater.passing ? id : best), passers[0]) : shooter;
@@ -647,6 +862,20 @@ class MatchSim {
       return this.rng.chance(0.45) ? { k: 'offense', team: a, q: 'controlled', n: 1 } : { k: 'breakout', team: b };
     }
 
+    // leeres Tor
+    if (tmB.goaliePulled) {
+      st.shotsOnGoal++;
+      this.ts[a].shotsOnGoal++;
+      this.ts[a].shotsByPeriod[this.period - 1]++;
+      this.unitShotOnGoal(a);
+      if (this.rng.chance(0.95)) {
+        this.emptyNet[a]++;
+        this.goal(a, shooter, cand, loc, xg, true);
+        return { k: 'faceoff', defTeam: null };
+      }
+      return { k: 'breakout', team: b };
+    }
+
     // Schuss aufs Tor
     const goalie = tmB.goalieId;
     const gp = tmB.byId.get(goalie)!;
@@ -660,6 +889,7 @@ class MatchSim {
     const gs = this.ps.get(goalie)!;
     gs.shotsAgainst++;
     this.unitShotOnGoal(a);
+    this.ruleShot(a, false);
     if (this.rng.chance(pGoal)) {
       gs.goalsAgainst++;
       this.goal(a, shooter, cand, loc, xg);
@@ -684,9 +914,38 @@ class MatchSim {
     return { k: 'breakout', team: b };
   }
 
-  private goal(a: Side, scorer: string, onIce: string[], loc: ShotLocation, xg: number) {
+  /** Distanzschuss aufs leere Tor nach Befreiung */
+  private emptyNetShot(a: Side): Next {
+    const b = (1 - a) as Side;
+    const oa = this.onIce(a);
+    const cand = this.all(oa);
+    const shooter = this.pickWeighted(a, cand, (p) => p.skater.shotAccuracy);
+    const st = this.ps.get(shooter)!;
+    st.shotAttempts++;
+    this.ts[a].shotAttempts++;
+    const xg = 0.45;
+    this.ts[a].xg += xg;
+    st.xg += xg;
+    if (this.rng.chance(0.5)) {
+      st.shotsOnGoal++;
+      this.ts[a].shotsOnGoal++;
+      this.ts[a].shotsByPeriod[this.period - 1]++;
+      this.emptyNet[a]++;
+      this.goal(a, shooter, cand, 'point', xg, true);
+      return { k: 'faceoff', defTeam: null };
+    }
+    st.shotsMissed++;
+    this.ts[a].shotsMissed++;
+    this.emit('shot', a, { shooter }, 'missed', xg, 'point');
+    return { k: 'faceoff', defTeam: a };
+  }
+
+  private goal(a: Side, scorer: string, onIce: string[], loc: ShotLocation, xg: number, emptyNet = false) {
     const b = (1 - a) as Side;
     const tmA = this.teams[a];
+    this.teams[b].goalsAgainstAt.push(this.t);
+    this.ruleShot(a, true);
+    if (this.isEvenStrength5()) this.matrix[a === 0 ? 'goalsHome' : 'goalsAway'][this.teams[0].curF][this.teams[1].curF]++;
     const nA = this.skaters(a), nB = this.skaters(b);
     this.score[a]++;
     this.periodScores[this.period - 1][a]++;
@@ -712,7 +971,8 @@ class MatchSim {
       for (const id of this.all(this.onIce(b))) this.ps.get(id)!.plusMinus--;
     }
     let kind = '';
-    if (nA > nB) {
+    const sit = this.penaltySituation(a);
+    if (sit === 'PP') {
       kind = 'PP';
       this.ts[a].powerPlayGoals++;
       // kleinste Reststrafe des Gegners endet
@@ -721,7 +981,7 @@ class MatchSim {
         this.penalties = this.penalties.filter((p) => p !== opp);
         this.emit('penaltyEnd', b, { player: opp.playerId });
       }
-    } else if (nA < nB) {
+    } else if (sit === 'PK') {
       kind = 'SH';
       this.ts[a].shortHandedGoals++;
     }
@@ -733,12 +993,13 @@ class MatchSim {
     }
     this.emit('goal', a, { scorer, assist1: assists[0] ?? '', assist2: assists[1] ?? '' }, kind || 'EV', xg, loc);
     const astText = assists.length ? ` (${assists.map((id) => this.name(a, id)).join(', ')})` : ' (ohne Vorlage)';
-    const kindText = kind === 'PP' ? ' – Überzahltor' : kind === 'SH' ? ' – Unterzahltor' : '';
+    const kindText = (emptyNet ? ' – ins leere Tor' : '') + (kind === 'PP' ? ' – Überzahltor' : kind === 'SH' ? ' – Unterzahltor' : '');
     this.tick('goal', `TOR für ${tmA.name}! ${this.name(a, scorer)}${astText} – ${this.score[0]}:${this.score[1]}${kindText}`, a);
   }
 
   private unitShotAttempt(a: Side, xg: number) {
     if (!this.isEvenStrength5()) return;
+    this.matrix[a === 0 ? 'shotsHome' : 'shotsAway'][this.teams[0].curF][this.teams[1].curF]++;
     const b = (1 - a) as Side;
     const ta = this.teams[a], tb = this.teams[b];
     const la = this.ls[a], lb = this.ls[b];

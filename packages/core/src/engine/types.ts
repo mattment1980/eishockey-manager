@@ -10,6 +10,8 @@ export interface TeamInput {
   shortName: string;
   plan: Matchplan;
   players: Player[];
+  /** Fähigkeiten des Trainerteams (Regelplätze, Reaktion, Matchups) */
+  coach?: { slots: number; fastReaction: boolean; matchupSkill: number };
 }
 
 export interface MatchInput {
@@ -123,9 +125,30 @@ export interface TickerLine {
   t: number;
   period: number;
   clock: string;
-  type: 'goal' | 'penalty' | 'save' | 'period' | 'info' | 'shootout' | 'chance';
+  type: 'goal' | 'penalty' | 'save' | 'period' | 'info' | 'shootout' | 'chance' | 'coach';
   team?: Side;
   text: string;
+}
+
+export interface RuleReport {
+  team: Side;
+  ruleId: string;
+  name: string;
+  activations: number;
+  activeSeconds: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  shotsFor: number;
+  shotsAgainst: number;
+}
+
+/** Reihe gegen Reihe bei 5-gegen-5: [Heimreihe][Gastreihe] */
+export interface LineMatrix {
+  toi: number[][];
+  shotsHome: number[][];
+  shotsAway: number[][];
+  goalsHome: number[][];
+  goalsAway: number[][];
 }
 
 export interface ShootoutAttempt {
@@ -145,4 +168,7 @@ export interface MatchResult {
   ticker: TickerLine[];
   events: MatchEvent[];
   shootout?: { attempts: ShootoutAttempt[]; score: [number, number] };
+  rules: RuleReport[];
+  lineMatrix: LineMatrix;
+  emptyNetGoals: [number, number];
 }

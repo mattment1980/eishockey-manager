@@ -9,7 +9,7 @@ import { mmss, pct } from '../labels.ts';
 
 type Speed = 'slow' | 'normal' | 'fast';
 const SPEED: Record<Speed, number> = { slow: 20, normal: 45, fast: 150 }; // Spielsekunden pro Sekunde
-type LiveTab = 'ticker' | 'team' | 'lines' | 'players' | 'map';
+type LiveTab = 'ticker' | 'team' | 'lines' | 'players' | 'map' | 'coach';
 
 function luminance(hex: string): number {
   const n = parseInt(hex.slice(1), 16);
@@ -99,7 +99,7 @@ export function LiveMatch({ result, sides, mySide, plan, format, playoff, subtit
       )}
 
       <div className="tabs">
-        {([['ticker', 'Ticker'], ['team', 'Team'], ['lines', 'Reihen'], ['players', 'Spieler'], ['map', 'Schüsse']] as [LiveTab, string][]).map(([id, l]) => (
+        {([['ticker', 'Ticker'], ['team', 'Team'], ['lines', 'Reihen'], ['players', 'Spieler'], ['map', 'Schüsse'], ['coach', 'Coaching']] as [LiveTab, string][]).map(([id, l]) => (
           <button key={id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>{l}</button>
         ))}
       </div>
@@ -154,6 +154,56 @@ export function LiveMatch({ result, sides, mySide, plan, format, playoff, subtit
               ))}
             </div>
           )}
+        </section>
+      )}
+
+      {tab === 'coach' && (
+        <section className="card">
+          <h3>Coaching-Regeln {me.shortName}</h3>
+          {!finished && (
+            <ul className="plain small">
+              {tickerNow.filter((t) => t.type === 'coach' && t.team === mySide).map((t, i) => <li key={i}><span className="muted">{t.period <= 3 ? `${t.period}.` : 'OT'} {t.clock}</span> {t.text}</li>)}
+              {tickerNow.filter((t) => t.type === 'coach' && t.team === mySide).length === 0 && <li className="muted">Noch keine Regel ausgelöst. Den vollständigen Bericht gibt es nach dem Spiel.</li>}
+            </ul>
+          )}
+          {finished && (
+            <table className="stats">
+              <thead><tr><th>Regel</th><th>×</th><th>Zeit</th><th>Tore</th><th>Schüsse</th></tr></thead>
+              <tbody>
+                {result.rules.filter((r) => r.team === mySide).map((r) => (
+                  <tr key={r.ruleId} className={r.activations ? '' : 'dim-row'}>
+                    <td>{r.name}</td><td>{r.activations}</td><td>{r.activeSeconds ? mmss(r.activeSeconds) : '–'}</td>
+                    <td>{r.activations ? `${r.goalsFor}:${r.goalsAgainst}` : '–'}</td><td>{r.activations ? `${r.shotsFor}:${r.shotsAgainst}` : '–'}</td>
+                  </tr>
+                ))}
+                {result.rules.filter((r) => r.team === mySide).length === 0 && <tr><td colSpan={5} className="muted">Keine Regeln aktiv.</td></tr>}
+              </tbody>
+            </table>
+          )}
+          {finished && (
+            <>
+              <h3 style={{ marginTop: 16 }}>Reihe gegen Reihe (5-gegen-5)</h3>
+              <p className="muted small">Gemeinsame Eiszeit deiner Sturmreihen gegen die gegnerischen Reihen, darunter Schussversuche für:gegen.</p>
+              <table className="stats matrix">
+                <thead><tr><th>{me.shortName} ↓ / Gegner →</th>{[0, 1, 2, 3].map((k) => <th key={k}>R{k + 1}</th>)}</tr></thead>
+                <tbody>
+                  {[0, 1, 2, 3].map((i) => (
+                    <tr key={i}>
+                      <td>Reihe {i + 1}</td>
+                      {[0, 1, 2, 3].map((k) => {
+                        const [h, a] = mySide === 0 ? [i, k] : [k, i];
+                        const toi = result.lineMatrix.toi[h][a];
+                        const sf = mySide === 0 ? result.lineMatrix.shotsHome[h][a] : result.lineMatrix.shotsAway[h][a];
+                        const sa = mySide === 0 ? result.lineMatrix.shotsAway[h][a] : result.lineMatrix.shotsHome[h][a];
+                        return <td key={k} className={sf + sa >= 4 ? (sf / (sf + sa) >= 0.55 ? 'good' : sf / (sf + sa) <= 0.45 ? 'bad' : '') : ''}>{mmss(toi)}<div className="muted small">{sf}:{sa}</div></td>;
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+          {finished && (result.emptyNetGoals[0] + result.emptyNetGoals[1] > 0) && <p className="muted small">Tore ins leere Tor: {sides[0].shortName} {result.emptyNetGoals[0]}, {sides[1].shortName} {result.emptyNetGoals[1]}</p>}
         </section>
       )}
 

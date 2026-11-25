@@ -9,6 +9,7 @@ import { addDays, onOrAfter } from './calendar.ts';
 import { beginSeasonFinances, bookFixture, closeMonthsBetween, evaluateSeason } from './economy.ts';
 import { updateScouting } from './scouting.ts';
 import { marketTick } from './market.ts';
+import { coachingCapacity, defaultRules } from './coaching.ts';
 
 /**
  * Saisonablauf nach Ligaformat: Hauptrunde → Pre-Playoffs → Playoffs (mit Neusetzen)
@@ -193,7 +194,9 @@ export function matchInputFor(world: World, fixture: Fixture): MatchInput {
   const fmt = leagueOf(world, comp).format;
   const team = (id: string): TeamInput => {
     const c = world.clubs.find((x) => x.id === id)!;
-    return { clubId: c.id, name: c.name, shortName: c.shortName, plan: planFor(world, c, fixture), players: world.players.filter((p) => p.contract?.clubId === c.id) };
+    let plan = planFor(world, c, fixture);
+    if (c.controller.type === 'ai' && !(plan.rules ?? []).length) plan = { ...plan, rules: defaultRules() };
+    return { clubId: c.id, name: c.name, shortName: c.shortName, plan, players: world.players.filter((p) => p.contract?.clubId === c.id), coach: coachingCapacity(world, c.id) };
   };
   return {
     home: team(fixture.home),

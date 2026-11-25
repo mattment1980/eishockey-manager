@@ -1,4 +1,5 @@
-import { DEFAULT_TACTICS, type Matchplan, type Player, type Position, type Tactics } from '@ehm/schema';
+import { DEFAULT_TACTICS, DEFAULT_SPECIAL_TEAMS, type Matchplan, type Player, type Position, type Tactics } from '@ehm/schema';
+import { defaultRules } from './coaching.ts';
 import { overall, offenseRating, defenseRating, weightedSkater, W } from './ratings.ts';
 
 export interface LineupOptions {
@@ -7,6 +8,8 @@ export interface LineupOptions {
   /** maximale Anzahl Ausländer im Spieltagskader */
   importSlotsGame: number;
   tactics?: Tactics;
+  /** bestehende Einstellungen (Special Teams, Matchups, Regeln) übernehmen */
+  keep?: Pick<Matchplan, 'specialTeams' | 'matchups' | 'rules'>;
 }
 
 export const isImport = (p: Player, countryCode: string) => !p.nationalities.includes(countryCode);
@@ -86,6 +89,9 @@ export function autoMatchplan(players: Player[], opts: LineupOptions): Matchplan
       { forwards: pkF.slice(2, 4).map((p) => p.id), defense: pkD.slice(2, 4).map((p) => p.id) },
     ],
     shootout: so.map((p) => p.id),
+    specialTeams: opts.keep?.specialTeams ?? { ...DEFAULT_SPECIAL_TEAMS },
+    matchups: opts.keep?.matchups ?? [],
+    rules: opts.keep?.rules ?? defaultRules(),
   };
 }
 

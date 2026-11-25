@@ -318,3 +318,24 @@ table.stats.roster-table td .tag:first-child { margin-left: 0; }
 .range-pair input { width: 70px; background: var(--panel-2); border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 7px; font: inherit; }
 .attr-filter { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; align-items: center; }
 .attr-filter .select { min-width: 0; }
+
+/* Coaching */
+.tk-coach { color: #c4b5fd; }
+.tk-coach .tk-text::before { content: '📋 '; }
+.rule.off { opacity: 0.55; }
+.rule.overflow { border-color: var(--warn); }
+.rule p { margin: 4px 0; }
+.rule-title { padding: 0; align-items: center; }
+.rule-tools { display: flex; gap: 4px; }
+.rule-tools .btn { padding: 4px 10px; }
+.template-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.template-list .btn { font-size: 0.85rem; padding: 7px 10px; }
+.param-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 0.85rem; margin: 6px 0; }
+.param-row .select { padding: 6px 8px; }
+.rule-part { border-top: 1px solid var(--line); padding-top: 6px; margin-top: 6px; }
+.name-input { width: 100%; background: var(--panel-2); border: 1px solid var(--line); color: var(--text); border-radius: 10px; padding: 9px 10px; font: inherit; font-weight: 700; font-size: 1.1rem; margin: 6px 0 4px; }
+.matchup .field { margin-top: 8px; }
+.dim-row td { color: var(--muted); }
+table.matrix td, table.matrix th { text-align: center; }
+table.matrix td:first-child, table.matrix th:first-child { text-align: left; }
+table.stats td.bad, table.stats td.good { background: none; }

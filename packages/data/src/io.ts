@@ -1,4 +1,5 @@
 import { WorldSchema, SCHEMA_VERSION, type World } from '@ehm/schema';
+import { defaultRules } from '@ehm/core';
 
 /** Ältere Spielstände auf das aktuelle Format heben. */
 export function migrateWorld(raw: unknown): unknown {
@@ -21,6 +22,16 @@ export function migrateWorld(raw: unknown): unknown {
   if (w.schemaVersion === 3) {
     // Vertragsfelder und Markt werden über Standardwerte des Schemas ergänzt
     w.schemaVersion = 4;
+  }
+  if (w.schemaVersion === 4) {
+    // Special Teams und Matchups über Standardwerte; Coaching-Regeln mit Standardvorlagen vorbelegen
+    w.schemaVersion = 5;
+    if (Array.isArray(w.clubs)) {
+      w.clubs = (w.clubs as Record<string, unknown>[]).map((c) => {
+        const mp = c.matchplan as Record<string, unknown> | null;
+        return mp && !mp.rules ? { ...c, matchplan: { ...mp, rules: defaultRules() } } : c;
+      });
+    }
   }
   void SCHEMA_VERSION;
   return w;

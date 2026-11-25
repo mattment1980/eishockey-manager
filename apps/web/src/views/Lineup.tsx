@@ -104,7 +104,7 @@ export function Lineup() {
     <div className="stack">
       <div className="row-between">
         <h2>Reihen</h2>
-        <button className="btn" onClick={() => setMatchplan(autoMatchplan(players, { countryCode: 'DE', importSlotsGame: rules.importSlotsGame, tactics: plan.tactics }))}>
+        <button className="btn" onClick={() => setMatchplan(autoMatchplan(players, { countryCode: 'DE', importSlotsGame: rules.importSlotsGame, tactics: plan.tactics, keep: { specialTeams: plan.specialTeams, matchups: plan.matchups, rules: plan.rules } }))}>
           Automatisch
         </button>
       </div>

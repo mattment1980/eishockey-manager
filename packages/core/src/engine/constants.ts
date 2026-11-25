@@ -20,7 +20,7 @@ export const C = {
   ADV_ENTRY: 0.45,
   ADV_TURNOVER: 0.5,
   ADV_SHOT_RATE: 0.45,
-  ADV_QUALITY: 0.45,
+  ADV_QUALITY: 0.55,
   /** Mehr Raum im 3-gegen-3 (Schussrate und -qualität) */
   OT_OPEN_ICE: 1.3,
 
@@ -47,7 +47,7 @@ export const C = {
   DUMP_RECOVER_BASE: -0.55,
 
   // --- Angriffszone ---
-  SHOT_PER_ACTION: 0.335,
+  SHOT_PER_ACTION: 0.32,
   TURNOVER_BASE: 0.22,
   STOPPAGE_PER_ACTION: 0.035,
 
@@ -75,6 +75,15 @@ export const C = {
   RECOVER: 0.34,
   /** Leistungsfaktor bei Frische 0 (bei 100 = 1,0) */
   FATIGUE_FLOOR: 0.8,
+
+  // --- Matchups (Erfolgsquote, ein Teil kommt aus der Trainerqualität) ---
+  MATCHUP_HOME: 0.85,
+  MATCHUP_AWAY: 0.45,
+  MATCHUP_ON_THE_FLY: 0.3,
+
+  // --- Leeres Tor ---
+  /** Chance auf einen Schuss aufs leere Tor nach erfolgreicher Befreiung */
+  EMPTY_NET_ATTEMPT: 0.35,
 
   // --- Penaltyschießen ---
   SHOOTOUT_BASE: 0.33,

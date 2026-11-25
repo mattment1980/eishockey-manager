@@ -406,7 +406,7 @@ export function refreshLineup(world: World, clubId: string): World {
   const valid = plan && [...plan.forwardLines.flat(), ...plan.defensePairs.flat(), ...plan.goalies, ...plan.powerPlay.flatMap((u) => [...u.forwards, ...u.defense]), ...plan.penaltyKill.flatMap((u) => [...u.forwards, ...u.defense])].every((id) => ids.has(id));
   if (club.controller.type === 'human' && valid) return world;
   try {
-    const next = autoMatchplan(roster, { countryCode: 'DE', importSlotsGame: world.countries[0].rules.importSlotsGame, tactics: plan?.tactics });
+    const next = autoMatchplan(roster, { countryCode: 'DE', importSlotsGame: world.countries[0].rules.importSlotsGame, tactics: plan?.tactics, keep: plan ? { specialTeams: plan.specialTeams, matchups: plan.matchups, rules: plan.rules } : undefined });
     return { ...world, clubs: world.clubs.map((c) => (c.id === clubId ? { ...c, matchplan: next } : c)) };
   } catch {
     return world;

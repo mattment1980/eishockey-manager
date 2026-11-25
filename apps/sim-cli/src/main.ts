@@ -108,6 +108,7 @@ interface Agg {
   pim: number; ot: number; so: number; homeWins: number; xg: number; hits: number; oneGoal: number;
   breakouts: number; breakoutsClean: number; ec: number; ecs: number; dumps: number; dumpsRec: number;
   lopsided: number;
+  en: number;
 }
 
 function cmdCalibrate() {
@@ -116,7 +117,7 @@ function cmdCalibrate() {
   const fmtL = world.leagues[0].format;
   const strength = new Map(world.clubs.map((c) => [c.id, strengthOf(world, c)]));
   const inputs = new Map(world.clubs.map((c) => [c.id, teamInput(world, c)]));
-  const agg: Agg = { games: 0, goals: 0, sog: 0, att: 0, blocked: 0, missed: 0, pp: 0, ppg: 0, pim: 0, ot: 0, so: 0, homeWins: 0, xg: 0, hits: 0, oneGoal: 0, breakouts: 0, breakoutsClean: 0, ec: 0, ecs: 0, dumps: 0, dumpsRec: 0, lopsided: 0 };
+  const agg: Agg = { games: 0, goals: 0, sog: 0, att: 0, blocked: 0, missed: 0, pp: 0, ppg: 0, pim: 0, ot: 0, so: 0, homeWins: 0, xg: 0, hits: 0, oneGoal: 0, breakouts: 0, breakoutsClean: 0, ec: 0, ecs: 0, dumps: 0, dumpsRec: 0, lopsided: 0, en: 0 };
   const buckets = [
     { label: 'ausgeglichen (< 0,3)', max: 3, g: 0, favWins: 0 },
     { label: 'leichter Favorit (0,3–0,8)', max: 8, g: 0, favWins: 0 },
@@ -137,6 +138,7 @@ function cmdCalibrate() {
       if (r.shootout) { agg.goals -= 1; } // Penaltytor nicht als Spieltor zählen
       const [s0, s1] = [r.teamStats[0].shotAttempts, r.teamStats[1].shotAttempts];
       if (Math.max(s0, s1) > 2 * Math.min(s0, s1)) agg.lopsided++;
+      agg.en += r.emptyNetGoals[0] + r.emptyNetGoals[1];
       if (r.decidedIn !== 'REG') agg.ot++;
       if (r.decidedIn === 'SO') agg.so++;
       if (r.score[0] > r.score[1]) agg.homeWins++;
@@ -160,6 +162,7 @@ function cmdCalibrate() {
   line('davon vorbei', fmt(agg.missed / tg, 1), '10 – 14');
   line('Fangquote', pct(1 - (agg.goals - agg.ppg * 0) / agg.sog), '90,5 – 91,5 %');
   line('xG', fmt(agg.xg / tg), '≈ Tore');
+  line('Tore ins leere Tor (je Spiel)', fmt(agg.en / n), '0,3 – 0,5');
   line('Überzahlspiele', fmt(agg.pp / tg), '3,0 – 4,0');
   line('Überzahlquote', pct(agg.ppg / Math.max(1, agg.pp)), '17 – 22 %');
   line('Strafminuten', fmt(agg.pim / tg, 1), '6 – 9');

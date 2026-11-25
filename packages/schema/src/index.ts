@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Version des Spielstand-Formats. Bei Änderungen erhöhen und Migration ergänzen. */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 /** Interne Attributskala 1–200 (Anzeige 1–20). */
 export const Rating = z.number().int().min(1).max(200);
@@ -216,6 +216,61 @@ export const DEFAULT_TACTICS: Tactics = {
   physicality: 'normal',
 };
 
+// ---------- Special Teams, Matchups, Coaching-Regeln ----------
+
+export const SpecialTeamsSchema = z.object({
+  /** Überzahl-Formation */
+  ppFormation: z.enum(['umbrella', 'overload', 'spread']),
+  /** Unterzahl-Formation */
+  pkFormation: z.enum(['box', 'diamond', 'aggressive']),
+});
+export type SpecialTeams = z.infer<typeof SpecialTeamsSchema>;
+export const DEFAULT_SPECIAL_TEAMS: SpecialTeams = { ppFormation: 'umbrella', pkFormation: 'box' };
+
+export const MatchupSchema = z.object({
+  /** eigene Einheit: Sturmreihe (0–3) oder Verteidigerpaar (0–2) */
+  unit: z.enum(['line', 'pair']),
+  mine: z.number().int().min(0).max(3),
+  /** gegnerische Sturmreihe (0–3), gegen die gespielt werden soll */
+  vs: z.number().int().min(0).max(3),
+});
+export type Matchup = z.infer<typeof MatchupSchema>;
+
+export const RuleConditionSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('score'), state: z.enum(['leading', 'trailing', 'tied']), min: z.number().int().min(1).max(5), max: z.number().int().min(1).max(9) }),
+  z.object({ type: z.literal('time'), fromMinute: z.number().min(0).max(65) }),
+  z.object({ type: z.literal('lastMinutes'), minutes: z.number().min(0.5).max(20) }),
+  z.object({ type: z.literal('period'), period: z.enum(['1', '2', '3', 'OT']) }),
+  z.object({ type: z.literal('situation'), situation: z.enum(['EV', 'PP', 'PK']) }),
+  z.object({ type: z.literal('shots'), state: z.enum(['ahead', 'behind']), diff: z.number().int().min(1).max(30) }),
+  z.object({ type: z.literal('goalieSave'), below: z.number().min(70).max(95), minShots: z.number().int().min(3).max(30) }),
+  z.object({ type: z.literal('goalsAgainst'), goals: z.number().int().min(2).max(5), withinMinutes: z.number().min(2).max(20) }),
+  z.object({ type: z.literal('playerPenalties'), count: z.number().int().min(1).max(4) }),
+  z.object({ type: z.literal('playoffs') }),
+]);
+export type RuleCondition = z.infer<typeof RuleConditionSchema>;
+
+export const RuleActionSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('tactic'), key: z.enum(['forecheck', 'forecheckIntensity', 'breakout', 'entry', 'offensiveZone', 'defensiveZone', 'gap', 'tempo', 'physicality']), value: z.string() }),
+  z.object({ type: z.literal('shortBench') }),
+  z.object({ type: z.literal('topLines') }),
+  z.object({ type: z.literal('pullGoalie') }),
+  z.object({ type: z.literal('switchGoalie') }),
+  z.object({ type: z.literal('timeout') }),
+  z.object({ type: z.literal('benchPenalized') }),
+  z.object({ type: z.literal('matchups'), on: z.boolean() }),
+]);
+export type RuleAction = z.infer<typeof RuleActionSchema>;
+
+export const CoachingRuleSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  enabled: z.boolean(),
+  conditions: z.array(RuleConditionSchema).min(1),
+  actions: z.array(RuleActionSchema).min(1),
+});
+export type CoachingRule = z.infer<typeof CoachingRuleSchema>;
+
 export const MatchplanSchema = z.object({
   tactics: TacticsSchema,
   /** 4 Sturmreihen: [LW, C, RW] */
@@ -232,6 +287,10 @@ export const MatchplanSchema = z.object({
   /** Unterzahl-Einheiten: 2 Stürmer + 2 Verteidiger */
   penaltyKill: z.array(z.object({ forwards: z.array(z.string()).length(2), defense: z.array(z.string()).length(2) })).length(2),
   shootout: z.array(z.string()).min(3),
+  specialTeams: SpecialTeamsSchema.default(DEFAULT_SPECIAL_TEAMS),
+  matchups: z.array(MatchupSchema).default([]),
+  /** Coaching-Regeln in Prioritätsreihenfolge (oben = wichtiger) */
+  rules: z.array(CoachingRuleSchema).default([]),
 });
 export type Matchplan = z.infer<typeof MatchplanSchema>;
 
