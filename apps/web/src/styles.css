@@ -309,3 +309,12 @@ table.stats.roster-table .pos { display: inline-block; margin-right: 6px; }
 .cell-name { display: inline-flex; align-items: center; cursor: pointer; font-weight: 600; white-space: nowrap; }
 table.stats.roster-table td { vertical-align: middle; }
 table.stats.roster-table td .tag:first-child { margin-left: 0; }
+
+/* Marktfilter */
+.filters { display: flex; flex-direction: column; gap: 10px; }
+.filter-row { display: flex; flex-direction: column; gap: 5px; font-size: 0.85rem; }
+.filter-row > span { color: var(--muted); }
+.range-pair { display: flex; align-items: center; gap: 8px; }
+.range-pair input { width: 70px; background: var(--panel-2); border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 7px; font: inherit; }
+.attr-filter { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; align-items: center; }
+.attr-filter .select { min-width: 0; }
