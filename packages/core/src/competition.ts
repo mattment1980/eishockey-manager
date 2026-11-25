@@ -8,6 +8,7 @@ import type { MatchInput, MatchResult, TeamInput } from './engine/types.ts';
 import { addDays, onOrAfter } from './calendar.ts';
 import { beginSeasonFinances, bookFixture, closeMonthsBetween, evaluateSeason } from './economy.ts';
 import { updateScouting } from './scouting.ts';
+import { marketTick } from './market.ts';
 
 /**
  * Saisonablauf nach Ligaformat: Hauptrunde → Pre-Playoffs → Playoffs (mit Neusetzen)
@@ -261,6 +262,8 @@ export function playDay(world: World, preplayed: Record<string, MatchResult> = {
   for (const f of todays) w = bookFixture(w, f, f.stage === 'regular' ? placeNow(f.home) : null);
   // Scouting
   w = updateScouting(w, date, todays.map((f) => ({ home: f.home, away: f.away, result: results[f.id] })));
+  // Markt (Entscheidungen, KI-Angebote, Versprechen)
+  w = marketTick(w, world.date);
   w = prepareNextDay(w);
   if (w.competition!.finished) {
     w = evaluateSeason(w);

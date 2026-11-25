@@ -12,7 +12,7 @@ Fantasienamen, ereignisbasierte Match-Engine mit Text-Ticker und Live-Statistike
 | 3 Oberfläche | Vereinswahl, Kader, Reihen, Taktik, Spiel mit Live-Ticker, Live-Stats und Schusskarte | ✅ |
 | 4 Saison | Spielplan, Spieltage, Tabelle, Pre-Playoffs, Playoffs, Playdowns, Statistiken, KI-Torhüterrotation und Spielstile | ✅ |
 | 5a Kalender, Wirtschaft, Scouting | Spieltermine, Wechselfrist, Monatsbuch, Zuschauer, Sponsoren, Vorstand, Liquiditätsprognose, Scouting mit Kenntnisstufen | ✅ |
-| 5b Markt & Verträge | Wettbieten um Vertragsspieler, Perks, Klauseln, Versprechen, Kaderplaner | offen |
+| 5b Markt & Verträge | Wettbieten um Vertragsspieler, Vorverträge, Perks, Prämien, Klauseln, Versprechen, Kaderplaner, KI-Markt, Saisonwechsel der Verträge | ✅ |
 | 6 Coaching & Chemie | Coaching-Regeln, Matchups, Traits, Moral | offen |
 | 7 Saisonwechsel & Daten | Entwicklung, Nachwuchs, Import/Export, Editor | offen |
 
@@ -26,6 +26,7 @@ pnpm sim generate         # Welt erzeugen (welt-2026.json)
 pnpm sim match 3          # Ein Spiel mit Ticker und Statistik
 pnpm sim season 2026      # Komplette Saison inkl. Playoffs und Playdowns
 pnpm sim calibrate 10     # Massensimulation mit Richtwerten
+pnpm sim seasons 3        # Mehrere Saisons inkl. Markt und Saisonwechsel
 pnpm dev                  # Web-App lokal starten (http://localhost:5173)
 pnpm build                # Web-App bauen (apps/web/dist)
 ```

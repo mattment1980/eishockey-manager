@@ -1,6 +1,7 @@
 import type { Player } from '@ehm/schema';
 import { GOALIE_ATTRIBUTES } from '@ehm/schema';
-import { overall, toDisplay, ageOn, formatView, type PlayerView, type AttrView } from '@ehm/core';
+import { overall, toDisplay, ageOn, formatView, PERK_LABEL, PROMISE_LABEL, ROLE_LABEL, type PlayerView, type AttrView } from '@ehm/core';
+import type { Perks } from '@ehm/schema';
 import { SKATER_GROUPS, SKATER_LABEL, GOALIE_LABEL, TRAIT_LABEL, POSITION_LABEL, NATION_LABEL, euro } from '../labels.ts';
 import { KnowledgeDots } from './KnowledgeDots.tsx';
 
@@ -54,9 +55,10 @@ interface Props {
   view?: PlayerView;
   clubName?: string;
   watch?: { on: boolean; toggle: () => void };
+  action?: { label: string; onClick: () => void };
 }
 
-export function PlayerSheet({ player, date, onClose, view, clubName, watch }: Props) {
+export function PlayerSheet({ player, date, onClose, view, clubName, watch, action }: Props) {
   const p = player;
   const age = ageOn(p.birthDate, date);
   const exact = (v: number): AttrView => ({ exact: toDisplay(v) });
@@ -96,8 +98,9 @@ export function PlayerSheet({ player, date, onClose, view, clubName, watch }: Pr
           <p className="small">Stärken laut Berichten: <b>{view.strengths.map((k) => (p.position === 'G' ? GOALIE_LABEL[k as keyof typeof GOALIE_LABEL] : SKATER_LABEL[k as keyof typeof SKATER_LABEL])).join(', ')}</b></p>
         )}
         {view && <p className="small muted">Potenzial: {view.potential}</p>}
+        {action && <button className="btn primary block" onClick={action.onClick}>{action.label}</button>}
         {watch && (
-          <button className={`btn block ${watch.on ? '' : 'primary'}`} onClick={watch.toggle}>
+          <button className={`btn block ${watch.on || action ? '' : 'primary'}`} onClick={watch.toggle}>
             {watch.on ? '✓ Auf der Beobachtungsliste – entfernen' : 'Beobachten (Scouts priorisieren ihn)'}
           </button>
         )}
@@ -140,8 +143,20 @@ export function PlayerSheet({ player, date, onClose, view, clubName, watch }: Pr
               <>
                 <div className="row-between small"><span>Gehalt</span><b>{euro(p.contract.salary)} / Jahr</b></div>
                 <div className="row-between small"><span>Vertrag bis</span><b>Saisonende {p.contract.untilSeason + 1}</b></div>
+                <div className="row-between small"><span>Rolle</span><b>{ROLE_LABEL[p.contract.role]}</b></div>
+                {(Object.keys(p.contract.perks) as (keyof Perks)[]).filter((k) => p.contract!.perks[k] > 0).map((k) => (
+                  <div key={k} className="row-between small"><span>{PERK_LABEL[k].title}</span><b>{PERK_LABEL[k].levels[p.contract!.perks[k]]}</b></div>
+                ))}
+                {p.contract.bonus.perPoint > 0 && <div className="row-between small"><span>Punkteprämie</span><b>{euro(p.contract.bonus.perPoint)}</b></div>}
+                {p.contract.bonus.playoffs > 0 && <div className="row-between small"><span>Playoffprämie</span><b>{euro(p.contract.bonus.playoffs)}</b></div>}
+                {p.contract.clauses.exit && <div className="row-between small"><span>Klausel</span><b>Ausstiegsklausel</b></div>}
+                {p.contract.clauses.relegation && <div className="row-between small"><span>Klausel</span><b>Abstiegsklausel</b></div>}
+                {p.contract.promises.map((pr) => (
+                  <div key={pr.type} className="row-between small"><span>Versprechen: {PROMISE_LABEL[pr.type]}</span><b className={pr.status === 'ok' ? 'win' : 'loss'}>{pr.status === 'ok' ? 'eingehalten' : pr.status === 'risk' ? 'gefährdet' : 'gebrochen'}</b></div>
+                ))}
               </>
             )}
+            {p.nextContract && <div className="row-between small"><span>Vorvertrag</span><b>ab {(p.nextContract.fromSeason ?? 0)}/{String((p.nextContract.fromSeason ?? 0) + 1).slice(2)} · {euro(p.nextContract.salary)}</b></div>}
           </div>
         )}
         {view && (

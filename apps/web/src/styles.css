@@ -274,3 +274,19 @@ table.stats td.win, table.stats td.loss { font-weight: 600; }
 .scout-row:first-of-type { border-top: 0; }
 .scout-row .select { max-width: 52%; }
 .sheet .btn.block { margin-top: 10px; }
+
+/* Markt & Verhandlung */
+.nego-info { display: flex; flex-direction: column; gap: 3px; background: var(--panel-2); border-radius: 10px; padding: 10px; margin: 10px 0; }
+.nego-row { display: flex; flex-direction: column; gap: 5px; margin: 8px 0; font-size: 0.85rem; }
+.nego-row > span { color: var(--muted); }
+.nego-summary { background: var(--panel-2); border-radius: 10px; padding: 10px; margin: 12px 0; display: flex; flex-direction: column; gap: 4px; }
+input[type=range] { width: 100%; accent-color: var(--ice); }
+.check { display: flex; gap: 8px; align-items: flex-start; font-size: 0.88rem; padding: 5px 0; }
+.check input { margin-top: 3px; accent-color: var(--ice); }
+.warn { color: var(--warn); }
+.alert.ok { background: color-mix(in srgb, var(--good) 18%, var(--panel)); border-color: color-mix(in srgb, var(--good) 50%, transparent); }
+.news { list-style: none; margin: 0; padding: 0; }
+.news li { display: flex; flex-direction: column; gap: 2px; padding: 8px 14px; border-top: 1px solid var(--line); font-size: 0.88rem; }
+.news li.mine { background: color-mix(in srgb, var(--ice) 8%, transparent); }
+.roster li.static { cursor: default; }
+.tabs button { padding: 8px 4px; font-size: 0.9rem; }

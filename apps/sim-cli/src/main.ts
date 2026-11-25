@@ -1,10 +1,10 @@
 import { writeFileSync } from 'node:fs';
 import type { World, Club, Player } from '@ehm/schema';
 import {
-  simulateMatch, roundRobinSchedule, teamStrength, overall, toDisplay, Rng, playDays, regularTable, INCOME, EXPENSE,
+  simulateMatch, roundRobinSchedule, teamStrength, overall, toDisplay, Rng, playDays, regularTable, INCOME, EXPENSE, payrollOf,
   type MatchResult, type TeamInput,
 } from '@ehm/core';
-import { generateWorld, exportWorldJson } from '@ehm/data';
+import { generateWorld, exportWorldJson, seasonTransition } from '@ehm/data';
 
 const [cmd = 'help', ...args] = process.argv.slice(2);
 const num = (i: number, d: number) => (args[i] !== undefined ? Number(args[i]) : d);
@@ -226,7 +226,32 @@ function cmdSeason() {
     .forEach(([id, t]) => console.log(`${pad(nm(id), 24)} ${pad(clubById.get(t.clubId)!.shortName, 4)} ${lpad(t.gs, 2)} Sp  Fangquote ${pct((t.sa - t.ga) / t.sa)}  GAA ${fmt((t.ga * 3600) / t.toi)}  Shutouts ${t.so}`));
 }
 
+// ---------------------------------------------------------------- seasons (Markt über mehrere Saisons)
+function cmdSeasons() {
+  const n = num(0, 3);
+  let world = generateWorld(num(1, 2026));
+  for (let i = 0; i < n; i++) {
+    const t0 = Date.now();
+    world = playDays(world, 1000);
+    const comp = world.competition!;
+    const signed = world.market.offers.filter((o) => o.status === 'accepted');
+    const ext = signed.filter((o) => world.players.find((p) => p.id === o.playerId)?.contract?.clubId === o.clubId).length;
+    const nextRoster = world.clubs.map((c) => world.players.filter((p) => (p.contract?.clubId === c.id && p.contract.untilSeason > world.season) || p.nextContract?.clubId === c.id).length);
+    const free = world.players.filter((p) => !p.contract).length;
+    console.log(`\nSaison ${world.season}/${String(world.season + 1).slice(2)} (${((Date.now() - t0) / 1000).toFixed(1)} s): Meister ${world.clubs.find((c) => c.id === comp.champion)!.shortName}, Absteiger ${world.clubs.find((c) => c.id === comp.relegated)!.shortName}`);
+    console.log(`  Verträge für nächste Saison unterschrieben: ${signed.length} (davon Verlängerungen ${ext}), offen: ${world.market.offers.filter((o) => o.status === 'open').length}, Vereinslose: ${free}`);
+    console.log(`  Kader nächste Saison je Verein: ${nextRoster.join(' ')}`);
+    world = seasonTransition(world);
+    const rosters = world.clubs.map((c) => world.players.filter((p) => p.contract?.clubId === c.id).length);
+    const payroll = world.clubs.map((c) => { const p = payrollOf(world, c.id); return Math.round(((p.players + p.perks + p.staff) / c.finances.budget) * 100); });
+    const strength = world.clubs.map((c) => toDisplay(strengthOf(world, c)));
+    console.log(`  → nach Saisonwechsel: Kader ${rosters.join(' ')} | Gehälter in % des Etats ${payroll.join(' ')} | Stärke ${strength.join(' ')}`);
+    console.log(`  Nachrichten (Auszug): ${world.market.news.slice(0, 3).map((x) => x.text).join(' | ')}`);
+  }
+}
+
 switch (cmd) {
+  case 'seasons': cmdSeasons(); break;
   case 'generate': cmdGenerate(); break;
   case 'match': cmdMatch(); break;
   case 'calibrate': cmdCalibrate(); break;

@@ -14,7 +14,7 @@ export function Finances() {
   if (!club) return null;
   const f = club.finances;
   const pay = payrollOf(world, club.id);
-  const payroll = pay.players + pay.staff;
+  const payroll = pay.players + pay.perks + pay.staff;
   const usage = payroll / Math.max(1, f.salaryBudget);
   const totals = new Map<LedgerCategory, number>();
   for (const m of f.ledger) for (const [k, v] of Object.entries(m.items)) totals.set(k as LedgerCategory, (totals.get(k as LedgerCategory) ?? 0) + v);
@@ -43,6 +43,7 @@ export function Finances() {
       <section className="card">
         <h3>Gehaltsetat</h3>
         <div className="row-between small"><span>Spieler</span><b>{euro(pay.players)}</b></div>
+        <div className="row-between small"><span>Nebenleistungen</span><b>{euro(pay.perks)}</b></div>
         <div className="row-between small"><span>Staff</span><b>{euro(pay.staff)}</b></div>
         <div className="row-between small"><span>Gesamt / Etat</span><b>{euro(payroll)} / {euro(f.salaryBudget)}</b></div>
         <div className="meter big"><div className={usage > 1 ? 'over' : ''} style={{ width: `${Math.min(100, usage * 100)}%` }} /></div>

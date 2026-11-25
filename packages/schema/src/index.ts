@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Version des Spielstand-Formats. Bei Änderungen erhöhen und Migration ergänzen. */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 /** Interne Attributskala 1–200 (Anzeige 1–20). */
 export const Rating = z.number().int().min(1).max(200);
@@ -74,6 +74,48 @@ export type Trait = z.infer<typeof TraitSchema>;
 
 export const PlayerRoleSchema = z.enum(['star', 'top', 'regular', 'depth', 'prospect']);
 
+export const PerksSchema = z.object({
+  /** 0 = keine, 1 = Wohnung, 2 = größere Wohnung, 3 = Haus */
+  housing: z.number().int().min(0).max(3),
+  /** 0 = kein, 1 = Kleinwagen, 2 = Mittelklasse, 3 = Oberklasse */
+  car: z.number().int().min(0).max(3),
+  /** Heimflüge pro Jahr (0–3) */
+  flights: z.number().int().min(0).max(3),
+  /** 0 = nichts, 1 = Schule/Kita, 2 = zusätzlich Jobunterstützung Partner */
+  family: z.number().int().min(0).max(2),
+  /** 0 = nichts, 1 = Ausbildung/Studium, 2 = zusätzlich Personal Trainer */
+  extras: z.number().int().min(0).max(2),
+});
+export type Perks = z.infer<typeof PerksSchema>;
+export const NO_PERKS: Perks = { housing: 0, car: 0, flights: 0, family: 0, extras: 0 };
+
+export const BonusSchema = z.object({
+  /** Prämie je Scorerpunkt in Euro */
+  perPoint: z.number().int().nonnegative(),
+  /** Prämie bei Erreichen des Viertelfinales */
+  playoffs: z.number().int().nonnegative(),
+});
+export type Bonus = z.infer<typeof BonusSchema>;
+
+export const ClausesSchema = z.object({
+  /** Ausstiegsklausel: Spieler darf im Sommer für ein Angebot aus einer stärkeren Liga gehen */
+  exit: z.boolean(),
+  /** Abstiegsklausel: Vertrag endet bei Abstieg */
+  relegation: z.boolean(),
+});
+export type Clauses = z.infer<typeof ClausesSchema>;
+
+export const PromiseTypeSchema = z.enum(['top6F', 'top4D', 'pp1', 'starter', 'playoffs']);
+export type PromiseType = z.infer<typeof PromiseTypeSchema>;
+
+export const PromiseSchema = z.object({
+  type: PromiseTypeSchema,
+  status: z.enum(['ok', 'risk', 'broken']),
+  /** Monate in Folge nicht eingehalten */
+  strikes: z.number().int(),
+});
+export type PlayerPromise = z.infer<typeof PromiseSchema>;
+
 export const ContractSchema = z.object({
   clubId: z.string(),
   /** Jahresgehalt brutto in Euro */
@@ -81,8 +123,25 @@ export const ContractSchema = z.object({
   /** Vertrag läuft bis Ende dieser Saison (Startjahr, z. B. 2027 = Saison 2027/28) */
   untilSeason: z.number().int(),
   role: PlayerRoleSchema,
+  perks: PerksSchema.default(NO_PERKS),
+  bonus: BonusSchema.default({ perPoint: 0, playoffs: 0 }),
+  clauses: ClausesSchema.default({ exit: false, relegation: false }),
+  promises: z.array(PromiseSchema).default([]),
+  /** Saison (Startjahr), ab der dieser Vertrag gilt */
+  fromSeason: z.number().int().optional(),
 });
 export type Contract = z.infer<typeof ContractSchema>;
+
+/** Vertrag mit Standardwerten für alle optionalen Bestandteile */
+export function makeContract(base: Pick<Contract, 'clubId' | 'salary' | 'untilSeason' | 'role'> & Partial<Contract>): Contract {
+  return {
+    perks: { ...NO_PERKS },
+    bonus: { perPoint: 0, playoffs: 0 },
+    clauses: { exit: false, relegation: false },
+    promises: [],
+    ...base,
+  };
+}
 
 export const PlayerSchema = z.object({
   id: z.string(),
@@ -98,6 +157,8 @@ export const PlayerSchema = z.object({
   condition: ConditionSchema,
   traits: z.array(TraitSchema),
   contract: ContractSchema.nullable(),
+  /** Vorvertrag für die kommende Saison (bei anderem oder eigenem Verein) */
+  nextContract: ContractSchema.nullable().default(null),
 });
 export type Player = z.infer<typeof PlayerSchema>;
 
@@ -366,6 +427,58 @@ export const ScoutingStateSchema = z.object({
 });
 export type ScoutingState = z.infer<typeof ScoutingStateSchema>;
 
+// ---------- Markt ----------
+
+export const TermsSchema = z.object({
+  salary: z.number().int().nonnegative(),
+  years: z.number().int().min(1).max(3),
+  role: PlayerRoleSchema,
+  perks: PerksSchema,
+  bonus: BonusSchema,
+  clauses: ClausesSchema,
+  promises: z.array(PromiseTypeSchema),
+});
+export type Terms = z.infer<typeof TermsSchema>;
+
+export const OfferSchema = z.object({
+  id: z.string(),
+  playerId: z.string(),
+  clubId: z.string(),
+  terms: TermsSchema,
+  /** Saison (Startjahr), ab der der Vertrag gelten soll */
+  forSeason: z.number().int(),
+  date: z.string(),
+  status: z.enum(['open', 'accepted', 'rejected', 'withdrawn']),
+  /** wie oft nachgebessert */
+  raises: z.number().int(),
+});
+export type Offer = z.infer<typeof OfferSchema>;
+
+export const NewsSchema = z.object({
+  date: z.string(),
+  text: z.string(),
+  kind: z.enum(['signing', 'offer', 'decision', 'promise', 'info']),
+  /** betrifft den Verein des Managers */
+  mine: z.boolean(),
+});
+export type News = z.infer<typeof NewsSchema>;
+
+export const MarketSchema = z.object({
+  offers: z.array(OfferSchema),
+  /** Entscheidungsfrist je Spieler (ISO-Datum) */
+  decideBy: z.record(z.string()),
+  /** Geduld je Spieler und Verein ("spieler:verein") */
+  patience: z.record(z.number()),
+  /** Gespräche abgebrochen ("spieler:verein") */
+  blocked: z.array(z.string()),
+  news: z.array(NewsSchema),
+  lastAiRun: z.string(),
+  /** Glaubwürdigkeit je Verein (0–1) */
+  credibility: z.record(z.number()),
+});
+export type Market = z.infer<typeof MarketSchema>;
+export const EMPTY_MARKET: Market = { offers: [], decideBy: {}, patience: {}, blocked: [], news: [], lastAiRun: '1900-01-01', credibility: {} };
+
 export const WorldSchema = z.object({
   schemaVersion: z.literal(SCHEMA_VERSION),
   id: z.string(),
@@ -382,5 +495,6 @@ export const WorldSchema = z.object({
   competition: CompetitionSchema.nullable(),
   /** Scouting-Stand je menschlich geführtem Verein */
   scouting: z.record(ScoutingStateSchema),
+  market: MarketSchema.default(EMPTY_MARKET),
 });
 export type World = z.infer<typeof WorldSchema>;

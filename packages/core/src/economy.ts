@@ -1,6 +1,7 @@
 import type { World, Club, Fixture, ClubProfile } from '@ehm/schema';
 import { hash01, monthKey, monthsBetween, nextMonth } from './calendar.ts';
 import { teamStrength } from './lineup.ts';
+import { perkCost } from './market.ts';
 
 /**
  * Wirtschaft (Basis): Ticketing, Catering, Sponsoren, Medien, Gehälter, Halle, Reisen, Verwaltung.
@@ -10,14 +11,14 @@ import { teamStrength } from './lineup.ts';
 
 export type LedgerCategory =
   | 'tickets' | 'catering' | 'sponsors' | 'media' | 'playoffs'
-  | 'salaries' | 'staff' | 'arena' | 'travel' | 'admin';
+  | 'salaries' | 'perks' | 'bonus' | 'staff' | 'arena' | 'travel' | 'admin';
 
 export const CATEGORY_LABEL: Record<LedgerCategory, string> = {
   tickets: 'Ticketing', catering: 'Catering & Merchandising', sponsors: 'Sponsoring', media: 'Medien', playoffs: 'Playoff-Ticketing',
-  salaries: 'Gehälter Spieler', staff: 'Gehälter Staff', arena: 'Halle', travel: 'Reisen', admin: 'Verwaltung & Betrieb',
+  salaries: 'Gehälter Spieler', perks: 'Nebenleistungen (Wohnung, Auto, …)', bonus: 'Prämien', staff: 'Gehälter Staff', arena: 'Halle', travel: 'Reisen', admin: 'Verwaltung & Betrieb',
 };
 export const INCOME: LedgerCategory[] = ['tickets', 'playoffs', 'catering', 'sponsors', 'media'];
-export const EXPENSE: LedgerCategory[] = ['salaries', 'staff', 'arena', 'travel', 'admin'];
+export const EXPENSE: LedgerCategory[] = ['salaries', 'perks', 'bonus', 'staff', 'arena', 'travel', 'admin'];
 
 export const E = {
   MEDIA_PER_CLUB: 240_000,
@@ -36,17 +37,20 @@ export const GOAL_LABEL = {
 } as const;
 const GOAL_PLACE = { title: 2, semifinal: 3, quarterfinal: 6, prePlayoffs: 10, survival: 12 } as const;
 
-export function payrollOf(world: World, clubId: string): { players: number; staff: number } {
-  let players = 0, staff = 0;
-  for (const p of world.players) if (p.contract?.clubId === clubId) players += p.contract.salary;
+export function payrollOf(world: World, clubId: string): { players: number; perks: number; staff: number } {
+  let players = 0, staff = 0, perks = 0;
+  for (const p of world.players) {
+    if (p.contract?.clubId !== clubId) continue;
+    players += p.contract.salary;
+    perks += perkCost(p.contract.perks);
+  }
   for (const s of world.staff) if (s.contract?.clubId === clubId) staff += s.contract.salary;
-  return { players, staff };
+  return { players, perks, staff };
 }
 
 function baseFill(club: Club): number {
   return 0.5 + 0.4 * (club.fanBase / 100);
 }
-
 function homeGames(world: World, clubId: string): number {
   return world.competition!.fixtures.filter((f) => f.stage === 'regular' && f.home === clubId).length;
 }
@@ -63,9 +67,9 @@ export function beginSeasonFinances(world: World): World {
     const price = E.TICKET_PRICE[c.profile];
     const expFans = Math.min(1, baseFill(c)) * c.arena.capacity * games;
     const expTickets = expFans * (price + E.CATERING_PER_FAN);
-    const fixedCosts = pay.players + pay.staff + games * c.arena.capacity * E.ARENA_PER_SEAT + games * E.TRAVEL_PER_GAME;
+    const fixedCosts = pay.players + pay.perks + pay.staff + games * c.arena.capacity * E.ARENA_PER_SEAT + games * E.TRAVEL_PER_GAME;
     const admin = Math.max(c.finances.budget * 0.08, c.finances.budget - fixedCosts);
-    const sponsors = Math.max(c.finances.budget * 0.15, pay.players + pay.staff + games * c.arena.capacity * E.ARENA_PER_SEAT + games * E.TRAVEL_PER_GAME + admin - expTickets - E.MEDIA_PER_CLUB - E.EXPECTED_PLAYOFF_SHARE);
+    const sponsors = Math.max(c.finances.budget * 0.15, pay.players + pay.perks + pay.staff + games * c.arena.capacity * E.ARENA_PER_SEAT + games * E.TRAVEL_PER_GAME + admin - expTickets - E.MEDIA_PER_CLUB - E.EXPECTED_PLAYOFF_SHARE);
     return {
       ...c,
       seasonGoal: goal as Club['seasonGoal'],
@@ -74,7 +78,7 @@ export function beginSeasonFinances(world: World): World {
         ticketPrice: price,
         sponsorIncome: Math.round(sponsors / 1000) * 1000,
         mediaIncome: E.MEDIA_PER_CLUB,
-        salaryBudget: Math.round(((pay.players + pay.staff) * 1.03) / 10_000) * 10_000,
+        salaryBudget: Math.round(Math.max(c.finances.budget * 0.6, pay.players + pay.perks + pay.staff) / 10_000) * 10_000,
         ledger: [],
         attendance: [],
       },
@@ -87,7 +91,7 @@ export function beginSeasonFinances(world: World): World {
 function adminPerMonth(world: World, club: Club): number {
   const pay = payrollOf(world, club.id);
   const games = homeGames(world, club.id);
-  const fixed = pay.players + pay.staff + games * club.arena.capacity * E.ARENA_PER_SEAT + games * E.TRAVEL_PER_GAME;
+  const fixed = pay.players + pay.perks + pay.staff + games * club.arena.capacity * E.ARENA_PER_SEAT + games * E.TRAVEL_PER_GAME;
   return Math.max(club.finances.budget * 0.08, club.finances.budget - fixed) / 12;
 }
 
@@ -139,6 +143,7 @@ export function closeMonth(world: World, month: string, place: (clubId: string) 
   const clubs = world.clubs.map((c) => {
     const pay = payrollOf(world, c.id);
     let x = book(c, month, 'salaries', -pay.players / 12);
+    if (pay.perks) x = book(x, month, 'perks', -pay.perks / 12);
     x = book(x, month, 'staff', -pay.staff / 12);
     x = book(x, month, 'sponsors', c.finances.sponsorIncome / 12);
     x = book(x, month, 'media', c.finances.mediaIncome / 12);
@@ -147,7 +152,7 @@ export function closeMonth(world: World, month: string, place: (clubId: string) 
     let conf = x.boardConfidence;
     const p = place(c.id);
     if (p && c.seasonGoal) conf += Math.max(-3, Math.min(3, (GOAL_PLACE[c.seasonGoal] - p) * 0.5));
-    const ratio = (pay.players + pay.staff) / Math.max(1, c.finances.salaryBudget);
+    const ratio = (pay.players + pay.perks + pay.staff) / Math.max(1, c.finances.salaryBudget);
     if (ratio > 1.0) conf -= Math.min(4, (ratio - 1) * 40);
     if (x.finances.balance < 0) conf -= 2;
     return { ...x, boardConfidence: Math.round(Math.max(0, Math.min(100, conf))) };
@@ -174,7 +179,18 @@ export function evaluateSeason(world: World): World {
       : c.seasonGoal === 'quarterfinal' ? place <= 6
       : c.seasonGoal === 'prePlayoffs' ? place <= 10
       : comp.relegated !== c.id;
-    return { ...c, boardConfidence: Math.max(0, Math.min(100, c.boardConfidence + (ok ? 12 : -12))) };
+    let x = { ...c, boardConfidence: Math.max(0, Math.min(100, c.boardConfidence + (ok ? 12 : -12))) };
+    // Prämien auszahlen
+    const quarter = reached(c.id, 'Viertelfinale') || reached(c.id, 'Halbfinale') || reached(c.id, 'Finale');
+    let bonus = 0;
+    for (const p of world.players) {
+      if (p.contract?.clubId !== c.id) continue;
+      const st = [comp.stats.regular[p.id], comp.stats.post[p.id]];
+      const points = st.reduce((s, l) => s + (l ? l.g + l.a : 0), 0);
+      bonus += p.contract.bonus.perPoint * points + (quarter ? p.contract.bonus.playoffs : 0);
+    }
+    if (bonus) x = book(x, monthKey(world.date), 'bonus', -bonus);
+    return x;
   });
   return { ...world, clubs };
 }
@@ -200,7 +216,7 @@ export function liquidityForecast(world: World, clubId: string): ForecastMonth[]
   }
   // Plan ab aktuellem Monat
   const pay = payrollOf(world, clubId);
-  const monthly = { inc: (club.finances.sponsorIncome + club.finances.mediaIncome) / 12, exp: (pay.players + pay.staff) / 12 + adminPerMonth(world, club) };
+  const monthly = { inc: (club.finances.sponsorIncome + club.finances.mediaIncome) / 12, exp: (pay.players + pay.perks + pay.staff) / 12 + adminPerMonth(world, club) };
   const expFans = Math.min(1, baseFill(club)) * club.arena.capacity;
   const startMonth = out.length && out[out.length - 1].month >= current ? nextMonth(out[out.length - 1].month) : current;
   balance = running;

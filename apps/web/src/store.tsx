@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { World, Club, Player, Matchplan } from '@ehm/schema';
+import type { World, Club, Player, Matchplan, Terms } from '@ehm/schema';
 import { WorldSchema } from '@ehm/schema';
-import { beginSeason, initScouting } from '@ehm/core';
-import { generateWorld, migrateWorld } from '@ehm/data';
+import { beginSeason, initScouting, submitOffer, withdrawOffer, type OfferResponse } from '@ehm/core';
+import { generateWorld, migrateWorld, seasonTransition } from '@ehm/data';
 
 const KEY = 'ehm.save.v1';
 
@@ -24,6 +24,8 @@ interface Store {
   newSeason: () => void;
   newGame: () => void;
   toggleWatch: (playerId: string) => void;
+  makeOffer: (playerId: string, terms: Terms) => OfferResponse;
+  withdraw: (playerId: string) => void;
   setScoutRegion: (scoutId: string, region: string) => void;
 }
 
@@ -102,11 +104,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           return { ...s, world: { ...w, scouting, staff, clubs: w.clubs.map((c) => (mine && c.id === mine.id ? { ...c, matchplan: mine.matchplan } : c)) } };
         }),
       newSeason: () =>
-        setSave((s) => {
-          const w = { ...s.world, season: s.world.season + 1, competition: null };
-          return { ...s, world: beginSeason(w, w.seed + w.season) };
-        }),
+        setSave((s) => ({ ...s, world: seasonTransition(s.world) })),
       newGame: () => setSave(fresh()),
+      makeOffer: (playerId, terms) => {
+        if (!save.clubId) return { kind: 'invalid', text: 'Kein Verein gewählt.' };
+        const r = submitOffer(save.world, playerId, save.clubId, terms);
+        setSave((s) => ({ ...s, world: r.world }));
+        return r.response;
+      },
+      withdraw: (playerId) => setSave((s) => (s.clubId ? { ...s, world: withdrawOffer(s.world, playerId, s.clubId) } : s)),
       toggleWatch: (playerId) =>
         setSave((s) => {
           if (!s.clubId) return s;

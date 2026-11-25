@@ -4,7 +4,7 @@ import {
   type SkaterAttribute, type GoalieAttribute, type StaffRole, type Manager,
 } from '@ehm/schema';
 import { Rng, clamp, autoMatchplan, beginSeason } from '@ehm/core';
-import { DEFAULT_TACTICS, type Tactics } from '@ehm/schema';
+import { DEFAULT_TACTICS, EMPTY_MARKET, makeContract, type Tactics } from '@ehm/schema';
 import { NAMES, IMPORT_ORIGINS } from './names.ts';
 import { COUNTRY_DE, LEAGUE_DEL2_MODEL, CLUBS_DEL2_MODEL, BUDGET_BY_PROFILE } from './del2.ts';
 
@@ -60,6 +60,8 @@ export interface GenerateOptions {
   seed: number;
   season?: number;
   freeAgents?: number;
+  /** Präfix für IDs neu erzeugter Personen (z. B. bei späteren Saisons, um Kollisionen zu vermeiden) */
+  idPrefix?: string;
 }
 
 export class WorldGenerator {
@@ -76,7 +78,7 @@ export class WorldGenerator {
   }
 
   private id(prefix: string) {
-    return `${prefix}${(++this.idCounter).toString(36)}`;
+    return `${prefix}${this.opts.idPrefix ?? ''}${(++this.idCounter).toString(36)}`;
   }
 
   generate(): World {
@@ -141,6 +143,7 @@ export class WorldGenerator {
       managers,
       competition: null,
       scouting: {},
+      market: structuredClone(EMPTY_MARKET),
     };
     return beginSeason(base, this.opts.seed);
   }
@@ -273,8 +276,12 @@ export class WorldGenerator {
       condition: { fitness: Math.round(rng.float(94, 100)), form: Math.round(clamp(rng.normal(50, 8), 20, 80)), morale: Math.round(clamp(rng.normal(62, 8), 30, 90)) },
       traits,
       contract: o.clubId
-        ? { clubId: o.clubId, salary, untilSeason: this.season + rng.int(0, 2), role: o.role ?? 'regular' }
+        ? makeContract({
+          clubId: o.clubId, salary, untilSeason: this.season + rng.int(0, 2), role: o.role ?? 'regular',
+          perks: isImport ? { housing: rng.int(1, 2), car: rng.int(1, 2), flights: rng.int(1, 2), family: 0, extras: 0 } : { housing: 0, car: rng.int(0, 1), flights: 0, family: 0, extras: 0 },
+        })
         : null,
+      nextContract: null,
     };
   }
 
@@ -298,7 +305,7 @@ export class WorldGenerator {
         ratings: { tactics: rt(), motivation: rt(), discipline: rt(), development: rt(), scouting: rt() },
         traits,
         region: role === 'scout' ? this.rng.pick(['DE', 'Skandinavien', 'Nordamerika', 'Osteuropa']) : undefined,
-        contract: { clubId, salary: Math.round((role === 'headCoach' ? 110_000 : 60_000) * this.rng.float(0.8, 1.3) / 1000) * 1000, untilSeason: this.season + this.rng.int(0, 2), role: 'regular' },
+        contract: makeContract({ clubId, salary: Math.round((role === 'headCoach' ? 110_000 : 60_000) * this.rng.float(0.8, 1.3) / 1000) * 1000, untilSeason: this.season + this.rng.int(0, 2), role: 'regular' }),
       };
     });
   }

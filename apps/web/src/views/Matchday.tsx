@@ -86,7 +86,7 @@ export function Matchday() {
           {releg && <div className="kpi"><span>Absteiger</span><strong>{releg.name}</strong></div>}
         </section>
         <section className="card">
-          <p className="muted small">Saisonwechsel mit Alterung, Entwicklung, Vertragsenden und Nachwuchs folgt in Meilenstein 7. Bis dahin startet die neue Saison mit unveränderten Kadern.</p>
+          <p className="muted small">Beim Saisonwechsel enden auslaufende Verträge, Vorverträge treten in Kraft und neue vereinslose Spieler kommen auf den Markt. Alterung und Spielerentwicklung folgen in Meilenstein 7.</p>
           <button className="btn primary block" onClick={newSeason}>Neue Saison starten</button>
         </section>
       </div>
@@ -149,6 +149,17 @@ export function Matchday() {
         {busy && busy !== 'live' && <p className="muted small hint">Simuliere …</p>}
         <p className="muted small hint">Eigene Spiele werden dabei mit deiner aktuellen Aufstellung und Taktik simuliert.</p>
       </section>
+
+      {world.market.news.length > 0 && (
+        <section className="card flush">
+          <h3 className="card-title">Nachrichten</h3>
+          <ul className="news">
+            {world.market.news.slice(0, 8).map((n, i) => (
+              <li key={i} className={n.mine ? 'mine' : ''}><small className="muted">{formatDate(n.date)}</small><span>{n.text}</span></li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {lastResults.length > 0 && (
         <section className="card flush">

@@ -4,6 +4,8 @@ import { overall, toDisplay, ageOn, offenseRating, defenseRating } from '@ehm/co
 import { useStore } from '../store.tsx';
 import { PlayerSheet } from '../components/PlayerSheet.tsx';
 import { Scouting } from './Scouting.tsx';
+import { Market } from './Market.tsx';
+import { Planner } from './Planner.tsx';
 import { TRAIT_LABEL, euro } from '../labels.ts';
 
 const GROUPS: { title: string; pos: Player['position'][] }[] = [
@@ -15,14 +17,19 @@ const GROUPS: { title: string; pos: Player['position'][] }[] = [
 type Sort = 'overall' | 'age' | 'salary' | 'off' | 'def';
 
 export function Roster() {
-  const [mode, setMode] = useState<'roster' | 'scouting'>('roster');
+  const [mode, setMode] = useState<'roster' | 'planner' | 'market' | 'scouting'>('roster');
   return (
     <div className="stack">
       <div className="tabs">
         <button className={mode === 'roster' ? 'on' : ''} onClick={() => setMode('roster')}>Kader</button>
-        <button className={mode === 'scouting' ? 'on' : ''} onClick={() => setMode('scouting')}>Scouting & Markt</button>
+        <button className={mode === 'planner' ? 'on' : ''} onClick={() => setMode('planner')}>Planer</button>
+        <button className={mode === 'market' ? 'on' : ''} onClick={() => setMode('market')}>Markt</button>
+        <button className={mode === 'scouting' ? 'on' : ''} onClick={() => setMode('scouting')}>Scouting</button>
       </div>
-      {mode === 'roster' ? <RosterList /> : <Scouting />}
+      {mode === 'roster' && <RosterList />}
+      {mode === 'planner' && <Planner />}
+      {mode === 'market' && <Market />}
+      {mode === 'scouting' && <Scouting />}
     </div>
   );
 }
@@ -66,6 +73,10 @@ function RosterList() {
                       {ageOn(p.birthDate, world.date)} J · {p.nationalities.join('/')}
                       {!p.nationalities.includes('DE') && <span className="tag">Import</span>}
                       {!inLineup.has(p.id) && <span className="tag dim">Tribüne</span>}
+                      {p.contract && p.contract.untilSeason <= world.season && !p.nextContract && <span className="tag mix">läuft aus</span>}
+                      {p.nextContract && p.nextContract.clubId === club?.id && <span className="tag pos">verlängert</span>}
+                      {p.nextContract && p.nextContract.clubId !== club?.id && <span className="tag neg">geht</span>}
+                      {p.contract?.promises.some((x) => x.status !== 'ok') && <span className="tag neg">Versprechen</span>}
                       {p.traits.slice(0, 1).map((t) => <span key={t.id} className={`tag ${TRAIT_LABEL[t.id].tone}`}>{TRAIT_LABEL[t.id].name}</span>)}
                     </small>
                   </div>

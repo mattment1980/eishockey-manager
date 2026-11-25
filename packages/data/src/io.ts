@@ -18,6 +18,10 @@ export function migrateWorld(raw: unknown): unknown {
       finances: { ticketPrice: 20, sponsorIncome: 0, mediaIncome: 0, salaryBudget: 0, ledger: [], attendance: [], ...(c.finances as object) },
     }));
   }
+  if (w.schemaVersion === 3) {
+    // Vertragsfelder und Markt werden über Standardwerte des Schemas ergänzt
+    w.schemaVersion = 4;
+  }
   void SCHEMA_VERSION;
   return w;
 }

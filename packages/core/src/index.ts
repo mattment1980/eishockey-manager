@@ -9,3 +9,4 @@ export * from './competition.ts';
 export * from './calendar.ts';
 export * from './economy.ts';
 export * from './scouting.ts';
+export * from './market.ts';
