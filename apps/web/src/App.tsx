@@ -9,14 +9,16 @@ import { Lineup } from './views/Lineup.tsx';
 import { TacticsView } from './views/Tactics.tsx';
 import { Matchday } from './views/Matchday.tsx';
 import { League } from './views/League.tsx';
+import { StaffView } from './views/StaffView.tsx';
 
-export type Tab = 'overview' | 'roster' | 'lineup' | 'tactics' | 'match' | 'league';
+export type Tab = 'overview' | 'roster' | 'lineup' | 'tactics' | 'staff' | 'match' | 'league';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'overview', label: 'Verein', icon: 'M4 10l8-6 8 6v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z' },
   { id: 'roster', label: 'Kader', icon: 'M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm8 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM2 19c0-3 3-5 6-5s6 2 6 5M14 14c3 0 8 1 8 5' },
   { id: 'lineup', label: 'Reihen', icon: 'M4 6h16M4 12h16M4 18h16' },
   { id: 'tactics', label: 'Taktik', icon: 'M5 5l4 4m0-4L5 9M15 15l4 4m0-4l-4 4M7 17c4 0 4-10 10-10m0 0l-3-2m3 2l-2 3' },
+  { id: 'staff', label: 'Staff', icon: 'M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1M17 4l1.5 1.5L21 3' },
   { id: 'match', label: 'Spieltag', icon: 'M4 16c0-2 3.6-3 8-3s8 1 8 3-3.6 3-8 3-8-1-8-3zm0 0v-2c0-2 3.6-3 8-3s8 1 8 3v2' },
   { id: 'league', label: 'Liga', icon: 'M7 4h10v4a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4m10-4h3a3 3 0 0 1-3 4M12 13v4m-4 3h8l-1-3H9z' },
 ];
@@ -42,6 +44,7 @@ export function App() {
         {tab === 'tactics' && <TacticsView />}
         {tab === 'match' && <Matchday />}
         {tab === 'league' && <League />}
+        {tab === 'staff' && <StaffView />}
       </main>
       <nav className="tabbar">
         {TABS.map((t) => (

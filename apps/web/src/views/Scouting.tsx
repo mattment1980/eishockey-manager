@@ -53,22 +53,7 @@ export function Scouting() {
 
   return (
     <div className="stack">
-      <section className="card">
-        <h3>Deine Scouts</h3>
-        {scouts.length === 0 && <p className="muted small">Keine Scouts angestellt.</p>}
-        {scouts.map((s) => (
-          <div key={s.id} className="scout-row">
-            <div>
-              <strong>{s.firstName} {s.lastName}</strong>
-              <div className="muted small">Scouting {toDisplay(s.ratings.scouting)} · ca. {Math.round((110 + 0.6 * s.ratings.scouting) / 60)} Spieler pro Woche</div>
-            </div>
-            <select className="select" value={s.region ?? 'DE'} onChange={(e) => setScoutRegion(s.id, e.target.value)} aria-label="Region">
-              {REGIONS.map((r) => <option key={r} value={r}>{REGION_LABEL[r]} ({regionCount(r)})</option>)}
-            </select>
-          </div>
-        ))}
-        <p className="muted small hint">Spieler der eigenen Liga lernst du auch durch Spiele gegen sie kennen. Beobachtete Spieler haben bei deinen Scouts Vorrang.</p>
-      </section>
+      <p className="muted small">Scouts und ihre Einsatzregionen verwaltest du im Reiter <b>Staff</b>. Beobachtete Spieler haben bei den Scouts Vorrang; Spieler der eigenen Liga lernst du auch durch Spiele gegen sie kennen.</p>
 
       <div className="segmented small-seg">
         {([['free', 'Vereinslos'], ['league', 'Liga'], ['watch', `Beobachtet (${st?.watch.length ?? 0})`]] as [StatusFilter, string][]).map(([id, l]) => (

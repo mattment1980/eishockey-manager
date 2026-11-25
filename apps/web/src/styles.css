@@ -45,7 +45,7 @@ ul.plain li:last-child { border-bottom: 0; }
 .topbar-title span { font-size: 0.78rem; color: var(--muted); }
 .content { flex: 1; padding: 14px 14px 96px; max-width: 760px; width: 100%; margin: 0 auto; }
 .tabbar {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 6; display: grid; grid-template-columns: repeat(6, 1fr);
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 6; display: grid; grid-template-columns: repeat(7, 1fr);
   background: rgba(10, 16, 32, 0.96); backdrop-filter: blur(8px); border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -290,3 +290,22 @@ input[type=range] { width: 100%; accent-color: var(--ice); }
 .news li.mine { background: color-mix(in srgb, var(--ice) 8%, transparent); }
 .roster li.static { cursor: default; }
 .tabs button { padding: 8px 4px; font-size: 0.9rem; }
+
+/* Staff */
+.staff-name { margin: 2px 0; }
+.staff-attr { grid-template-columns: 1fr 80px 28px; padding: 5px 0; }
+.staff-attr span { display: flex; flex-direction: column; }
+.staff-attr small { font-size: 0.72rem; }
+.trait-text { margin: 2px 0 6px; }
+.scout-assign { margin-top: 10px; }
+/* Kader-Sichten */
+.skill-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.chip { font-size: 0.72rem; padding: 1px 7px; border-radius: 6px; white-space: nowrap; }
+.chip.top { background: color-mix(in srgb, var(--good) 20%, transparent); color: #b8f3dc; }
+.chip.low { background: color-mix(in srgb, var(--goal) 18%, transparent); color: #fecaca; }
+table.stats.roster-table td:first-child { cursor: pointer; }
+table.stats.roster-table .pos { display: inline-block; margin-right: 6px; }
+.tabbar button span { font-size: 0.64rem; }
+.cell-name { display: inline-flex; align-items: center; cursor: pointer; font-weight: 600; white-space: nowrap; }
+table.stats.roster-table td { vertical-align: middle; }
+table.stats.roster-table td .tag:first-child { margin-left: 0; }
