@@ -100,6 +100,21 @@ Monate abschließen → Spiele simulieren → Einnahmen buchen → Moral & Chemi
 
 **Saisonwechsel (bisher):** Verträge, Klauseln, Karriereende, neue freie Spieler, KI-Kaderauffüllung, Nachwuchs für den menschlichen Verein, neue Aufstellungen, Chemie-Saat, Moral pendelt sich ein. **Noch nicht:** Alterung/Entwicklung der Spielerwerte.
 
+### Sommerpause – Ausbaustand der Phasen
+
+Festgehalten am 27.11.2026 (Matthias): Die Phasen, die bisher nur Platzhalter sind, werden in der Planung als eigene Aufgabe sauber ausprogrammiert.
+
+| Phase | Was heute passiert | Stand |
+|---|---|---|
+| Saisonende | Meister, Abstieg, Prämien, Abschluss der Monate | fertig |
+| Saisonbilanz | Bewertung durch den Vorstand mit Vertrauen, Urlaub (Fitness, Form, Moral, Eingespieltheit) | fertig |
+| Vertragsgespräche | nur Markt-Zeitraum bis 25.05. + Bericht | **Platzhalter** – keine eigenen Gespräche (z. B. Spielerwünsche, Rollen, Gehaltsforderungen, Abwanderungsdruck) |
+| Transfermarkt | nur Markt-Zeitraum bis 20.06. + Bericht | **Platzhalter** – keine eigene Marktdynamik (z. B. Transferphase der KI, Ausland, letzte freie Spieler, Deadline) |
+| Sommertraining | Entwicklungsschritt, Tag der Leistungstests, Nachwuchsjahrgang | fertig (Trainingsschwerpunkte noch nicht wählbar) |
+| Saisonwechsel & Trainingsauftakt | Verträge, Karriereende, Kaderauffüllung, neues Ziel | fertig |
+| Trainingslager | pauschaler Zuwachs bei Chemie und Eingespieltheit | **Platzhalter** – keine Entscheidungen (Ort/Kosten, Schwerpunkt, Intensität, Verletzungsrisiko) |
+| Vorbereitungsspiele | pauschaler Zuwachs bei Chemie und Eingespieltheit | **Platzhalter** – keine echten Testspiele (Gegner wählen, Spiele simulieren, Reihen testen) |
+
 ## Kalibrierung (10 Saisons, siehe `docs/kalibrierung.md`)
 
 Tore ≈ 3,06 je Team, Schüsse 30,9, Corsi 59,5, Fangquote 90,1 %, Überzahlquote 16,7 %, Verlängerung 21,0 %, Heimsiege 55,7 %, Corsi > 2:1 in 9,6 % der Spiele, klarer Favorit gewinnt 72,5 % (kleine Stichprobe). Neu: `FITNESS_EFFECT` 0,003, `FAMILIARITY_EFFECT` 0,025.
@@ -128,4 +143,5 @@ Offene Punkte: Tore ins leere Tor zu selten (0,15 statt 0,3–0,5 je Spiel), Üb
 2. Dominanz des stärksten Vereins prüfen (Etat, Markt, Gehaltsgrenzen)
 3. Kalibrierung: Tore ins leere Tor (KI zieht den Torhüter zu selten), Überzahl- und Fangquote
 4. Mehrere Spielstände (Speicherplätze) – laut V1-Umfang vorgesehen
+4a. Sommerpause ausbauen: Vertragsgespräche, Transfermarkt, Trainingslager und Vorbereitungsspiele als echte Phasen statt Platzhalter (siehe „Sommerpause – Ausbaustand“)
 5. Danach V1.5 Multiplayer oder V2-Themen (Verletzungen, Training) nach Priorität
