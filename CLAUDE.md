@@ -18,4 +18,5 @@
 - `apps/web/src/ui.tsx`: globale Fenster (Spielerprofil, Vereinskader) und Mouseover. Spieler- und Vereinsnamen immer über `PlayerName` / `ClubName` anzeigen; Tooltips über das Attribut `data-tip`.
 - `apps/web/src/views/workshop/`: Datenwerkstatt (Editor, Import-Assistent, Export). Vor Spielbeginn alles editierbar, im laufenden Spiel nur Namen und Farben (Entscheidung Matthias).
 - `apps/web/src/styles/`: `base.css` (Grundlagen), `views.css` (Ansichten), `components.css` (gemeinsame Bausteine), `features.css` (Markt-Baum, Sommerpause, Drag & Drop). Neue Regeln in die passende Datei, keine Überschreib-Blöcke am Ende anhängen.
-- `tests/`: je Bereich eine Datei (`world`, `engine`, `season`, `market`, `team`, `development`, `data`), gemeinsame Testwelt in `helpers.ts`.
+- `packages/core/src/stadium.ts`: Zuschauer, Preise, Catering, Fanshop, Heimvorteil (`ST`); Spieltagsaktionen als Katalog in `stadiumActions.ts`. Nach Änderungen an der Nachfrage `npx tsx scripts/econ-check.ts 4 2026` prüfen (Auslastung ≈ 75–80 %, Heimvorteil Ø ≈ 0,04).
+- `tests/`: je Bereich eine Datei (`world`, `engine`, `season`, `market`, `team`, `development`, `data`, `stadium`), gemeinsame Testwelt in `helpers.ts`.

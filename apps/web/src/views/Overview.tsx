@@ -10,19 +10,21 @@ import { Crest } from '../components/Crest.tsx';
 import { PROFILE_LABEL, euro } from '../labels.ts';
 import type { Tab } from '../App.tsx';
 import { Finances } from './Finances.tsx';
+import { StadiumView } from './Stadium.tsx';
 import { useState } from 'react';
 
 export function Overview({ go }: { go: (t: Tab) => void }) {
-  const [mode, setMode] = useState<'club' | 'finances' | 'sponsors'>('club');
+  const [mode, setMode] = useState<'club' | 'finances' | 'stadium' | 'sponsors'>('club');
   const { club } = useStore();
   return (
     <div className="stack">
       <div className="tabs">
         <button className={mode === 'club' ? 'on' : ''} onClick={() => setMode('club')}>Übersicht</button>
         <button className={mode === 'finances' ? 'on' : ''} onClick={() => setMode('finances')}>Finanzen</button>
+        <button className={mode === 'stadium' ? 'on' : ''} onClick={() => setMode('stadium')}>Stadion</button>
         <button className={mode === 'sponsors' ? 'on' : ''} onClick={() => setMode('sponsors')}>Sponsoren{club && club.sponsors.offers.length ? ` (${club.sponsors.offers.length})` : ''}</button>
       </div>
-      {mode === 'club' ? <ClubOverview go={go} /> : mode === 'finances' ? <Finances /> : <SponsorsView />}
+      {mode === 'club' ? <ClubOverview go={go} /> : mode === 'finances' ? <Finances /> : mode === 'stadium' ? <StadiumView /> : <SponsorsView />}
     </div>
   );
 }

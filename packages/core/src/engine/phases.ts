@@ -27,7 +27,7 @@ export function faceoff(this: MatchSim, defTeam: Side | null): Next {
   const c0 = taker(0, o0), c1 = taker(1, o1);
   const r0 = weightedSkater(this.teams[0].byId.get(c0)!, W.faceoff);
   const r1 = weightedSkater(this.teams[1].byId.get(c1)!, W.faceoff);
-  const p0 = sigmoid(0.5 * ((r0 - r1) / 20) + C.HOME);
+  const p0 = sigmoid(0.5 * ((r0 - r1) / 20) + this.home);
   const w: Side = this.rng.chance(p0) ? 0 : 1;
   const winner = w === 0 ? c0 : c1, loser = w === 0 ? c1 : c0;
   this.ps.get(winner)!.faceoffsWon++;
@@ -187,7 +187,7 @@ export function offense(this: MatchSim, a: Side, q: Quality, n: number): Next {
     if (pk === 'aggressive') stTurn += 0.3;
     if (pk === 'box') stShot *= 0.95;
   }
-  const pTurn = sigmoid(C.K * ((dz - cycle) / 20) + logit(C.TURNOVER_BASE) + dzMod + stTurn + (ta.offensiveZone === 'slot' ? 0.15 : 0) - (a === 0 ? C.HOME : -C.HOME) - C.DAY_FORM_POSSESSION * (this.dayForm[a] - this.dayForm[b]) - C.ADV_TURNOVER * adv);
+  const pTurn = sigmoid(C.K * ((dz - cycle) / 20) + logit(C.TURNOVER_BASE) + dzMod + stTurn + (ta.offensiveZone === 'slot' ? 0.15 : 0) - (a === 0 ? this.home : -this.home) - C.DAY_FORM_POSSESSION * (this.dayForm[a] - this.dayForm[b]) - C.ADV_TURNOVER * adv);
   const pShot = pShotBase * stShot;
   const r = this.rng.next();
   if (r < C.STOPPAGE_PER_ACTION) return { k: 'faceoff', defTeam: b };

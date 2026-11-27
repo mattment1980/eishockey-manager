@@ -45,7 +45,7 @@ Ein Vertrag besteht aus:
 - Laufzeit
 - gegebenenfalls Abstiegsklausel
 
-**Pflichttermine** erledigt man über die Termine „Sponsorenabend“ und „Werbedreh“ beim Wochenstart. Gutgeschrieben wird dem Partner mit dem größten Rückstand. Jeder nicht erledigte Termin kostet am Saisonende 12 Punkte Zufriedenheit.
+**Pflichttermine** erledigt man über die Spieltagsaktion „Business-Spieltag“ (seit M12a, Verein › Stadion) und den Termin „Werbedreh“ beim Wochenstart. Gutgeschrieben wird dem Partner mit dem größten Rückstand. Jeder nicht erledigte Termin kostet am Saisonende 12 Punkte Zufriedenheit.
 
 **Zufriedenheit** (0–100, Start 60–65) bewegt sich monatlich in Richtung eines Zielwerts. Dieser setzt sich zusammen aus der Sponsorenstimmung und dem Typ-Wunsch. Unter 15 steigt der Partner aus.
 

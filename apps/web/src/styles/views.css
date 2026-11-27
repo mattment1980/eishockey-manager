@@ -368,3 +368,19 @@ h3.row-between { display: flex; justify-content: space-between; align-items: cen
 .sp-negotiate { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
 .tag.warn-tag { background: color-mix(in srgb, var(--warn) 25%, transparent); color: #fde7a6; }
 .sp-sat .attr-bar > span { display: block; height: 100%; }
+
+/* Stadion */
+.st-bars { display: flex; flex-direction: column; gap: 6px; margin: 6px 0; }
+.st-bar-row { display: grid; grid-template-columns: 7.5rem minmax(60px, 1fr) minmax(0, 1.6fr); gap: 8px; align-items: center; }
+.st-bar > span { display: block; height: 100%; }
+.st-factors { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; margin-top: 4px; }
+.st-factors .tag { margin-left: 0; }
+.tag.up { color: var(--good); } .tag.down { color: #fca5a5; }
+.st-prices { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 8px 14px; margin: 6px 0; }
+.st-prices label { display: flex; flex-direction: column; gap: 4px; }
+.st-prices input { width: 7rem; }
+.st-actions td, .st-actions th { text-align: left; white-space: nowrap; }
+.st-actions td:nth-child(3) { width: 100%; }
+.st-actions select { width: 100%; min-width: 12rem; }
+.st-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin: 6px 0; }
+@media (max-width: 560px) { .st-bar-row { grid-template-columns: 5.5rem minmax(40px, 1fr); } .st-bar-num { grid-column: 1 / -1; } }

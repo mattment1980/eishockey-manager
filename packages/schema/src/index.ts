@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Version des Spielstand-Formats. Bei Änderungen erhöhen und Migration ergänzen. */
-export const SCHEMA_VERSION = 15;
+export const SCHEMA_VERSION = 16;
 
 /** Interne Attributskala 1–200 (Anzeige 1–20). */
 export const Rating = z.number().int().min(1).max(200);
@@ -438,6 +438,73 @@ export type ClubEvents = z.infer<typeof ClubEventsSchema>;
 export const ClubProfileSchema = z.enum(['tradition', 'corporate', 'patron', 'development', 'promoted']);
 export type ClubProfile = z.infer<typeof ClubProfileSchema>;
 
+// ---------- Stadionbetrieb & Zuschauer ----------
+
+/** Platzbereiche der Halle */
+export const STANDS = ['standing', 'seated', 'business'] as const;
+export const StandSchema = z.enum(STANDS);
+export type Stand = z.infer<typeof StandSchema>;
+export const StandValuesSchema = z.object({ standing: z.number(), seated: z.number(), business: z.number() });
+export type StandValues = z.infer<typeof StandValuesSchema>;
+
+/** Abrechnung eines Heimspiels */
+export const HomeGameReportSchema = z.object({
+  fixtureId: z.string(),
+  date: z.string(),
+  opponent: z.string(),
+  playoffs: z.boolean().default(false),
+  derby: z.boolean().default(false),
+  /** Zuschauer je Bereich (inkl. Gästefans im Stehplatzbereich) */
+  attendance: StandValuesSchema,
+  /** Nachfrage je Bereich (kann größer sein als die Plätze) */
+  demand: StandValuesSchema,
+  /** davon Gästefans */
+  away: z.number().int().default(0),
+  /** Abgewiesene (keine Karte mehr bekommen) */
+  turnedAway: z.number().int().default(0),
+  /** Freikarten (zahlen keinen Eintritt) */
+  free: z.number().int().default(0),
+  /** Stimmung in der Halle 0–100 */
+  atmosphere: z.number(),
+  /** Heimvorteil in der Engine */
+  homeEdge: z.number(),
+  tickets: z.number(),
+  catering: z.number(),
+  /** Kosten des Spieltags (Wareneinsatz, Personal, Aktion) */
+  costs: z.number(),
+  actionId: z.string().nullable().default(null),
+});
+export type HomeGameReport = z.infer<typeof HomeGameReportSchema>;
+
+export const ClubStadiumSchema = z.object({
+  /** Tageskartenpreise je Bereich (null = Standard nach Vereinsprofil) */
+  prices: StandValuesSchema.nullable().default(null),
+  /** Aufschlag in den Playoffs (Anteil) */
+  playoffSurcharge: z.number().default(0.25),
+  /** Aufschlag bei Topspielen und Derbys (Anteil) */
+  topSurcharge: z.number().default(0),
+  catering: z.object({
+    /** Eigenbetrieb (Risiko, Ertrag) oder Pächter (feste Pacht); null = Standard nach Profil */
+    mode: z.enum(['own', 'lease']).nullable().default(null),
+    /** Wechsel des Betriebsmodells zur nächsten Saison */
+    nextMode: z.enum(['own', 'lease']).nullable().default(null),
+    level: z.enum(['basic', 'standard', 'premium']).default('standard'),
+    pricing: z.enum(['low', 'normal', 'high']).default('normal'),
+  }).default({}),
+  /** Fanshop */
+  shop: z.enum(['small', 'standard', 'large']).default('standard'),
+  /** Geschäftsführer setzt Preise nach Leitlinie */
+  delegate: z.boolean().default(false),
+  strategy: z.enum(['fans', 'balanced', 'profit']).default('balanced'),
+  /** Geschäftsführer plant Spieltagsaktionen */
+  autoActions: z.boolean().default(false),
+  /** geplante Spieltagsaktionen: Spiel-ID → Aktion */
+  actions: z.record(z.string()).default({}),
+  /** Heimspiele der laufenden Saison */
+  games: z.array(HomeGameReportSchema).default([]),
+});
+export type ClubStadium = z.infer<typeof ClubStadiumSchema>;
+
 // ---------- Taktik & Matchplan ----------
 
 export const TacticsSchema = z.object({
@@ -560,13 +627,18 @@ export const ClubSchema = z.object({
   nickname: z.string(),
   colors: z.object({ primary: z.string(), secondary: z.string() }),
   profile: ClubProfileSchema,
-  arena: z.object({ name: z.string(), capacity: z.number().int().positive() }),
+  arena: z.object({
+    name: z.string(),
+    capacity: z.number().int().positive(),
+    /** Plätze je Bereich (Summe = capacity; fehlt = Aufteilung nach Vereinsprofil) */
+    seats: StandValuesSchema.optional(),
+  }),
   finances: z.object({
     /** Saisonetat in Euro (geplante Gesamtausgaben) */
     budget: z.number().int(),
     /** Kontostand in Euro */
     balance: z.number().int(),
-    /** Durchschnittlicher Ticketpreis in Euro */
+    /** Durchschnittlicher Ticketpreis in Euro (aus den Preisen je Bereich) */
     ticketPrice: z.number(),
     /** Sponsoreneinnahmen der laufenden Saison (gesamt) */
     sponsorIncome: z.number().int(),
@@ -595,6 +667,10 @@ export const ClubSchema = z.object({
   events: ClubEventsSchema.default({}),
   /** Sponsoren: Verträge, Angebote, Geschäftsführer-Leitlinie */
   sponsors: ClubSponsorsSchema.default({}),
+  /** Stadionbetrieb: Preise, Catering, Fanshop, Spieltagsaktionen */
+  stadium: ClubStadiumSchema.default({}),
+  /** Rivalen (Derbys) */
+  rivals: z.array(z.string()).default([]),
 });
 export type Club = z.infer<typeof ClubSchema>;
 

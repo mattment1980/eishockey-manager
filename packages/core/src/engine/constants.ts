@@ -28,8 +28,12 @@ export const C = {
   SCORE_EFFECT_TRAIL: 0.3,
   SCORE_EFFECT_LEAD: 0.2,
 
-  /** Heimvorteil auf alle Duelle */
+  /** Heimvorteil auf alle Duelle (Standard, wenn keine Zuschauer übergeben werden, z. B. CLI-Kalibrierung) */
   HOME: 0.04,
+  /** Heimvorteil aus den Zuschauern (M12a): Grundwert + Menge (Auslastung 0–1) + Art (Stimmung 0–1) */
+  HOME_BASE: 0.010,
+  HOME_CROWD: 0.025,
+  HOME_ATMOS: 0.017,
 
   // --- Zeitbedarf je Phase (Sekunden) ---
   T_FACEOFF: [1, 3],

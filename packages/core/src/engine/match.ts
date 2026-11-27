@@ -50,6 +50,8 @@ export class MatchSim {
   keepEvents: boolean;
   /** Tagesform je Team (Logit) und Torhüter-Tagesform */
   dayForm: [number, number];
+  /** Heimvorteil dieses Spiels */
+  home: number;
   goalieForm: [number, number];
   matrix: LineMatrix = {
     toi: [0, 1, 2, 3].map(() => [0, 0, 0, 0]), shotsHome: [0, 1, 2, 3].map(() => [0, 0, 0, 0]), shotsAway: [0, 1, 2, 3].map(() => [0, 0, 0, 0]),
@@ -62,6 +64,7 @@ export class MatchSim {
   constructor(readonly input: MatchInput) {
     this.rng = new Rng(input.seed);
     this.keepEvents = input.keepEvents ?? true;
+    this.home = input.homeEdge ?? C.HOME;
     this.teams = [this.initTeam(0), this.initTeam(1)];
     this.dayForm = [this.rng.normal(0, C.DAY_FORM_SD), this.rng.normal(0, C.DAY_FORM_SD)];
     // Teamklima verschiebt die Tagesform leicht

@@ -13,6 +13,7 @@ import { creditSponsorTermin } from './sponsors.ts';
  * Diese Datei enthält nur den Ablauf (planen, auswerten, entscheiden) und die Wirkungen (`Effect`).
  *
  * - Termine plant der Manager beim Wochenstart; jeder Termin ersetzt eine Trainingseinheit.
+ *   Stadionbezogene Aktionen (Familientag, Kindertag, Business-Spieltag …) sind seit M12a Spieltagsaktionen (`stadiumActions.ts`).
  * - Zufallsereignisse kommen etwa alle 2–3 Wochen beim Wochenstart, meist mit 2–3 Antworten.
  *   Ohne Entscheidung (Schnell weiter) wählt der Co-Trainer die Standardantwort.
  * - Wiederholte Termine nutzen sich ab (Wirkung sinkt), manche haben eine Pause.
@@ -31,6 +32,8 @@ export type Effect =
   /** Chemie zwischen den beiden betroffenen Spielern */
   | { kind: 'pairChemistry'; amount: number }
   | { kind: 'fans'; amount: number }
+  /** Fanbasis (langfristig, Punkte) */
+  | { kind: 'fanBase'; amount: number }
   | { kind: 'sponsors'; amount: number }
   /** Geld: positiv = Einnahme, negativ = Ausgabe */
   | { kind: 'money'; amount: number; cat: LedgerCategory }
@@ -233,6 +236,9 @@ export function applyEffects(world: World, clubId: string, effects: Effect[], ct
       case 'fans':
         club = { ...club, mood: { ...club.mood, fans: r1(clamp(club.mood.fans + e.amount, 0, 100)) } };
         break;
+      case 'fanBase':
+        club = { ...club, fanBase: r1(clamp(club.fanBase + e.amount, 1, 100)) };
+        break;
       case 'sponsors':
         club = { ...club, mood: { ...club.mood, sponsors: r1(clamp(club.mood.sponsors + e.amount, 0, 100)) } };
         break;
@@ -265,7 +271,7 @@ export function applyEffects(world: World, clubId: string, effects: Effect[], ct
   return w;
 }
 
-function logEvent(world: World, clubId: string, entry: EventLog, doneId: string): World {
+export function logEvent(world: World, clubId: string, entry: EventLog, doneId: string): World {
   return {
     ...world,
     clubs: world.clubs.map((c) => (c.id === clubId ? { ...c, events: { ...c.events, log: [entry, ...c.events.log].slice(0, 40), done: [...c.events.done, { id: doneId, date: entry.date }].slice(-60) } } : c)),

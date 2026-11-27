@@ -1,6 +1,6 @@
 # Kalibrierung Match-Engine
 
-Stand: 27.11.2026 (Runde vor M7: dynamische Fitness und Form, Taktik-Eingespieltheit) – erzeugt mit `pnpm sim calibrate 10` (Welt-Seed 2026). Richtwerte sind Orientierungsgrößen für europäisches Profi-Eishockey, keine offiziellen Ligastatistiken.
+Stand: 27.11.2026 (geprüft mit M12a: Heimvorteil aus Zuschauern; die CLI-Kalibrierung nutzt den Standardwert `HOME` 0,04 – Werte unverändert. Im Spielbetrieb liegt der Heimvorteil je Spiel bei 0,025–0,052, Schnitt 0,040, Heimsiege 57,6 % gegenüber 57,5 % vorher über 8 Testsaisons; siehe `docs/stadion.md`. Zuvor: Runde vor M7 mit dynamischer Fitness und Form, Taktik-Eingespieltheit) – erzeugt mit `pnpm sim calibrate 10` (Welt-Seed 2026). Richtwerte sind Orientierungsgrößen für europäisches Profi-Eishockey, keine offiziellen Ligastatistiken.
 
 ```
 Kalibrierung: 3640 Spiele (10 Saisons à 52 Spieltage) in 57.9 s (15,90 ms/Spiel)

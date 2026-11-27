@@ -1,35 +1,34 @@
-import type { World, Club, Fixture, ClubProfile } from '@ehm/schema';
-import { hash01, monthKey, monthsBetween, nextMonth } from './calendar.ts';
+import type { World, Club, Fixture } from '@ehm/schema';
+import { monthKey, monthsBetween, nextMonth } from './calendar.ts';
 import { teamStrength } from './lineup.ts';
 import { perkCost } from './market.ts';
 import { sponsorAnnual, sponsorMonth, sponsorSeasonEnd } from './sponsors.ts';
+import { beginSeasonStadium, expectedHomeGame, expectedShopSeason, settleHomeGame, shopMonth, stadiumMonth, type GameForecast } from './stadium.ts';
 
 /**
- * Wirtschaft (Basis): Ticketing, Catering, Sponsoren, Medien, Gehälter, Halle, Reisen, Verwaltung.
+ * Wirtschaft (Basis): Ticketing, Catering, Fanshop, Sponsoren, Medien, Gehälter, Halle, Reisen, Verwaltung.
+ * Zuschauer, Preise und Catering rechnet `stadium.ts`; hier wird gebucht und geplant.
  * Die Saison wird so geplant, dass ein Verein bei erwartetem Verlauf ungefähr bei null landet;
  * sportlicher Erfolg (Zuschauer, Playoff-Heimspiele) entscheidet über Gewinn oder Verlust.
  */
 
 export type LedgerCategory =
-  | 'tickets' | 'catering' | 'sponsors' | 'media' | 'playoffs'
-  | 'salaries' | 'perks' | 'bonus' | 'staff' | 'arena' | 'travel' | 'admin';
+  | 'tickets' | 'catering' | 'merch' | 'sponsors' | 'media' | 'playoffs'
+  | 'salaries' | 'perks' | 'bonus' | 'staff' | 'arena' | 'matchday' | 'travel' | 'admin';
 
 export const CATEGORY_LABEL: Record<LedgerCategory, string> = {
-  tickets: 'Ticketing', catering: 'Catering & Merchandising', sponsors: 'Sponsoring', media: 'Medien', playoffs: 'Playoff-Ticketing',
-  salaries: 'Gehälter Spieler', perks: 'Nebenleistungen (Wohnung, Auto, …)', bonus: 'Prämien', staff: 'Gehälter Staff', arena: 'Halle', travel: 'Reisen', admin: 'Verwaltung & Betrieb',
+  tickets: 'Ticketing', catering: 'Catering', merch: 'Fanshop & Merchandising', sponsors: 'Sponsoring', media: 'Medien', playoffs: 'Playoff-Ticketing',
+  salaries: 'Gehälter Spieler', perks: 'Nebenleistungen (Wohnung, Auto, …)', bonus: 'Prämien', staff: 'Gehälter Staff', arena: 'Halle', matchday: 'Stadionbetrieb (Catering, Fanshop, Aktionen)', travel: 'Reisen', admin: 'Verwaltung & Betrieb',
 };
-export const INCOME: LedgerCategory[] = ['tickets', 'playoffs', 'catering', 'sponsors', 'media'];
-export const EXPENSE: LedgerCategory[] = ['salaries', 'perks', 'bonus', 'staff', 'arena', 'travel', 'admin'];
+export const INCOME: LedgerCategory[] = ['tickets', 'playoffs', 'catering', 'merch', 'sponsors', 'media'];
+export const EXPENSE: LedgerCategory[] = ['salaries', 'perks', 'bonus', 'staff', 'arena', 'matchday', 'travel', 'admin'];
 
 export const E = {
   MEDIA_PER_CLUB: 240_000,
-  CATERING_PER_FAN: 5,
   ARENA_PER_SEAT: 3.2,
   TRAVEL_PER_GAME: 5_500,
-  PLAYOFF_PRICE_FACTOR: 1.25,
   /** Erwarteter Zusatzerlös (Playoffs, Zuschauerschwankung), um den die Sponsoren niedriger geplant werden */
   EXPECTED_PLAYOFF_SHARE: 150_000,
-  TICKET_PRICE: { corporate: 24, patron: 22, tradition: 21, development: 19, promoted: 18 } as Record<ClubProfile, number>,
 };
 
 export const GOAL_LABEL = {
@@ -56,27 +55,26 @@ function homeGames(world: World, clubId: string): number {
   return world.competition!.fixtures.filter((f) => f.stage === 'regular' && f.home === clubId).length;
 }
 
-/** Saisonplanung: Ziel, Ticketpreis, Sponsoren, Medien, Gehaltsetat. */
+/** Saisonplanung: Ziel, Sponsoren, Medien, Gehaltsetat (Zuschauer und Catering nach den Preisen im Stadion). */
 export function beginSeasonFinances(world: World): World {
   const byId = new Map(world.players.map((p) => [p.id, p]));
   const ranked = [...world.clubs].sort((a, b) => teamStrength(b.matchplan!, byId) - teamStrength(a.matchplan!, byId)).map((c) => c.id);
-  const clubs = world.clubs.map((c) => {
+  const clubs = world.clubs.map((c0) => {
+    const c = beginSeasonStadium(c0);
     const rank = ranked.indexOf(c.id) + 1;
     const goal = rank <= 2 ? 'title' : rank <= 4 ? 'semifinal' : rank <= 6 ? 'quarterfinal' : rank <= 10 ? 'prePlayoffs' : 'survival';
     const pay = payrollOf(world, c.id);
     const games = homeGames(world, c.id);
-    const price = E.TICKET_PRICE[c.profile];
-    const expFans = Math.min(1, baseFill(c)) * c.arena.capacity * games;
-    const expTickets = expFans * (price + E.CATERING_PER_FAN);
+    const exp = expectedHomeGame(world, c);
+    const expMatchday = games * (exp.tickets + exp.catering) + expectedShopSeason(c);
     const fixedCosts = pay.players + pay.perks + pay.staff + games * c.arena.capacity * E.ARENA_PER_SEAT + games * E.TRAVEL_PER_GAME;
     const admin = Math.max(c.finances.budget * 0.08, c.finances.budget - fixedCosts);
-    const sponsors = Math.max(c.finances.budget * 0.15, pay.players + pay.perks + pay.staff + games * c.arena.capacity * E.ARENA_PER_SEAT + games * E.TRAVEL_PER_GAME + admin - expTickets - E.MEDIA_PER_CLUB - E.EXPECTED_PLAYOFF_SHARE);
+    const sponsors = Math.max(c.finances.budget * 0.15, fixedCosts + admin - expMatchday - E.MEDIA_PER_CLUB - E.EXPECTED_PLAYOFF_SHARE);
     return {
       ...c,
       seasonGoal: goal as Club['seasonGoal'],
       finances: {
         ...c.finances,
-        ticketPrice: price,
         sponsorIncome: Math.round(sponsors / 1000) * 1000,
         mediaIncome: E.MEDIA_PER_CLUB,
         salaryBudget: Math.round(Math.max(c.finances.budget * 0.6, pay.players + pay.perks + pay.staff) / 10_000) * 10_000,
@@ -109,43 +107,27 @@ function book(club: Club, month: string, cat: LedgerCategory, amount: number): C
   return { ...club, finances: { ...club.finances, ledger, balance: Math.round(club.finances.balance + amount) } };
 }
 
-/** Zuschlag auf die Hallenauslastung: Fanstimmung (±10 % der Halle) und Event-Bonus (z. B. Autogrammstunde) */
-export const fanFillBonus = (c: Club) => ((c.mood.fans - 50) / 50) * 0.1 + (c.events.attendance?.pct ?? 0);
-
-/** Zuschauerzahl eines Heimspiels (deterministisch je Spiel). */
-export function attendanceFor(world: World, fixture: Fixture, place: number | null): number {
-  const home = world.clubs.find((c) => c.id === fixture.home)!;
-  const away = world.clubs.find((c) => c.id === fixture.away)!;
-  const n = world.clubs.filter((c) => c.leagueId === home.leagueId).length;
-  let fill = baseFill(home);
-  if (place) fill += ((n / 2 - place) / n) * 0.16;
-  fill += (away.fanBase / 100) * 0.06 - 0.03;
-  fill += fanFillBonus(home);
-  if (fixture.stage === 'playoffs') {
-    const ser = world.competition!.series.find((s) => s.id === fixture.seriesId);
-    fill += 0.12 + 0.04 * (ser?.roundNo ?? 1);
-  } else if (fixture.stage !== 'regular') fill += 0.1;
-  fill += (hash01(`zuschauer:${fixture.id}:${world.season}`) - 0.5) * 0.08;
-  return Math.round(Math.max(0.25, Math.min(1, fill)) * home.arena.capacity);
-}
-
-/** Einnahmen/Ausgaben eines gespielten Spiels buchen. */
-export function bookFixture(world: World, fixture: Fixture, place: number | null): World {
+/** Einnahmen/Ausgaben eines gespielten Spiels buchen (Heimspiel: Zuschauer aus der Prognose vor dem Spiel). */
+export function bookFixture(world: World, fixture: Fixture, fc: GameForecast | null): World {
   const month = monthKey(fixture.date);
-  const fans = attendanceFor(world, fixture, place);
-  const clubs = world.clubs.map((c) => {
-    if (c.id === fixture.home) {
-      const post = fixture.stage !== 'regular';
-      const price = c.finances.ticketPrice * (post ? E.PLAYOFF_PRICE_FACTOR : 1);
-      let x = book(c, month, post ? 'playoffs' : 'tickets', fans * price);
-      x = book(x, month, 'catering', fans * E.CATERING_PER_FAN);
-      x = book(x, month, 'arena', -c.arena.capacity * E.ARENA_PER_SEAT);
-      return { ...x, finances: { ...x.finances, attendance: [...x.finances.attendance, fans] } };
-    }
-    if (c.id === fixture.away) return book(c, month, 'travel', -E.TRAVEL_PER_GAME);
-    return c;
-  });
-  return { ...world, clubs };
+  let w = world;
+  if (fc) {
+    const s = settleHomeGame(w, fixture, fc);
+    w = s.world;
+    const post = fixture.stage !== 'regular';
+    w = {
+      ...w,
+      clubs: w.clubs.map((c) => {
+        if (c.id !== fixture.home) return c;
+        let x = book(c, month, post ? 'playoffs' : 'tickets', s.report.tickets);
+        x = book(x, month, 'catering', s.report.catering);
+        if (s.report.costs) x = book(x, month, 'matchday', -s.report.costs);
+        x = book(x, month, 'arena', -c.arena.capacity * E.ARENA_PER_SEAT);
+        return { ...x, finances: { ...x.finances, attendance: [...x.finances.attendance, fc.total] } };
+      }),
+    };
+  }
+  return { ...w, clubs: w.clubs.map((c) => (c.id === fixture.away ? book(c, month, 'travel', -E.TRAVEL_PER_GAME) : c)) };
 }
 
 /** Monatsabschluss: laufende Einnahmen und Ausgaben, Vorstandsvertrauen. */
@@ -157,6 +139,9 @@ export function closeMonth(world: World, month: string, place: (clubId: string) 
     x = book(x, month, 'staff', -pay.staff / 12);
     x = book(x, month, 'sponsors', sponsorAnnual(c, world.season) / 12);
     x = book(x, month, 'media', c.finances.mediaIncome / 12);
+    const shop = shopMonth(world, c, month);
+    x = book(x, month, 'merch', shop.revenue);
+    x = book(x, month, 'matchday', -shop.costs);
     x = book(x, month, 'admin', -adminPerMonth(world, c));
     // Vorstand
     let conf = x.boardConfidence;
@@ -175,6 +160,8 @@ export function closeMonthsBetween(world: World, fromIso: string, toIso: string,
   let w = world;
   for (const m of monthsBetween(monthKey(fromIso), monthKey(toIso))) {
     w = closeMonth(w, m, place);
+    // Stadion: Preise der KI und des Geschäftsführers
+    w = stadiumMonth(w);
     // Sponsoren: Zufriedenheit, Ausstiege, Angebote für freie Flächen
     w = sponsorMonth(w, m, place, (c) => (c.seasonGoal ? GOAL_PLACE[c.seasonGoal] : null));
   }
@@ -226,14 +213,15 @@ export function liquidityForecast(world: World, clubId: string): ForecastMonth[]
   }
   // Plan ab aktuellem Monat
   const pay = payrollOf(world, clubId);
-  const monthly = { inc: (sponsorAnnual(club, world.season) + club.finances.mediaIncome) / 12, exp: (pay.players + pay.perks + pay.staff) / 12 + adminPerMonth(world, club) };
-  const expFans = Math.min(1, baseFill(club)) * club.arena.capacity;
+  const game = expectedHomeGame(world, club);
+  const shopM = expectedShopSeason(club) / 12;
+  const monthly = { inc: (sponsorAnnual(club, world.season) + club.finances.mediaIncome) / 12 + shopM, exp: (pay.players + pay.perks + pay.staff) / 12 + adminPerMonth(world, club) };
   const startMonth = out.length && out[out.length - 1].month >= current ? nextMonth(out[out.length - 1].month) : current;
   balance = running;
   for (const m of monthsBetween(startMonth, end)) {
     const homes = comp.fixtures.filter((f) => !f.result && f.home === clubId && monthKey(f.date) === m).length;
     const aways = comp.fixtures.filter((f) => !f.result && f.away === clubId && monthKey(f.date) === m).length;
-    const inc = monthly.inc + homes * expFans * (club.finances.ticketPrice + E.CATERING_PER_FAN);
+    const inc = monthly.inc + homes * (game.tickets + game.catering);
     const exp = -monthly.exp - homes * club.arena.capacity * E.ARENA_PER_SEAT - aways * E.TRAVEL_PER_GAME;
     balance += inc + exp;
     out.push({ month: m, income: inc, expense: exp, balance, actual: false });

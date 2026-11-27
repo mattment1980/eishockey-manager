@@ -29,6 +29,8 @@ export interface MatchInput {
   format: LeagueFormat;
   /** Volles Ereignisprotokoll behalten (Standard: ja) */
   keepEvents?: boolean;
+  /** Heimvorteil aus Zuschauern und Stimmung (Standard: C.HOME) */
+  homeEdge?: number;
 }
 
 export type EventType =

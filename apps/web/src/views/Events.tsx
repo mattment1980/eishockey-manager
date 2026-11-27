@@ -27,7 +27,7 @@ export function TerminPlanner({ games, date }: { games: number; date: string }) 
         {plan.length < slots && <button className="btn ghost small" onClick={() => setOpen(!open)}>{open ? 'Schließen' : 'Termin planen'}</button>}
       </div>
       {plan.length === 0 && !open && <p className="muted small">Keine Termine – volle Trainingswoche. Jeder Termin ersetzt eine Trainingseinheit.</p>}
-      {openSponsorTermine(club, world.season) > 0 && <p className="small">Sponsoren warten noch auf <b>{openSponsorTermine(club, world.season)} Pflichttermine</b> in dieser Saison – „Sponsorenabend“ und „Werbedreh“ zählen dafür.</p>}
+      {openSponsorTermine(club, world.season) > 0 && <p className="small">Sponsoren warten noch auf <b>{openSponsorTermine(club, world.season)} Pflichttermine</b> in dieser Saison – der „Business-Spieltag“ (Verein › Stadion) und der Termin „Werbedreh“ zählen dafür.</p>}
       {plan.map((e, i) => {
         const def = TERMINE.find((t) => t.id === e.id);
         const subj = e.subject ? byId.get(e.subject) : undefined;
