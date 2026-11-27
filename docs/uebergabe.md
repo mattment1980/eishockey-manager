@@ -27,9 +27,15 @@ Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst z
 | Aufräumrunde | Engine und Wettbewerb in Module, Eingaben während Simulation sicher, Spielstand-Sicherung, Formel an einer Stelle, Oberfläche/CSS/Tests aufgeteilt, Fingerabdruck-Prüfung | ✅ |
 | Runde vor M7 | 14 Anpassungen (siehe unten): Spielerprofil überall, Mouseover, Fitness/Form/aktuelle Stärke, Talent, Markt mit Ligenbaum, Vereinskader, Form & Teamstatistik, Tooltips, Drag & Drop, Sommerpause, Taktik-Eingespieltheit | ✅ |
 | 7 | Saisonwechsel & Daten: Alterung/Entwicklung, Nachwuchs, CSV-Import/Export, Datenwerkstatt | ✅ |
-| **V1-Abschluss** | **Testphase, Feinschliff, offene Kalibrierungspunkte, mehrere Spielstände** | **als Nächstes** |
-| V1.5 | Multiplayer (Server, Accounts, private Ligen) | später |
-| V2 | Verletzungen & Medizin, Training, Trait-Entwicklung, Manager-Karriere, Ligensystem u. a. | später |
+| **8** | **Training** (Trainingswoche, Schwerpunkte, Belastung; Trainingslager und Vorbereitung als echte Phasen) | **als Nächstes** |
+| 9 | Verletzungen & medizinische Abteilung (Konzept: „verletzungen-und-medizin“) | geplant |
+| 10 | Events: Zufallsereignisse und planbare Termine unter der Woche (Teamevent, Autogrammstunde …) mit Wirkung auf Moral, Frische, Zuschauer, Stimmung, Chemie | geplant |
+| 11 | Sponsoring | geplant |
+| 12a | Stadionbetrieb & Zuschauer: Catering, Eintrittspreise, Veranstaltungen (Sponsorenabend, Kindertag …) mit Einfluss auf die Zuschauer | geplant |
+| 12b | Stadionausbau | geplant |
+| nebenbei | Dominanz des stärksten Vereins, offene Kalibrierungspunkte, mehrere Spielstände, Vertragsgespräche/Transfermarkt in der Sommerpause | offen |
+| später | Multiplayer (Server, Accounts, private Ligen) – bewusst hinten angestellt (Matthias, 27.11.2026) | später |
+| später | Trait-Entwicklung, Manager-Karriere, Ligensystem u. a. | später |
 
 ## Technik
 
@@ -135,13 +141,14 @@ Offene Punkte: Tore ins leere Tor zu selten (0,15 statt 0,3–0,5 je Spiel), Üb
 - Wirtschaft realistisch; Geschäftsführer optional; Hallenausbau später
 - V1 Einzelspieler-Test mit DEL2-Modell
 - Spielerentwicklung hybrid: monatlich kleine Schritte + großer Schritt im Sommer
-- Verletzungen und medizinische Abteilung: vorgemerkt für V2
+- Reihenfolge ab 27.11.2026: Training → Verletzungen & Medizin → Events → Sponsoring → Stadionbetrieb & Zuschauer → Stadionausbau; Multiplayer hinten angestellt
 
-## Nächste Schritte (Vorschläge)
+## Nächste Schritte
 
-1. Testphase durch Matthias, Rückmeldungen einarbeiten
-2. Dominanz des stärksten Vereins prüfen (Etat, Markt, Gehaltsgrenzen)
-3. Kalibrierung: Tore ins leere Tor (KI zieht den Torhüter zu selten), Überzahl- und Fangquote
-4. Mehrere Spielstände (Speicherplätze) – laut V1-Umfang vorgesehen
-5. Sommerpause ausbauen: Vertragsgespräche, Transfermarkt, Trainingslager und Vorbereitungsspiele als echte Phasen statt Platzhalter (siehe „Sommerpause – Ausbaustand“)
-6. Danach V1.5 Multiplayer oder V2-Themen (Verletzungen, Training) nach Priorität
+1. **Meilenstein 8 – Training:** Konzept mit Matthias klären, dann umsetzen. Trainingslager und Vorbereitungsspiele der Sommerpause gehören dazu (bisher Platzhalter).
+2. Meilenstein 9 – Verletzungen & medizinische Abteilung (baut auf der Belastung aus dem Training auf)
+3. Meilenstein 10 – Events
+4. Meilenstein 11 – Sponsoring
+5. Meilenstein 12a/b – Stadionbetrieb & Zuschauer, danach Stadionausbau
+6. Nebenbei: Dominanz des stärksten Vereins, Kalibrierung (leeres Tor, Überzahl- und Fangquote), mehrere Spielstände, Vertragsgespräche und Transfermarkt in der Sommerpause
+7. Multiplayer später
