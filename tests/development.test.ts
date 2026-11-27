@@ -47,8 +47,9 @@ describe('Nachwuchsjahrgang', () => {
     w = youthIntake(w, w.season + 1);
     expect(youthOf(w, me).length).toBeGreaterThanOrEqual(4);
     for (const c of w.clubs.filter((x) => x.id !== me)) expect(youthOf(w, c.id).length).toBe(0);
-    const youngsters = w.players.filter((p) => ageOn(p.birthDate, `${w.season + 1}-08-01`) <= 17);
-    expect(youngsters.length).toBeGreaterThan(40);
+    const youngsters = w.players.filter((p) => p.id.startsWith(`py${w.season + 1}-`));
+    expect(youngsters.length).toBeGreaterThanOrEqual(w.clubs.length * 4);
+    expect(youngsters.every((p) => { const a = ageOn(p.birthDate, `${w.season + 1}-07-15`); return a >= 16 && a <= 18; })).toBe(true);
     const pick = youthOf(w, me)[0];
     const r = signYouth(w, pick.id);
     expect(r.error).toBeUndefined();

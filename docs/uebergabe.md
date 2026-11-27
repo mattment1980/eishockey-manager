@@ -1,6 +1,6 @@
 # Übergabe – Stand der Entwicklung
 
-Stand: 27.11.2026 · letzter Commit „Aufräumrunde: Module, Aktions-Warteschlange, Spielstand-Sicherung“
+Stand: 27.11.2026 · letzter Commit „M7 Teil 2: Datenwerkstatt, CSV-Import/-Export“
 
 Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst zusammen, was gebaut ist, wie der Code aufgebaut ist, was entschieden wurde und was als Nächstes kommt.
 
@@ -26,7 +26,8 @@ Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst z
 | 6b | Chemie & Moral | ✅ |
 | Aufräumrunde | Engine und Wettbewerb in Module, Eingaben während Simulation sicher, Spielstand-Sicherung, Formel an einer Stelle, Oberfläche/CSS/Tests aufgeteilt, Fingerabdruck-Prüfung | ✅ |
 | Runde vor M7 | 14 Anpassungen (siehe unten): Spielerprofil überall, Mouseover, Fitness/Form/aktuelle Stärke, Talent, Markt mit Ligenbaum, Vereinskader, Form & Teamstatistik, Tooltips, Drag & Drop, Sommerpause, Taktik-Eingespieltheit | ✅ |
-| **7** | **Saisonwechsel & Daten: Alterung/Entwicklung, Nachwuchs, CSV-Import/Export, Editor** | **als Nächstes** |
+| 7 | Saisonwechsel & Daten: Alterung/Entwicklung, Nachwuchs, CSV-Import/Export, Datenwerkstatt | ✅ |
+| **V1-Abschluss** | **Testphase, Feinschliff, offene Kalibrierungspunkte, mehrere Spielstände** | **als Nächstes** |
 | V1.5 | Multiplayer (Server, Accounts, private Ligen) | später |
 | V2 | Verletzungen & Medizin, Training, Trait-Entwicklung, Manager-Karriere, Ligensystem u. a. | später |
 
@@ -41,12 +42,12 @@ Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst z
 
 | Paket | Inhalt |
 |---|---|
-| `packages/schema` | Datenmodell (Welt, Land, Liga, Verein, Spieler, Staff, Vertrag, Wettbewerb, Scouting, Markt, Matchplan, Coaching-Regeln, Chemie), aktuell **SCHEMA_VERSION 7** (neu: `Club.familiarity`, `World.offseason`, `FixtureResult.team`) |
+| `packages/schema` | Datenmodell (Welt, Land, Liga, Verein, Spieler, Staff, Vertrag, Wettbewerb, Scouting, Markt, Matchplan, Coaching-Regeln, Chemie), aktuell **SCHEMA_VERSION 8** (v7: `Club.familiarity`, `World.offseason`, `FixtureResult.team`; v8: `Player.dev`, `Player.youthClub`) |
 | `packages/core` | Spiellogik: `engine/` (`match.ts` = Zustand und Ablauf; Bereiche als Methoden in `lines`, `rules`, `modifiers`, `phases`, `shots`, `penalties`, `shootout`; dazu `state`, `types`, `constants`), `competition.ts` (Spielplan, Serien), `standings.ts` (Tabelle, Form, Teamstatistik), `matchday.ts` (Ablauf eines Spieltags), `economy.ts`, `scouting.ts`, `market.ts`, `coaching.ts`, `chemistry.ts`, `condition.ts` (Fitness & Form), `familiarity.ts` (Taktik-Eingespieltheit), `offseason.ts` (Phasen, Trainingslager), `lineup.ts`, `ratings.ts` (u. a. `effectiveRating`, `talentStars`) |
-| `packages/data` | Weltgenerator, Namen, Import/Export + Migration v1→v7 (`io.ts`), Saisonwechsel (`transition.ts`), Sommerpause-Ablauf (`offseason.ts`) |
+| `packages/data` | Weltgenerator, Namen, Import/Export + Migration v1→v8 (`io.ts`), CSV mit Spaltenzuordnung (`csv.ts`), Datensatz-Neuaufbau (`rebuild.ts`), Nachwuchsjahrgang (`youth.ts`), Saisonwechsel (`transition.ts`), Sommerpause-Ablauf (`offseason.ts`) |
 | `apps/web` | Oberfläche (7 Reiter: Verein, Kader, Reihen, Taktik, Staff, Spieltag, Liga); `store.tsx` = Spielstand mit Aktions-Warteschlange (Eingaben während einer Simulation werden danach erneut angewendet), Export/Import als Datei; `ui.tsx` = globale Fenster (`components/PlayerProfile`, `ClubSheet`, `HoverLayer`), `PlayerName`/`ClubName` für klickbare Namen, `data-tip` für Tooltips; CSS in `styles/` (base, views, components, features) |
 | `apps/sim-cli` | `pnpm sim generate | match | season | calibrate | seasons` |
-| `tests/` | 33 Tests in 5 Dateien (world, engine, season, market, team) |
+| `tests/` | 45 Tests in 7 Dateien (world, engine, season, market, team, development, data) |
 
 ### Ablauf eines Spieltags (`playDay` in `matchday.ts`)
 
@@ -83,6 +84,15 @@ Monate abschließen → Spiele simulieren → Einnahmen buchen → Moral & Chemi
 - Sommerpause in 8 Phasen: Saisonende → Saisonbilanz (Urlaub) → Vertragsgespräche → Transfermarkt → Sommertraining → Saisonwechsel & Trainingsauftakt → Trainingslager → Vorbereitungsspiele → Saisonstart. Trainingsphasen stärken Reihenchemie und Taktik-Eingespieltheit. Platz für Testspiele/Training später.
 - Taktik-Eingespieltheit je System („forecheck:1-2-2“, „pp:umbrella“ …): wächst mit Spielen (Tempo abhängig von Trainer-Taktik und „Taktikfuchs“), verblasst ohne Einsatz und im Urlaub; Wirkung ±2,5 % (`FAMILIARITY_EFFECT`), Anzeige als Balken unter jeder Taktik-Option und in der Kabine. Reihen-Eingespieltheit = bisherige Chemie.
 
+**Meilenstein 7 (27.11.2026):**
+- **Entwicklung** (`core/development.ts`): monatlich September–April kleine Schritte, im Sommertraining der große Schritt. Wachstum = Lücke zum Potenzial × Jahresrate (`DEV.YEAR_RATE` 0,19) × Faktoren: Talent (0,5★ = 0,6 … 5★ = 1,32), Eiszeit (Tribüne 0,7, viel Eiszeit bis 1,15), Entwicklungstrainer (0,85–1,15, „Ausbilder“ +10 % bis 23), Mentor im Team (+8 % bis 23), Einstellung (Professionalität, „Perfektionist“ +10 %). Physis wächst früh und baut ab 30 ab, Technik ab 32, Mentales ab 36; Torhüter zwei Jahre später. Entwicklungssprünge im Sommer möglich. Ganzzahlige Werte über deterministisches Runden.
+- **Anzeige:** Pfeile an den Attributen und an der Gesamtstärke (seit Saisonbeginn), Verlaufslinie, Tempo mit Aufschlüsselung, Kader-Ansicht „Entwicklung“, Sommer-Nachrichten (Sprünge, Abbau).
+- **Karriereende:** Vereinslose ab 33 zunehmend, ab 35 sicher; mit Vertrag ab 36 (25 %), ab 38 sicher.
+- **Nachwuchsjahrgang** (`core/youth.ts`, `data/youth.ts`): jeder Verein im Sommertraining 4 Talente (16–18 J., +1 bei Entwicklungstrainer ≥ 14), fester Ligamaßstab plus Ausbildungsverein und Trainer. KI übernimmt höchstens 1 (ab Potenzial 11), Manager entscheidet in Kader › Nachwuchs oder in der Sommerpause (Fördervertrag 3 Jahre, 12.000 €). Offene Talente werden beim Saisonwechsel vereinslos.
+- **Langzeit-Balance** (`pnpm sim seasons 10`): Ø Spielerstärke 10,2 → 10,4, Top 50 12,2 → 11,9, Ø Alter 26,5–27,3, Vereinsstärke 10–12 über 10 Saisons stabil. Beobachtung: Falkenstein (Profil „corporate“, höchstes Grundniveau) wird in der Simulation fast jedes Jahr Meister – prüfen, ob Etat/Markt die Dominanz zu wenig bremsen.
+- **Datenwerkstatt** (Startbildschirm und Verein › Spielstand): Vereine (Name, Kürzel, Farben, Halle, Profil, Etat) und Spieler (alle Werte, Vertrag, Charakter, Potenzial; anlegen/löschen) vor Spielbeginn; im laufenden Spiel nur Namen/Farben. Vorlage im Browser speichern und bei der Vereinswahl laden.
+- **Import/Export:** CSV für Spieler und Vereine (Trennzeichen automatisch, Werte 1–20, deutsche/englische Kopfzeilen automatisch erkannt, frei zuordenbar), Prüfung je Zeile, Vorschau, Zusammenführen (über ID oder Name) oder Ersetzen (vor Spielbeginn; Vereine zeilenweise umbenennen). Einfache Listen (Name, Position, Verein, Stärke, Alter) reichen – fehlende Werte werden passend erzeugt. JSON = kompletter Datensatz.
+
 **Saisonwechsel (bisher):** Verträge, Klauseln, Karriereende, neue freie Spieler, KI-Kaderauffüllung, Nachwuchs für den menschlichen Verein, neue Aufstellungen, Chemie-Saat, Moral pendelt sich ein. **Noch nicht:** Alterung/Entwicklung der Spielerwerte.
 
 ## Kalibrierung (10 Saisons, siehe `docs/kalibrierung.md`)
@@ -107,10 +117,10 @@ Offene Punkte: Tore ins leere Tor zu selten (0,15 statt 0,3–0,5 je Spiel), Üb
 - Spielerentwicklung hybrid: monatlich kleine Schritte + großer Schritt im Sommer
 - Verletzungen und medizinische Abteilung: vorgemerkt für V2
 
-## Nächster Schritt: Meilenstein 7
+## Nächste Schritte (Vorschläge)
 
-1. Alterung und Spielerentwicklung (monatlich klein, Sommer groß; Potenzial, Alter, Eiszeit, Trainer/Ausbilder, Mentoren, Perfektionist) – Konzept im Projekt-Dokument „spielerentwicklung“. **Talent (Sterne) soll die Entwicklungsgeschwindigkeit steuern** (Wunsch Matthias). Der große Sommerschritt gehört in die Sommerpause (Phase „Sommertraining“ bzw. „Saisonwechsel“).
-2. Nachwuchsjahrgang für alle Vereine
-3. CSV-/JSON-Import und -Export mit Validierung und Vorschau
-4. Einfacher Editor für Spieler und Vereine
-5. Optional: Kalibrierungs-Punkt „Torhüter raus“ der KI nachschärfen
+1. Testphase durch Matthias, Rückmeldungen einarbeiten
+2. Dominanz des stärksten Vereins prüfen (Etat, Markt, Gehaltsgrenzen)
+3. Kalibrierung: Tore ins leere Tor (KI zieht den Torhüter zu selten), Überzahl- und Fangquote
+4. Mehrere Spielstände (Speicherplätze) – laut V1-Umfang vorgesehen
+5. Danach V1.5 Multiplayer oder V2-Themen (Verletzungen, Training) nach Priorität

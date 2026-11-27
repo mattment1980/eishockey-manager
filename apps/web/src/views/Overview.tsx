@@ -108,7 +108,7 @@ function ClubOverview({ go }: { go: (t: Tab) => void }) {
         </ul>
       </section>
 
-      <SaveCard />
+      <SaveCard onWorkshop={() => go('data')} />
     </div>
   );
 }

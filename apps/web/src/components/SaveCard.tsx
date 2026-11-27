@@ -6,7 +6,7 @@ function ask(text: string): boolean {
 }
 
 /** Spielstand: automatisch im Browser, dazu Sicherung als Datei herunterladen und wieder laden */
-export function SaveCard() {
+export function SaveCard({ onWorkshop }: { onWorkshop?: () => void }) {
   const { world, club, exportSave, importSave, newGame, saveError } = useStore();
   const file = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -37,6 +37,7 @@ export function SaveCard() {
       <div className="row-gap wrap">
         <button className="btn" onClick={download}>Sicherung herunterladen</button>
         <button className="btn" onClick={() => file.current?.click()}>Sicherung laden …</button>
+        {onWorkshop && <button className="btn" onClick={onWorkshop} data-tip="Namen und Farben ändern, Daten importieren oder exportieren">Datenwerkstatt</button>}
         <button className="btn ghost" onClick={() => { if (ask('Neues Spiel beginnen? Der aktuelle Spielstand wird gelöscht.')) newGame(); }}>Neues Spiel beginnen</button>
       </div>
       <input ref={file} type="file" accept="application/json,.json" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void load(f); }} />

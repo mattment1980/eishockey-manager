@@ -23,7 +23,7 @@ export function youthIntake(world: World, year: number): World {
     const size = YOUTH.SIZE + (academy >= 14 ? 1 : 0);
     for (let i = 0; i < size; i++) {
       const pos = rng.weighted<Position>(['C', 'LW', 'RW', 'LD', 'RD', 'G'], [2.5, 2, 2, 1.6, 1.6, 0.6]);
-      const p = gen.generatePlayer({ position: pos, quality: level + (academy - 10) * 1.5 + rng.normal(0, 6), age: rng.int(16, 17), nationality: 'DE', clubId: null, role: 'prospect' });
+      const p = gen.generatePlayer({ position: pos, quality: level + (academy - 10) * 1.5 + rng.normal(0, 6), age: 17, nationality: 'DE', clubId: null, role: 'prospect' });
       players.push({ ...p, youthClub: club.id });
     }
     if (club.controller.type === 'human') news.push({ date, kind: 'info', mine: true, text: `Neuer Nachwuchsjahrgang: ${size} Talente warten auf eine Entscheidung (Kader › Nachwuchs).` });

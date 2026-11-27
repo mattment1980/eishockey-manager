@@ -11,8 +11,9 @@ import { Matchday } from './views/Matchday.tsx';
 import { League } from './views/League.tsx';
 import { StaffView } from './views/StaffView.tsx';
 import { UiProvider } from './ui.tsx';
+import { Workshop } from './views/workshop/Workshop.tsx';
 
-export type Tab = 'overview' | 'roster' | 'lineup' | 'tactics' | 'staff' | 'match' | 'league';
+export type Tab = 'overview' | 'roster' | 'lineup' | 'tactics' | 'staff' | 'match' | 'league' | 'data';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'overview', label: 'Verein', icon: 'M4 10l8-6 8 6v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z' },
@@ -27,7 +28,15 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 export function App() {
   const { club, world, simulating, saveError } = useStore();
   const [tab, setTab] = useState<Tab>('overview');
-  if (!club) return <ClubSelect />;
+  const [setupWorkshop, setSetupWorkshop] = useState(false);
+  if (!club) {
+    if (!setupWorkshop) return <UiProvider><ClubSelect onWorkshop={() => setSetupWorkshop(true)} /></UiProvider>;
+    return (
+      <UiProvider>
+        <div className="app"><main className="content"><Workshop mode="setup" onClose={() => setSetupWorkshop(false)} /></main></div>
+      </UiProvider>
+    );
+  }
 
   return (
     <UiProvider>
@@ -49,6 +58,7 @@ export function App() {
         {tab === 'match' && <Matchday />}
         {tab === 'league' && <League />}
         {tab === 'staff' && <StaffView />}
+        {tab === 'data' && <Workshop mode="game" onClose={() => setTab('overview')} />}
       </main>
       <nav className="tabbar">
         {TABS.map((t) => (

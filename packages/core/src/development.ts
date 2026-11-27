@@ -78,6 +78,8 @@ export interface DevFactors {
   personality: number;
   /** Produkt aller Faktoren */
   total: number;
+  /** Abstand zum Potenzial (intern) */
+  gap: number;
 }
 
 /** Eiszeitfaktor aus der laufenden Saison (Tribüne bremst, viel Eiszeit fördert) */
@@ -108,7 +110,7 @@ export function devFactors(world: World, p: Player, date: string): DevFactors {
   const personality = (0.85 + (p.hidden.professionalism / 200) * 0.3) * (hasTrait(p, 'perfektionist') ? 1.1 : 1);
   const talent = talentSpeed(p.hidden.potential);
   const playtime = playtimeFactor(world, p);
-  return { age, talent, playtime, coach, mentor, personality, total: talent * playtime * coach * mentor * personality };
+  return { age, talent, playtime, coach, mentor, personality, total: talent * playtime * coach * mentor * personality, gap: Math.max(0, p.hidden.potential - overall(p)) };
 }
 
 type AttrMap = Record<string, number>;
@@ -201,7 +203,8 @@ export interface DevReportLine {
 
 /**
  * Großer Sommerschritt: Wachstum (Rest des Jahres) und Abbau mit dem Alter.
- * Setzt danach den Referenzstand für die Entwicklungspfeile der neuen Saison.
+ * Der Referenzstand für die Pfeile wird erst beim Saisonwechsel neu gesetzt (`resetDevRef`),
+ * damit in der Sommerpause die Entwicklung des ganzen Jahres sichtbar bleibt.
  */
 export function developSummer(world: World, year: number): { world: World; report: Map<string, DevReportLine> } {
   const date = `${year}-07-15`;
@@ -214,8 +217,7 @@ export function developSummer(world: World, year: number): { world: World; repor
     const after = overall(np);
     const jump = after - before > Math.max(6, gap * 0.3);
     report.set(p.id, { playerId: p.id, before, after, jump });
-    const ref: Record<string, number> = { ...np.skater, ...(np.goalie ? Object.fromEntries(Object.entries(np.goalie).map(([k, v]) => [`g.${k}`, v])) : {}) };
-    return logHistory({ ...np, dev: { ...np.dev, ref } }, `${year}-07`);
+    return logHistory(np, `${year}-07`);
   });
   return { world: { ...world, players }, report };
 }
@@ -253,6 +255,13 @@ export function ovrChange(p: Player): number | undefined {
   return overall(p) - overall(refPlayer);
 }
 
+const refOf = (p: Player): Record<string, number> => ({ ...p.skater, ...(p.goalie ? Object.fromEntries(Object.entries(p.goalie).map(([k, v]) => [`g.${k}`, v])) : {}) });
+
+/** Saisonwechsel: aktueller Stand wird Referenz für die Entwicklungspfeile der neuen Saison */
+export function resetDevRef(world: World): World {
+  return { ...world, players: world.players.map((p) => ({ ...p, dev: { ...p.dev, ref: refOf(p) } })) };
+}
+
 /** Referenzstand für Spieler ohne Verlauf setzen (neue Welt, alte Spielstände) */
 export function seedDevRef(world: World): World {
   if (!world.players.some((p) => !Object.keys(p.dev.ref).length)) return world;
@@ -260,7 +269,7 @@ export function seedDevRef(world: World): World {
     ...world,
     players: world.players.map((p) => (Object.keys(p.dev.ref).length ? p : {
       ...p,
-      dev: { ...p.dev, ref: { ...p.skater, ...(p.goalie ? Object.fromEntries(Object.entries(p.goalie).map(([k, v]) => [`g.${k}`, v])) : {}) } },
+      dev: { ...p.dev, ref: refOf(p) },
     })),
   };
 }

@@ -52,3 +52,29 @@
 .bench-item .pos { display: inline-block; margin-right: 2px; }
 .bench-item.dragging { opacity: 0.45; }
 .drag-ghost { position: fixed; z-index: 70; pointer-events: none; background: var(--ice); color: #06223a; font-weight: 800; padding: 6px 10px; border-radius: 10px; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4); font-size: 0.85rem; }
+
+/* Datenwerkstatt */
+.editor-layout { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+.editor-layout > * { min-width: 0; }
+@media (min-width: 860px) { .editor-layout { grid-template-columns: 300px minmax(0, 1fr); align-items: start; } }
+.editor-list { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 4px; max-height: 60vh; overflow: auto; }
+.editor-list.tall { max-height: 70vh; }
+.editor-item { width: 100%; display: flex; align-items: center; gap: 8px; background: none; border: 0; text-align: left; padding: 6px 8px; border-radius: 8px; font-size: 0.86rem; color: var(--text); }
+.editor-item:hover { background: var(--panel-2); }
+.editor-item.on { background: color-mix(in srgb, var(--ice) 18%, var(--panel-2)); }
+.editor-item .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.editor-form h4 { margin: 14px 0 6px; }
+.form-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); margin: 10px 0; }
+.form-grid label, .num-field, .map-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 0.78rem; color: var(--muted); }
+.form-grid input, .form-grid select, .num-field input, .map-grid select, .search {
+  background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; font-size: 0.9rem; font-family: inherit;
+}
+.form-grid input[type='color'] { padding: 2px; height: 36px; }
+.search { min-width: 180px; flex: 1; }
+.attr-edit { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+.trait.off { opacity: 0.55; background: var(--panel-2); border-color: var(--line); color: var(--muted); }
+button.trait { cursor: pointer; font-family: inherit; }
+.map-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.map-grid label.req span { color: var(--text); font-weight: 700; }
+.import-errors { max-height: 220px; overflow: auto; background: color-mix(in srgb, var(--goal) 10%, var(--panel-2)); border-radius: 8px; padding: 8px 8px 8px 24px; }
+.hero-actions { justify-content: center; margin-top: 12px; }

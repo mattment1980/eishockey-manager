@@ -1,11 +1,12 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { teamStrength } from '@ehm/core';
 import { useStore } from '../store.tsx';
 import { Crest } from '../components/Crest.tsx';
 import { PROFILE_LABEL, euro } from '../labels.ts';
 
-export function ClubSelect() {
-  const { world, byId, chooseClub } = useStore();
+export function ClubSelect({ onWorkshop }: { onWorkshop: () => void }) {
+  const { world, byId, chooseClub, newGame, hasTemplate, loadTemplate } = useStore();
+  const [msg, setMsg] = useState<string | null>(null);
   const clubs = useMemo(
     () =>
       world.clubs
@@ -20,6 +21,12 @@ export function ClubSelect() {
         <div className="hero-kicker">Eishockey-Manager · Testbuild</div>
         <h1>Wähle deinen Verein</h1>
         <p>Testliga nach DEL2-Modell: 14 Vereine, 52 Hauptrundenspiele. Der Verein bestimmt den Schwierigkeitsgrad.</p>
+        <div className="row-gap wrap hero-actions">
+          <button className="btn" onClick={onWorkshop} data-tip="Vereine und Spieler bearbeiten, eigene Daten (CSV/JSON) importieren">Datenwerkstatt</button>
+          <button className="btn ghost" onClick={newGame} data-tip="Neue Liga mit zufälligen Fantasie-Spielern erzeugen">Neue Zufallswelt</button>
+          {hasTemplate && <button className="btn ghost" onClick={() => setMsg(loadTemplate())} data-tip="Den in der Datenwerkstatt gespeicherten Datensatz laden">Meine Vorlage laden</button>}
+        </div>
+        {msg && <p className="small">{msg}</p>}
       </div>
       <div className="club-grid">
         {clubs.map(({ c, s }) => {

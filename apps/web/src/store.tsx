@@ -5,6 +5,7 @@ import { beginSeason, initScouting, submitOffer, withdrawOffer, signYouth, relea
 import { generateWorld, migrateWorld, advanceOffseason, ensureChemistry, exportWorldJson, importWorldJson } from '@ehm/data';
 
 const KEY = 'ehm.save.v1';
+const TEMPLATE_KEY = 'ehm.template.v1';
 
 interface SaveGame {
   world: World;
@@ -42,6 +43,14 @@ interface Store {
   /** Nachwuchstalent: Fördervertrag geben (Fehlertext, wenn nicht möglich) oder freigeben */
   signYouth: (playerId: string) => string | null;
   releaseYouth: (playerId: string) => void;
+  /** Datenwerkstatt: Welt ändern (als Aktion, auch während einer Simulation sicher) */
+  editWorld: (fn: (w: World) => World) => void;
+  /** Vor Spielbeginn: Welt komplett ersetzen (z. B. nach Import oder Neuaufbau) */
+  replaceWorld: (w: World) => void;
+  /** Eigene Vorlage (Datensatz) im Browser */
+  hasTemplate: boolean;
+  saveTemplate: () => string | null;
+  loadTemplate: () => string | null;
   /** Spielstand als JSON-Text (zum Herunterladen) */
   exportSave: () => string;
   /** Spielstand aus JSON-Text laden; gibt Fehlermeldungen zurück (leer = geladen) */
@@ -97,6 +106,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [save, setSave] = useState<SaveGame>(() => load() ?? fresh());
   const [simulating, setSimulating] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [hasTemplate, setHasTemplate] = useState(() => { try { return !!localStorage.getItem(TEMPLATE_KEY); } catch { return false; } });
   /** Aktionen, die während einer laufenden Simulation ausgeführt wurden */
   const pending = useRef<Action[] | null>(null);
   const saveRef = useRef(save);
@@ -170,6 +180,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return null;
       },
       releaseYouth: (playerId) => act((w) => releaseYouth(w, playerId)),
+      editWorld: (fn) => act((w) => fn(w)),
+      replaceWorld: (w) => setSave((s) => ({ ...s, world: w })),
+      hasTemplate,
+      saveTemplate: () => {
+        try {
+          localStorage.setItem(TEMPLATE_KEY, JSON.stringify(save.world));
+          setHasTemplate(true);
+          return null;
+        } catch {
+          return 'Die Vorlage konnte nicht im Browser gespeichert werden (Speicher voll?). Bitte als Datei exportieren.';
+        }
+      },
+      loadTemplate: () => {
+        const raw = localStorage.getItem(TEMPLATE_KEY);
+        if (!raw) return 'Keine Vorlage gespeichert.';
+        const res = importWorldJson(raw);
+        if (!res.ok) return `Vorlage fehlerhaft: ${res.errors.slice(0, 2).join('; ')}`;
+        setSave({ world: res.world, clubId: null });
+        return null;
+      },
       exportSave: () => exportWorldJson(save.world),
       importSave: (json) => {
         const res = importWorldJson(json);
@@ -179,7 +209,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return [];
       },
     };
-  }, [save, simulating, saveError, act, simulate]);
+  }, [save, simulating, saveError, hasTemplate, act, simulate]);
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;
 }

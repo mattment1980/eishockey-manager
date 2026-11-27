@@ -1,5 +1,5 @@
 import type { World } from '@ehm/schema';
-import { OFFSEASON_PHASES, phaseDate, marketAdvance, daysBetween, trainingCamp, vacation, developSummer, summerNews, releaseRemainingYouth } from '@ehm/core';
+import { OFFSEASON_PHASES, phaseDate, marketAdvance, daysBetween, trainingCamp, vacation, developSummer, summerNews, releaseRemainingYouth, resetDevRef } from '@ehm/core';
 import { seasonTransition } from './transition.ts';
 import { youthIntake } from './youth.ts';
 
@@ -36,7 +36,7 @@ export function advanceOffseason(world: World): World {
   }
   if (ph.id === 'kickoff') {
     w = releaseRemainingYouth(w, target);
-    w = seasonTransition(w);
+    w = resetDevRef(seasonTransition(w));
     w = trainingCamp(w, 0.3, `${w.season}:auftakt`);
     return { ...w, offseason: { phase: next } };
   }
