@@ -52,6 +52,14 @@ function assign(plan: Matchplan, slot: Slot, id: string): Matchplan {
   if (slot.k === 'F' || slot.k === 'D' || slot.k === 'G') {
     const from = mainSlots().find((s) => get(next, s) === id);
     if (from) set(next, from, old);
+    else if (old && old !== id && slot.k !== 'G') {
+      // Der verdrängte Spieler sitzt jetzt auf der Tribüne: in Über-/Unterzahl und im Penaltyschießen übernimmt der Neue seinen Platz
+      for (const u of [...next.powerPlay, ...next.penaltyKill]) {
+        for (const arr of [u.forwards, u.defense]) { const k = arr.indexOf(old); if (k >= 0 && !arr.includes(id)) arr[k] = id; }
+      }
+      const k = next.shootout.indexOf(old);
+      if (k >= 0 && !next.shootout.includes(id)) next.shootout[k] = id;
+    }
   } else {
     const unitKey = slot.k;
     const size = unitKey === 'PPF' ? 3 : 2;

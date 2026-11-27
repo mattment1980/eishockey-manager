@@ -8,11 +8,20 @@ export type WorkerRequest =
 
 export type WorkerResponse =
   | { type: 'match'; result: MatchResult }
-  | { type: 'world'; world: World };
+  | { type: 'world'; world: World }
+  | { type: 'error'; message: string };
 
 self.onmessage = (e: MessageEvent<WorkerRequest>) => {
   const req = e.data;
   const post = (r: WorkerResponse) => (self as unknown as Worker).postMessage(r);
+  try {
+    handle(req, post);
+  } catch (err) {
+    post({ type: 'error', message: err instanceof Error ? err.message : String(err) });
+  }
+};
+
+function handle(req: WorkerRequest, post: (r: WorkerResponse) => void) {
   if (req.type === 'match') post({ type: 'match', result: simulateMatch(req.input) });
   if (req.type === 'day') post({ type: 'world', world: playDay(req.world, req.preplayed).world });
   if (req.type === 'days') {
@@ -24,4 +33,4 @@ self.onmessage = (e: MessageEvent<WorkerRequest>) => {
     });
     post({ type: 'world', world });
   }
-};
+}

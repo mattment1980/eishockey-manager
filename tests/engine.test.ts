@@ -72,3 +72,27 @@ describe('Coaching, Matchups, Special Teams', () => {
     expect(r.rules.filter((x) => x.team === 0)).toHaveLength(4);
   });
 });
+
+describe('Aufstellung absichern', () => {
+  it('Über-/Unterzahl mit nicht aufgestellten Spielern wird vor dem Spiel ersetzt', async () => {
+    const core = await import('@ehm/core');
+    const { generateWorld } = await import('@ehm/data');
+    const w = generateWorld(87);
+    const club = w.clubs[0];
+    const plan = club.matchplan!;
+    const roster = w.players.filter((p) => p.contract?.clubId === club.id);
+    const dressed = new Set([...plan.forwardLines.flat(), ...plan.defensePairs.flat(), ...plan.goalies]);
+    const scratchD = roster.find((p) => (p.position === 'LD' || p.position === 'RD') && !dressed.has(p.id));
+    expect(scratchD).toBeDefined();
+    const broken = structuredClone(plan);
+    broken.powerPlay[1].defense[1] = scratchD!.id;
+    broken.penaltyKill[0].defense[1] = scratchD!.id;
+    const byId = new Map(roster.map((p) => [p.id, p]));
+    const fixed = core.sanitizePlan(broken, byId);
+    const ids = [...fixed.powerPlay, ...fixed.penaltyKill].flatMap((u) => [...u.forwards, ...u.defense]);
+    expect(ids).not.toContain(scratchD!.id);
+    expect(core.sanitizePlan(plan, byId)).toBe(plan);
+    const w2 = { ...w, clubs: w.clubs.map((c) => (c.id === club.id ? { ...c, matchplan: broken } : c)) };
+    expect(() => core.playDay(w2)).not.toThrow();
+  });
+});

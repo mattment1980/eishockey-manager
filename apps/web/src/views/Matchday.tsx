@@ -20,6 +20,7 @@ export function Matchday({ onTraining }: { onTraining: () => void }) {
   const { world, club, byId, clubById, simulate, simulating } = useStore();
   const [live, setLive] = useState<{ result: MatchResult; fixture: Fixture; sides: [Club, Club] } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const comp = world.competition!;
   if (!club || !club.matchplan) return null;
   const plan = club.matchplan;
@@ -32,7 +33,8 @@ export function Matchday({ onTraining }: { onTraining: () => void }) {
 
   async function run(label: string, fn: () => Promise<void>) {
     setBusy(label);
-    try { await fn(); } finally { setBusy(null); }
+    setError(null);
+    try { await fn(); } catch (err) { setError(err instanceof Error ? err.message : String(err)); } finally { setBusy(null); }
   }
 
   const playLive = () => run('live', async () => {
@@ -89,6 +91,7 @@ export function Matchday({ onTraining }: { onTraining: () => void }) {
         <span className="muted small right">{stageLabel(comp)}<br />{formatDate(comp.fixtures.find((f) => f.day === comp.day + 1)?.date ?? world.date, true)}</span>
       </div>
 
+      {error && <div className="alert">Die Simulation wurde wegen eines Fehlers abgebrochen ({error}). Der Spielstand ist unverändert.</div>}
       <WeekPanel onTraining={onTraining} />
 
       {needsStart ? null : next ? (

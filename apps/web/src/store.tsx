@@ -133,6 +133,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const result = await run(saveRef.current.world);
       const actions = pending.current ?? [];
       setSave((s) => ({ ...s, world: actions.reduce((w, a) => a(w, s.clubId), result) }));
+    } catch (err) {
+      // Fehler in der Simulation: Spielstand bleibt unverändert, Meldung statt endlosem „Simuliere …“
+      console.error(err);
+      setSaveError(`Die Simulation ist auf einen Fehler gestoßen und wurde abgebrochen (${err instanceof Error ? err.message : String(err)}). Der Spielstand ist unverändert – bitte eine Sicherung herunterladen und melden.`);
     } finally {
       pending.current = null;
       setSimulating(false);

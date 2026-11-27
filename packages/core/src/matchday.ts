@@ -12,6 +12,7 @@ import { updateFamiliarity } from './familiarity.ts';
 import { developMonths } from './development.ts';
 import { runTraining } from './training.ts';
 import { leagueOf, regularTable } from './standings.ts';
+import { sanitizePlan } from './lineup.ts';
 import { prepareNextDay, needed } from './competition.ts';
 
 /**
@@ -45,6 +46,8 @@ export function matchInputFor(world: World, fixture: Fixture): MatchInput {
     if (c.controller.type === 'ai' && !(plan.rules ?? []).length) plan = { ...plan, rules: defaultRules() };
     const players = world.players.filter((p) => p.contract?.clubId === c.id);
     const byId = new Map(players.map((p) => [p.id, p]));
+    // Formationen nur mit aufgestellten Spielern (z. B. nach Umbau der Reihen)
+    plan = sanitizePlan(plan, byId);
     const staff = world.staff.filter((s) => s.contract?.clubId === c.id);
     const head = staff.find((s) => s.role === 'headCoach');
     const penaltyFactor = (head ? 1.08 - (toDisplay(head.ratings.discipline) - 5) * 0.016 : 1) * (staff.some((s) => s.traits.some((t) => t.id === 'disziplinfanatiker')) ? 0.88 : 1);

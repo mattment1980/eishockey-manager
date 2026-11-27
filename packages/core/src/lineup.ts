@@ -105,3 +105,37 @@ export function teamStrength(plan: Matchplan, byId: Map<string, Player>): number
   const g = overall(byId.get(plan.goalies[0])!);
   return skaters * 0.75 + g * 0.25;
 }
+
+/**
+ * Aufstellung für ein Spiel absichern: Über- und Unterzahlformationen sowie Penaltyschützen dürfen nur
+ * Spieler enthalten, die auch in den Reihen stehen (sonst fehlen sie in der Simulation).
+ * Fehlende werden durch die passendsten aufgestellten Spieler ersetzt. Unveränderte Pläne bleiben dasselbe Objekt.
+ */
+export function sanitizePlan(plan: Matchplan, byId: Map<string, Player>): Matchplan {
+  const fw = plan.forwardLines.flat(), df = plan.defensePairs.flat();
+  const dressed = new Set([...fw, ...df]);
+  const units = [...plan.powerPlay, ...plan.penaltyKill];
+  const ok = units.every((u) => [...u.forwards, ...u.defense].every((id) => dressed.has(id))) && plan.shootout.every((id) => dressed.has(id));
+  if (ok) return plan;
+  const rate = (f: (p: Player) => number) => (a: string, b: string) => f(byId.get(b)!) - f(byId.get(a)!);
+  const fix = (unit: string[], pool: string[], sort: (a: string, b: string) => number) => {
+    const inPool = new Set(pool);
+    const used = new Set(unit.filter((id) => inPool.has(id)));
+    return unit.map((id) => {
+      if (inPool.has(id)) return id;
+      const rep = pool.filter((x) => !used.has(x)).sort(sort)[0];
+      if (rep) used.add(rep);
+      return rep ?? id;
+    });
+  };
+  const off = rate(offenseRating), def = rate(defenseRating);
+  const shoot = rate((p) => weightedSkater(p, W.shootoutShooter));
+  const so = plan.shootout.filter((id) => dressed.has(id));
+  for (const id of [...fw].sort(shoot)) if (so.length < plan.shootout.length && !so.includes(id)) so.push(id);
+  return {
+    ...plan,
+    powerPlay: plan.powerPlay.map((u) => ({ forwards: fix(u.forwards, fw, off), defense: fix(u.defense, df, off) })),
+    penaltyKill: plan.penaltyKill.map((u) => ({ forwards: fix(u.forwards, fw, def), defense: fix(u.defense, df, def) })),
+    shootout: so,
+  };
+}
