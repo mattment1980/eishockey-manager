@@ -306,3 +306,89 @@ describe('Chemie & Moral', () => {
     expect(pimHot).toBeGreaterThan(pimNormal);
   });
 });
+
+describe('Zustand, Eingespieltheit, Sommerpause (vor M7)', async () => {
+  const core = await import('@ehm/core');
+  const data = await import('@ehm/data');
+
+  it('Fitness sinkt mit Eiszeit und erholt sich, Form bewegt sich', () => {
+    let w = data.generateWorld(77);
+    const day = core.playDay(w);
+    const fx = day.world.competition!.fixtures.filter((f) => f.day === 1);
+    // direkt nach dem Spiel (ohne Erholung bis zum nächsten Termin)
+    w = core.updateCondition(w, fx.map((f) => ({ fixture: f, result: day.results[f.id] })));
+    const tired = w.players.filter((p) => p.contract && p.condition.fitness < 95);
+    expect(tired.length).toBeGreaterThan(20);
+    const forms = new Set(w.players.filter((p) => p.contract).map((p) => p.condition.form));
+    expect(forms.size).toBeGreaterThan(50);
+    const rested = core.recoverFitness(w, 6);
+    const p = tired[0];
+    expect(rested.players.find((x) => x.id === p.id)!.condition.fitness).toBeGreaterThan(p.condition.fitness);
+    // aktuelle Stärke: müder Spieler liegt unter seinem Grundwert
+    const exhausted = { ...p, condition: { fitness: 70, form: 50, morale: 50 } };
+    expect(core.effectiveRating(exhausted)).toBeLessThan(core.overall(exhausted));
+  });
+
+  it('Taktik-Eingespieltheit wächst mit Spielen und neue Systeme starten niedrig', () => {
+    let w = data.generateWorld(78);
+    const c0 = w.clubs[0];
+    const before = core.teamFamiliarity(c0.familiarity, c0.matchplan!.tactics, c0.matchplan!);
+    w = core.playDays(w, 4);
+    const c1 = w.clubs.find((c) => c.id === c0.id)!;
+    expect(core.teamFamiliarity(c1.familiarity, c1.matchplan!.tactics, c1.matchplan!)).toBeGreaterThan(before);
+    const other = { ...c1.matchplan!.tactics, forecheck: c1.matchplan!.tactics.forecheck === '1-3-1' ? '2-1-2' as const : '1-3-1' as const };
+    expect(core.familiarityValue(c1.familiarity, `forecheck:${other.forecheck}`)).toBeLessThan(core.familiarityValue(c1.familiarity, `forecheck:${c1.matchplan!.tactics.forecheck}`));
+  });
+
+  it('Teamstatistik und Form der letzten Spiele', () => {
+    let w = data.generateWorld(79);
+    w = core.playDays(w, 6);
+    const rows = core.teamSeasonStats(w, 'regular');
+    expect(rows.reduce((s, r) => s + r.gf, 0)).toBeGreaterThan(0);
+    for (const r of rows) {
+      expect(r.gp).toBe(6);
+      expect(r.detailed).toBe(6);
+      expect(r.ppg).toBeLessThanOrEqual(r.pp);
+    }
+    expect(rows.reduce((s, r) => s + r.pp, 0)).toBe(rows.reduce((s, r) => s + r.pk, 0));
+    expect(core.lastResults(w.competition!, w.clubs[0].id).length).toBe(5);
+  });
+
+  it('Sommerpause läuft in Phasen bis zum Saisonstart', () => {
+    let w = data.generateWorld(80);
+    w = core.playDays(w, 400);
+    expect(w.competition!.finished).toBe(true);
+    expect(data.offseasonPhase(w)).toBe(0);
+    const year = w.season;
+    const seen: number[] = [];
+    let guard = 0;
+    while (data.offseasonPhase(w) !== null && guard++ < 20) { w = data.advanceOffseason(w); seen.push(data.offseasonPhase(w) ?? -1); }
+    expect(seen).toEqual([1, 2, 3, 4, 5, 6, 7, -1]);
+    expect(w.season).toBe(year + 1);
+    expect(w.competition!.day).toBe(0);
+    expect(WorldSchema.safeParse(w).success).toBe(true);
+    w = core.playDays(w, 1);
+    expect(w.competition!.day).toBe(1);
+  });
+
+  it('Talent ist je nach Scouting exakt, als Spanne oder unbekannt', () => {
+    const w = data.generateWorld(81);
+    const clubId = w.clubs[0].id;
+    const st = w.scouting[clubId] ? w : core.initScouting(w, clubId);
+    const foreign = st.players.find((p) => !p.contract && core.regionOf(p) !== 'DE')!;
+    const own = st.players.find((p) => p.contract?.clubId === clubId)!;
+    expect('stars' in core.playerView(st, clubId, own, 25).talent).toBe(true);
+    expect('hidden' in core.playerView(st, clubId, foreign, 25).talent).toBe(true);
+  });
+
+  it('migriert v6-Spielstände', () => {
+    const w = data.generateWorld(82);
+    const raw = JSON.parse(data.exportWorldJson(w));
+    raw.schemaVersion = 6;
+    delete raw.offseason;
+    for (const c of raw.clubs) delete c.familiarity;
+    const res = data.importWorldJson(JSON.stringify(raw));
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(Object.keys(res.world.clubs[0].familiarity).length).toBeGreaterThan(0);
+  });
+});

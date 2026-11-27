@@ -4,6 +4,7 @@ import {
   RULE_TEMPLATES, coachingCapacity, describeCondition, describeAction, TACTIC_KEY_LABEL, tacticValueLabel,
 } from '@ehm/core';
 import { useStore } from '../store.tsx';
+import { Sheet } from '../components/Sheet.tsx';
 import { TACTIC_OPTIONS } from '../labels.ts';
 
 const newId = () => `r${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
@@ -165,8 +166,7 @@ function ActionEditor({ a, onChange }: { a: RuleAction; onChange: (a: RuleAction
 function RuleSheet({ rule, onSave, onCancel }: { rule: CoachingRule; onSave: (r: CoachingRule) => void; onCancel: () => void }) {
   const [r, setR] = useState<CoachingRule>(rule);
   return (
-    <div className="sheet-backdrop" onClick={onCancel}>
-      <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Regel bearbeiten">
+    <Sheet onClose={onCancel} label="Regel bearbeiten">
         <div className="muted small">Coaching-Regel</div>
         <input className="name-input" value={r.name} onChange={(e) => setR({ ...r, name: e.target.value })} aria-label="Name der Regel" />
 
@@ -206,7 +206,6 @@ function RuleSheet({ rule, onSave, onCancel }: { rule: CoachingRule; onSave: (r:
           <button className="btn primary big" onClick={() => onSave(r)}>Speichern</button>
           <button className="btn big" onClick={onCancel}>Abbrechen</button>
         </div>
-      </div>
-    </div>
+    </Sheet>
   );
 }

@@ -5,6 +5,7 @@ import {
   PERK_COST, PERK_LABEL, ROLE_LABEL, PROMISE_LABEL, type OfferResponse,
 } from '@ehm/core';
 import { useStore } from '../store.tsx';
+import { Sheet } from './Sheet.tsx';
 import { euro } from '../labels.ts';
 
 const ROLES: Contract['role'][] = ['star', 'top', 'regular', 'depth', 'prospect'];
@@ -51,8 +52,7 @@ export function Negotiation({ player, onClose }: { player: Player; onClose: () =
   const own = player.contract?.clubId === club.id;
 
   return (
-    <div className="sheet-backdrop" onClick={onClose}>
-      <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Vertragsangebot">
+    <Sheet onClose={onClose} label="Vertragsangebot">
         <div className="muted small">{own ? 'Vertragsverlängerung' : 'Vertragsangebot'} · gültig ab {av.ok ? `${av.forSeason}/${String(av.forSeason + 1).slice(2)}${av.immediate ? ' (sofort)' : ''}` : '–'}</div>
         <h2>{player.firstName} {player.lastName}</h2>
         {!av.ok ? (
@@ -138,8 +138,6 @@ export function Negotiation({ player, onClose }: { player: Player; onClose: () =
             </div>
           </>
         )}
-        <button className="btn ghost block" onClick={onClose}>Schließen</button>
-      </div>
-    </div>
+    </Sheet>
   );
 }

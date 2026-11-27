@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Club, LeagueFormat, Matchplan } from '@ehm/schema';
 import type { MatchResult, Side } from '@ehm/core';
 import { useStore } from '../store.tsx';
+import { PlayerName } from '../ui.tsx';
 import { Crest } from './Crest.tsx';
 import { Rink } from './Rink.tsx';
 import { computeLive, cutIndex, type LiveUnit } from '../live.ts';
@@ -123,8 +124,8 @@ export function LiveMatch({ result, sides, mySide, plan, format, playoff, subtit
       {tab === 'lines' && (
         <section className="card">
           <h3>{me.shortName}: Reihen bei 5-gegen-5</h3>
-          <UnitTable title="Sturm" units={live.lines[mySide]} labels={plan.forwardLines.map((l, i) => `${i + 1}: ${l.map((id) => byId.get(id)?.lastName).join(' – ')}`)} toi={finished ? result.lineStats[mySide].lines.map((u) => u.toi) : null} />
-          <UnitTable title="Verteidigung" units={live.pairs[mySide]} labels={plan.defensePairs.map((l, i) => `${i + 1}: ${l.map((id) => byId.get(id)?.lastName).join(' – ')}`)} toi={finished ? result.lineStats[mySide].pairs.map((u) => u.toi) : null} />
+          <UnitTable title="Sturm" units={live.lines[mySide]} labels={plan.forwardLines.map((l, i) => <>{i + 1}: {l.map((id, k) => <span key={id}>{k ? ' – ' : ''}{byId.get(id) ? <PlayerName p={byId.get(id)!} /> : id}</span>)}</>)} toi={finished ? result.lineStats[mySide].lines.map((u) => u.toi) : null} />
+          <UnitTable title="Verteidigung" units={live.pairs[mySide]} labels={plan.defensePairs.map((l, i) => <>{i + 1}: {l.map((id, k) => <span key={id}>{k ? ' – ' : ''}{byId.get(id) ? <PlayerName p={byId.get(id)!} /> : id}</span>)}</>)} toi={finished ? result.lineStats[mySide].pairs.map((u) => u.toi) : null} />
           <p className="muted small">Corsi = Schussversuche für:gegen, xG = erwartete Tore, während die Einheit auf dem Eis ist.</p>
         </section>
       )}
@@ -139,7 +140,7 @@ export function LiveMatch({ result, sides, mySide, plan, format, playoff, subtit
                 .sort((x, y) => y.s.g + y.s.a - (x.s.g + x.s.a) || y.s.xg - x.s.xg)
                 .map(({ id, s, f }) => (
                   <tr key={id}>
-                    <td>{nameOf(id)}</td><td>{s.g}</td><td>{s.a}</td><td>{s.sog}</td><td>{s.xg.toFixed(2).replace('.', ',')}</td>
+                    <td>{byId.get(id) ? <PlayerName p={byId.get(id)!} /> : nameOf(id)}</td><td>{s.g}</td><td>{s.a}</td><td>{s.sog}</td><td>{s.xg.toFixed(2).replace('.', ',')}</td>
                     {finished && <td>{f ? (f.plusMinus > 0 ? '+' : '') + f.plusMinus : ''}</td>}
                     {finished && <td>{f ? mmss(f.toi) : ''}</td>}
                     <td>{s.hits}</td><td>{s.pim}</td>
@@ -150,7 +151,7 @@ export function LiveMatch({ result, sides, mySide, plan, format, playoff, subtit
           {finished && (
             <div className="goalie-line">
               {result.playerStats.filter((p) => p.team === mySide && p.shotsAgainst > 0).map((g) => (
-                <span key={g.playerId}>Torhüter {nameOf(g.playerId)}: {g.saves}/{g.shotsAgainst} Paraden ({pct(g.saves / g.shotsAgainst)})</span>
+                <span key={g.playerId}>Torhüter {byId.get(g.playerId) ? <PlayerName p={byId.get(g.playerId)!} /> : nameOf(g.playerId)}: {g.saves}/{g.shotsAgainst} Paraden ({pct(g.saves / g.shotsAgainst)})</span>
               ))}
             </div>
           )}
@@ -249,7 +250,7 @@ function TeamTable({ live, names, result }: { live: ReturnType<typeof computeLiv
   );
 }
 
-function UnitTable({ title, units, labels, toi }: { title: string; units: LiveUnit[]; labels: string[]; toi: number[] | null }) {
+function UnitTable({ title, units, labels, toi }: { title: string; units: LiveUnit[]; labels: React.ReactNode[]; toi: number[] | null }) {
   return (
     <table className="stats units">
       <thead><tr><th>{title}</th><th>Corsi</th><th>xG</th><th>Tore</th>{toi && <th>Eis</th>}</tr></thead>

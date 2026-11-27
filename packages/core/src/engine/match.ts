@@ -1,7 +1,8 @@
 import type { Player, Tactics, SkaterAttribute, CoachingRule, RuleCondition, TraitId } from '@ehm/schema';
 import { describeAction, ONCE_ACTIONS } from '../coaching.ts';
 import { Rng, sigmoid, logit, clamp } from '../rng.ts';
-import { weightedSkater, weightedGoalie, W } from '../ratings.ts';
+import { weightedSkater, weightedGoalie, W, fitnessFactor } from '../ratings.ts';
+import { teamFamiliarity, familiarityEffect } from '../familiarity.ts';
 import { C } from './constants.ts';
 import type {
   MatchInput, MatchResult, MatchEvent, PlayerGameStats, TeamStats, TeamLineStats, UnitStats,
@@ -55,6 +56,9 @@ interface TeamState {
   unitLeader: Map<string, number>;
   penaltyFactor: number;
   leaderAnnounced: boolean;
+  // Eingespieltheit mit den aktuell gespielten Systemen (Anteil) und Fitness je Spieler
+  famMod: number;
+  fitF: Map<string, number>;
 }
 
 interface OnIce { F: string[]; D: string[] }
@@ -71,6 +75,8 @@ const emptyTeamStats = (): TeamStats => ({
   dumpInsRecovered: 0, ozoneTime: 0, shotsByPeriod: [],
 });
 const emptyUnit = (): UnitStats => ({ toi: 0, corsiFor: 0, corsiAgainst: 0, xgFor: 0, xgAgainst: 0, goalsFor: 0, goalsAgainst: 0, shotsFor: 0, shotsAgainst: 0 });
+
+const side = (input: MatchInput, s: Side) => (s === 0 ? input.home : input.away);
 
 export function simulateMatch(input: MatchInput): MatchResult {
   return new MatchSim(input).run();
@@ -164,6 +170,8 @@ class MatchSim {
       baseTactics: { ...plan.tactics }, rules, ruleState, coach, goaliePulled: false, benched: new Set(),
       shares: [...plan.forwardShares], matchupsOn: (plan.matchups ?? []).length > 0, timeoutUsed: false, goalsAgainstAt: [],
       traits, unitChem, unitLeader, penaltyFactor: coach.penaltyFactor ?? 1, leaderAnnounced: false,
+      famMod: ti.familiarity ? familiarityEffect(teamFamiliarity(ti.familiarity, plan.tactics, plan), C.FAMILIARITY_EFFECT) : 0,
+      fitF: new Map(ids.map((id) => [id, fitnessFactor(byId.get(id)!.condition.fitness)])),
     };
   }
 
@@ -521,6 +529,8 @@ class MatchSim {
       }
     }
     tm.tactics = tactics;
+    const fam = side(this.input, tm.side).familiarity;
+    if (fam) tm.famMod = familiarityEffect(teamFamiliarity(fam, tactics, tm.plan), C.FAMILIARITY_EFFECT);
     tm.shares = shares;
     tm.matchupsOn = matchups;
     if (pull !== tm.goaliePulled) {
@@ -547,9 +557,9 @@ class MatchSim {
     const p = tm.byId.get(id)!;
     const f = tm.fresh.get(id) ?? 100;
     const fat = C.FATIGUE_FLOOR + (1 - C.FATIGUE_FLOOR) * (f / 100);
-    let mod = (p.condition.form - 50) / 1000 + (p.condition.morale - 50) / 1500 + this.characterMod(side, id);
+    let mod = (p.condition.form - 50) / 1000 + (p.condition.morale - 50) / 1500 + this.characterMod(side, id) + tm.famMod;
     mod = Math.max(-C.CHARACTER_CAP, Math.min(C.CHARACTER_CAP, mod));
-    return fat * (1 + mod);
+    return fat * (tm.fitF.get(id) ?? 1) * (1 + mod);
   }
 
   /** Situative Trait-Boni und Reihenchemie (Anteil, z. B. 0.03 = +3 %) */
@@ -941,7 +951,7 @@ class MatchSim {
     // Schuss aufs Tor
     const goalie = tmB.goalieId;
     const gp = tmB.byId.get(goalie)!;
-    const gr = weightedGoalie(gp, W.goalie) * (1 + (gp.condition.form - 50) / 800);
+    const gr = weightedGoalie(gp, W.goalie) * fitnessFactor(gp.condition.fitness) * (1 + (gp.condition.form - 50) / 800);
     const shootR = weightedSkater(sp, W.shooting) * this.mult(a, shooter);
     const homeAdj = a === 0 ? C.HOME : -C.HOME;
     const pGoal = sigmoid(logit(qs) + C.K_SHOT * ((shootR - gr) / 20) + homeAdj + this.dayForm[a] - this.goalieForm[b]);

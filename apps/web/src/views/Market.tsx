@@ -1,14 +1,20 @@
 import { useMemo, useState } from 'react';
 import type { Player, Position } from '@ehm/schema';
-import { marketPlayers, marketInfo, playerView, ageOn, formatDate, expectedSalary, CATEGORY, type PlayerView, type AttrView } from '@ehm/core';
+import { marketPlayers, marketInfo, playerView, ageOn, formatDate, expectedSalary, availability, regionOf, REGIONS, REGION_LABEL, type PlayerView, type AttrView, type Region } from '@ehm/core';
 import { useStore } from '../store.tsx';
-import { PlayerSheet } from '../components/PlayerSheet.tsx';
-import { Negotiation } from '../components/Negotiation.tsx';
 import { KnowledgeDots } from '../components/KnowledgeDots.tsx';
+import { OverallBadge, viewSortValue as sortValue } from '../components/Badges.tsx';
+import { Crest } from '../components/Crest.tsx';
+import { PlayerName, useUi } from '../ui.tsx';
 import { NATION_LABEL, SKATER_LABEL, GOALIE_LABEL, euro } from '../labels.ts';
 
 type PosFilter = 'all' | 'F' | 'D' | 'G';
-type Kind = 'all' | 'free' | 'expiring' | 'mine';
+/** Auswahl im Ligenbaum */
+type Node =
+  | { k: 'available' } | { k: 'mine' } | { k: 'watch' }
+  | { k: 'league'; id: string } | { k: 'club'; id: string }
+  | { k: 'freeDE' } | { k: 'abroad'; region: Region | null };
+const sameNode = (a: Node, b: Node) => JSON.stringify(a) === JSON.stringify(b);
 const POS: Record<PosFilter, Position[]> = { all: ['C', 'LW', 'RW', 'LD', 'RD', 'G'], F: ['C', 'LW', 'RW'], D: ['LD', 'RD'], G: ['G'] };
 
 /** Mittelwert der Kategorien in Anzeigepunkten */
@@ -38,46 +44,49 @@ const ATTR_OPTIONS: { key: string; label: string }[] = [
   ...Object.entries(GOALIE_LABEL).map(([k, l]) => ({ key: `g:${k}`, label: `Torhüter: ${l}` })),
 ];
 
-function sortValue(v: PlayerView): number {
-  const o = v.overall;
-  if ('exact' in o) return o.exact;
-  if ('range' in o) return (o.range[0] + o.range[1]) / 2;
-  if ('category' in o) return 5 + CATEGORY.indexOf(o.category as (typeof CATEGORY)[number]) * 3;
-  return 0;
-}
-
-export function OverallBadge({ v }: { v: PlayerView }) {
-  const o = v.overall;
-  if ('exact' in o) return <span className="rating">{o.exact}</span>;
-  if ('range' in o) return <span className="rating range-badge">{o.range[0]}–{o.range[1]}</span>;
-  if ('category' in o) return <span className="rating cat-badge">{o.category}</span>;
-  return <span className="rating">?</span>;
-}
-
 export function Market() {
   const { world, club, clubById } = useStore();
   const [pos, setPos] = useState<PosFilter>('all');
-  const [kind, setKind] = useState<Kind>('all');
+  const [node, setNode] = useState<Node>({ k: 'available' });
+  const [treeOpen, setTreeOpen] = useState(false);
+  const [onlyAvailable, setOnlyAvailable] = useState(false);
+  const { openPlayer } = useUi();
   const [onlyImports, setOnlyImports] = useState(false);
   const [f, setF] = useState<Filters>(DEFAULT_FILTERS);
   const [showFilters, setShowFilters] = useState(false);
   const activeFilters = (f.ageMin > 16 || f.ageMax < 40 ? 1 : 0) + (f.overallMin ? 1 : 0) + (f.shoots !== 'all' ? 1 : 0) + f.attrs.filter((a) => a.min).length + (f.minKnowledge > 1 ? 1 : 0) + (f.maxSalary ? 1 : 0);
-  const [sel, setSel] = useState<Player | null>(null);
-  const [nego, setNego] = useState<Player | null>(null);
   const clubId = club?.id ?? '';
   const st = world.scouting[clubId];
 
+  const myOffers = useMemo(() => new Set(world.market.offers.filter((o) => o.clubId === clubId && o.status === 'open').map((o) => o.playerId)), [world, clubId]);
+  const leagueOf = useMemo(() => new Map(world.clubs.map((c) => [c.id, c.leagueId])), [world]);
+  const available = useMemo(() => new Set(clubId ? marketPlayers(world, clubId).map((p) => p.id) : []), [world, clubId]);
+  /** Spieler eines Baumknotens (ohne eigene Spieler) */
+  const inNode = (p: Player, n: Node): boolean => {
+    if (p.contract?.clubId === clubId) return false;
+    switch (n.k) {
+      case 'available': return available.has(p.id);
+      case 'mine': return myOffers.has(p.id);
+      case 'watch': return !!st?.watch.includes(p.id);
+      case 'league': return !!p.contract && leagueOf.get(p.contract.clubId) === n.id;
+      case 'club': return p.contract?.clubId === n.id;
+      case 'freeDE': return !p.contract && regionOf(p) === 'DE';
+      case 'abroad': return !p.contract && regionOf(p) !== 'DE' && (!n.region || regionOf(p) === n.region);
+    }
+  };
+  const count = (n: Node) => world.players.filter((p) => inNode(p, n)).length;
+
   const list = useMemo(() => {
     if (!clubId) return [];
-    return marketPlayers(world, clubId)
-      .filter((p) => p.contract?.clubId !== clubId)
+    return world.players
+      .filter((p) => inNode(p, node))
+      .filter((p) => !onlyAvailable || available.has(p.id))
       .filter((p) => POS[pos].includes(p.position))
       .filter((p) => !onlyImports || !p.nationalities.includes('DE'))
       .filter((p) => f.shoots === 'all' || p.shoots === f.shoots)
       .map((p) => ({ p, age: ageOn(p.birthDate, world.date) }))
       .filter(({ age }) => age >= f.ageMin && age <= f.ageMax)
       .map(({ p, age }) => ({ p, age, v: playerView(world, clubId, p, age), m: marketInfo(world, p, clubId), sal: expectedSalary(world, p) }))
-      .filter(({ p, m }) => (kind === 'free' ? !p.contract : kind === 'expiring' ? !!p.contract : kind === 'mine' ? !!m.myOffer : true))
       .filter(({ v }) => v.level >= f.minKnowledge)
       .filter(({ sal }) => !f.maxSalary || sal <= f.maxSalary)
       .filter(({ v }) => {
@@ -98,7 +107,7 @@ export function Market() {
         : f.sort === 'salary' ? a.sal - b.sal
         : f.sort === 'knowledge' ? b.v.level - a.v.level || sortValue(b.v) - sortValue(a.v)
         : sortValue(b.v) - sortValue(a.v)));
-  }, [world, clubId, pos, kind, onlyImports, f]);
+  }, [world, clubId, pos, node, onlyImports, onlyAvailable, f, available, myOffers]);
   if (!club) return null;
 
   const comp = world.competition!;
@@ -106,19 +115,55 @@ export function Market() {
     ? 'Verhandlungsphase für die nächste Saison: Spieler mit auslaufendem Vertrag sind verfügbar.'
     : `Bis 1. November nur vereinslose Spieler. Sofortverpflichtungen bis ${formatDate(comp.transferDeadline)}.`;
 
+  const league = world.leagues[0];
+  const leagueClubs = world.clubs.filter((c) => c.leagueId === league.id && c.id !== club.id).sort((a, b) => a.name.localeCompare(b.name));
+  const nodeLabel = (n: Node): string => {
+    switch (n.k) {
+      case 'available': return 'Verhandelbar';
+      case 'mine': return 'Meine Angebote';
+      case 'watch': return 'Beobachtet';
+      case 'league': return league.name;
+      case 'club': return clubById.get(n.id)?.name ?? '';
+      case 'freeDE': return 'Vereinslos (Deutschland & Österreich)';
+      case 'abroad': return n.region ? `Ausland · ${REGION_LABEL[n.region]}` : 'Ausland (alle Regionen)';
+    }
+  };
+  const item = (n: Node, label: React.ReactNode, depth = 0, tip?: string) => (
+    <button key={JSON.stringify(n)} className={`mtree-item d${depth} ${sameNode(n, node) ? 'on' : ''}`} onClick={() => { setNode(n); setTreeOpen(false); }} data-tip={tip}>
+      <span>{label}</span><small>{count(n)}</small>
+    </button>
+  );
+  const tree = (
+    <nav className="mtree" aria-label="Ligenstruktur">
+      <div className="mtree-group">Schnellzugriff</div>
+      {item({ k: 'available' }, 'Verhandelbar', 0, 'Alle Spieler, um die du jetzt bieten kannst')}
+      {item({ k: 'mine' }, 'Meine Angebote')}
+      {item({ k: 'watch' }, 'Beobachtet', 0, 'Spieler, die deine Scouts gerade beobachten')}
+      <div className="mtree-group">Deutschland</div>
+      {item({ k: 'league', id: league.id }, league.name, 0, 'Alle Spieler der Liga (ohne deinen Kader)')}
+      {leagueClubs.map((c) => item({ k: 'club', id: c.id }, <><Crest club={c} size={16} />{c.name}</>, 1))}
+      {item({ k: 'freeDE' }, 'Vereinslos', 0, 'Vereinslose Spieler aus Deutschland und Österreich')}
+      <div className="mtree-group">Ausland</div>
+      {item({ k: 'abroad', region: null }, 'Alle Regionen', 0, 'Vereinslose Spieler aus dem Ausland. Ausländische Ligen kommen später dazu.')}
+      {REGIONS.filter((r) => r !== 'DE').map((r) => item({ k: 'abroad', region: r }, REGION_LABEL[r], 1))}
+    </nav>
+  );
+
   return (
+    <div className="market-layout">
+      <aside className={`mtree-wrap ${treeOpen ? 'open' : ''}`}>
+        <button className="btn block mtree-toggle" onClick={() => setTreeOpen((x) => !x)}>{nodeLabel(node)} {treeOpen ? '▲' : '▼'}</button>
+        {tree}
+      </aside>
     <div className="stack">
+      <h3 className="market-title">{nodeLabel(node)}</h3>
       <p className="muted small">{phase}</p>
-      <div className="segmented small-seg">
-        {([['all', 'Alle'], ['free', 'Vereinslos'], ['expiring', 'Vertrag läuft aus'], ['mine', 'Meine Angebote']] as [Kind, string][]).map(([id, l]) => (
-          <button key={id} className={kind === id ? 'on' : ''} onClick={() => setKind(id)}>{l}</button>
-        ))}
-      </div>
       <div className="segmented small-seg">
         {([['all', 'Alle'], ['F', 'Sturm'], ['D', 'Verteidigung'], ['G', 'Tor']] as [PosFilter, string][]).map(([id, l]) => (
           <button key={id} className={pos === id ? 'on' : ''} onClick={() => setPos(id)}>{l}</button>
         ))}
-        <button className={onlyImports ? 'on' : ''} onClick={() => setOnlyImports((x) => !x)}>Nur Import</button>
+        <button className={onlyImports ? 'on' : ''} onClick={() => setOnlyImports((x) => !x)} data-tip="Nur Spieler ohne deutschen Pass (brauchen eine Ausländerlizenz)">Nur Import</button>
+        {node.k !== 'available' && <button className={onlyAvailable ? 'on' : ''} onClick={() => setOnlyAvailable((x) => !x)} data-tip="Nur Spieler, um die du gerade bieten kannst">Nur verhandelbar</button>}
       </div>
       <div className="row-between">
         <button className="btn" onClick={() => setShowFilters((x) => !x)}>Filter{activeFilters ? ` (${activeFilters})` : ''} {showFilters ? '▲' : '▼'}</button>
@@ -187,36 +232,34 @@ export function Market() {
       <section className="card flush">
         <ul className="roster">
           {list.length === 0 && <li className="muted">Keine Spieler gefunden.</li>}
-          {list.slice(0, 80).map(({ p, v, m }) => (
-            <li key={p.id} onClick={() => setSel(p)}>
+          {list.slice(0, 120).map(({ p, v, m }) => {
+            const ok = available.has(p.id);
+            const c = p.contract ? clubById.get(p.contract.clubId) : undefined;
+            const status = !p.contract ? 'vereinslos' : p.contract.untilSeason <= world.season ? `${c?.shortName} · läuft aus` : `${c?.shortName} · bis ${p.contract.untilSeason + 1}`;
+            const why = ok ? '' : availability(world, p, clubId);
+            return (
+            <li key={p.id} onClick={() => openPlayer(p.id)} className={ok ? '' : 'locked'}>
               <span className={`pos pos-${p.position}`}>{p.position}</span>
               <div className="roster-main">
-                <strong>{p.firstName[0]}. {p.lastName}{st?.watch.includes(p.id) ? ' 👁' : ''}</strong>
+                <strong><PlayerName p={p} />{st?.watch.includes(p.id) ? <span data-tip="Wird von deinen Scouts beobachtet"> 👁</span> : ''}</strong>
                 <small className="muted">
-                  {ageOn(p.birthDate, world.date)} J · {NATION_LABEL[p.nationalities[0]] ?? p.nationalities[0]} · {p.contract ? `läuft aus (${clubById.get(p.contract.clubId)?.shortName})` : 'vereinslos'}
-                  {m.interested > 0 && <span className="tag">{m.interested} {m.interested === 1 ? 'Angebot' : 'Angebote'}</span>}
-                  {m.myOffer && <span className={`tag ${m.tendency.code === 'leading' ? 'pos' : m.tendency.code === 'behind' ? 'neg' : 'mix'}`}>dein Angebot</span>}
+                  {ageOn(p.birthDate, world.date)} J · {NATION_LABEL[p.nationalities[0]] ?? p.nationalities[0]} · {status}
+                  {ok ? <span className="tag pos" data-tip="Du kannst jetzt ein Angebot machen">verhandelbar</span>
+                    : <span className="tag dim" data-tip={why && !why.ok ? `Kein Angebot möglich: ${why.reason}` : ''}>gebunden</span>}
+                  {ok && m.interested > 0 && <span className="tag" data-tip="Anzahl offener Angebote anderer Vereine">{m.interested} {m.interested === 1 ? 'Angebot' : 'Angebote'}</span>}
+                  {m.myOffer && <span className={`tag ${m.tendency.code === 'leading' ? 'pos' : m.tendency.code === 'behind' ? 'neg' : 'mix'}`} data-tip={m.tendency.text || 'Dein Angebot liegt vor'}>dein Angebot</span>}
                 </small>
               </div>
               <KnowledgeDots level={v.level} />
               <OverallBadge v={v} />
             </li>
-          ))}
+            );
+          })}
         </ul>
-        {list.length > 80 && <p className="muted small pad">… und {list.length - 80} weitere. Filter nutzen.</p>}
+        {list.length > 120 && <p className="muted small pad">… und {list.length - 120} weitere. Filter nutzen.</p>}
       </section>
+    </div>
 
-      {sel && !nego && (
-        <PlayerSheet
-          player={sel}
-          date={world.date}
-          onClose={() => setSel(null)}
-          view={playerView(world, club.id, sel, ageOn(sel.birthDate, world.date))}
-          clubName={sel.contract ? clubById.get(sel.contract.clubId)?.name : 'vereinslos'}
-          action={{ label: marketInfo(world, sel, club.id).myOffer ? 'Angebot ansehen / ändern' : 'Vertragsangebot machen', onClick: () => setNego(sel) }}
-        />
-      )}
-      {nego && <Negotiation player={nego} onClose={() => { setNego(null); setSel(null); }} />}
     </div>
   );
 }

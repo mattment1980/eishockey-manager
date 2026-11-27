@@ -1,4 +1,5 @@
 import type { Player, SkaterAttribute, GoalieAttribute } from '@ehm/schema';
+import { C } from './engine/constants.ts';
 
 type Weights<K extends string> = Partial<Record<K, number>>;
 
@@ -77,3 +78,25 @@ export function ageOn(birthDate: string, date: string): number {
   if (d.getMonth() < b.getMonth() || (d.getMonth() === b.getMonth() && d.getDate() < b.getDate())) age--;
   return age;
 }
+
+/** Interne Skala → Anzeige mit einer Nachkommastelle (z. B. 12,6) */
+export const toDisplay1 = (v: number): number => Math.max(1, Math.min(20, Math.round(v) / 10));
+
+/** Leistungsfaktor aus der Fitness (100 % = 1,0) */
+export const fitnessFactor = (fitness: number): number => 1 - Math.max(0, 100 - fitness) * C.FITNESS_EFFECT;
+
+/** Anteil aus Form und Moral (wie in der Match-Engine, ohne Situations-Traits und Chemie) */
+export const conditionMod = (p: Player): number =>
+  Math.max(-C.CHARACTER_CAP, Math.min(C.CHARACTER_CAP, (p.condition.form - 50) / 1000 + (p.condition.morale - 50) / 1500));
+
+/**
+ * Aktuelle Stärke: Grundwert × Fitness × (1 + Form/Moral).
+ * Entspricht dem, was der Spieler zu Spielbeginn tatsächlich auf das Eis bringt.
+ */
+export function effectiveRating(p: Player, base: number = overall(p)): number {
+  if (p.position === 'G') return base * fitnessFactor(p.condition.fitness) * (1 + (p.condition.form - 50) / 800 + (p.condition.morale - 50) / 3000);
+  return base * fitnessFactor(p.condition.fitness) * (1 + conditionMod(p));
+}
+
+/** Talent (Obergrenze der Entwicklung) in Sternen 0,5–5 */
+export const talentStars = (potential: number): number => Math.max(0.5, Math.min(5, Math.round(((potential - 70) / 12) * 2) / 2));

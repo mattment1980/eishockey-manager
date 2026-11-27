@@ -68,7 +68,7 @@ export function StaffView() {
             </div>
             {s.traits.length > 0 && (
               <div className="traits">
-                {s.traits.map((t) => <span key={t.id} className={`trait ${TRAIT_LABEL[t.id].tone}`} title={TRAIT_LABEL[t.id].text}>{TRAIT_LABEL[t.id].name}</span>)}
+                {s.traits.map((t) => <span key={t.id} className={`trait ${TRAIT_LABEL[t.id].tone}`} data-tip={TRAIT_LABEL[t.id].text}>{TRAIT_LABEL[t.id].name}</span>)}
               </div>
             )}
             {s.traits.map((t) => <p key={t.id} className="muted small trait-text">{TRAIT_LABEL[t.id].name}: {TRAIT_LABEL[t.id].text}</p>)}

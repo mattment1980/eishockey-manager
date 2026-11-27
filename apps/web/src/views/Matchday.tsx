@@ -8,12 +8,15 @@ import { useStore } from '../store.tsx';
 import { Crest } from '../components/Crest.tsx';
 import { LiveMatch } from '../components/LiveMatch.tsx';
 import { simMatch, simDay, simDays } from '../worker.ts';
+import { Offseason } from './Offseason.tsx';
+import { offseasonPhase } from '@ehm/data';
+import { ClubName } from '../ui.tsx';
 
 const resultText = (f: Fixture) =>
   f.result ? `${f.result.score[0]}:${f.result.score[1]}${f.result.decidedIn === 'OT' ? ' n.V.' : f.result.decidedIn === 'SO' ? ' n.P.' : ''}` : '–';
 
 export function Matchday() {
-  const { world, club, byId, clubById, applyWorld, newSeason } = useStore();
+  const { world, club, byId, clubById, applyWorld } = useStore();
   const [live, setLive] = useState<{ result: MatchResult; fixture: Fixture; sides: [Club, Club] } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const comp = world.competition!;
@@ -62,36 +65,8 @@ export function Matchday() {
     );
   }
 
-  // --- Saisonende
-  if (comp.finished) {
-    const table = regularTable(world);
-    const place = table.findIndex((r) => r.clubId === club.id) + 1;
-    const champ = clubById.get(comp.champion!)!;
-    const releg = comp.relegated ? clubById.get(comp.relegated)! : null;
-    const mySeries = comp.series.filter((s) => s.high === club.id || s.low === club.id);
-    const lastSeries = mySeries[mySeries.length - 1];
-    const outcome = comp.champion === club.id ? 'Meister! 🏆'
-      : comp.relegated === club.id ? 'Abgestiegen'
-      : lastSeries ? `${lastSeries.winner === club.id ? 'Gewonnen' : 'Aus'} in: ${lastSeries.roundName}` : '–';
-    return (
-      <div className="stack">
-        <h2>Saison {comp.year}/{String(comp.year + 1).slice(2)} beendet</h2>
-        <section className="card champion">
-          <Crest club={champ} size={84} />
-          <div><div className="muted small">Meister</div><h2>{champ.name}</h2></div>
-        </section>
-        <section className="kpis">
-          <div className="kpi"><span>Hauptrunde</span><strong>Platz {place}</strong></div>
-          <div className="kpi"><span>Nachsaison</span><strong>{outcome}</strong></div>
-          {releg && <div className="kpi"><span>Absteiger</span><strong>{releg.name}</strong></div>}
-        </section>
-        <section className="card">
-          <p className="muted small">Beim Saisonwechsel enden auslaufende Verträge, Vorverträge treten in Kraft und neue vereinslose Spieler kommen auf den Markt. Alterung und Spielerentwicklung folgen in Meilenstein 7.</p>
-          <button className="btn primary block" onClick={newSeason}>Neue Saison starten</button>
-        </section>
-      </div>
-    );
-  }
+  // --- Sommerpause (Saisonende bis Saisonstart)
+  if (offseasonPhase(world) !== null) return <Offseason />;
 
   const lastDay = comp.day;
   const lastResults = lastDay > 0 ? fixturesOfDay(comp, lastDay) : [];
@@ -171,9 +146,9 @@ export function Matchday() {
               const mine = f.home === club.id || f.away === club.id;
               return (
                 <li key={f.id} className={mine ? 'mine' : ''}>
-                  <span className="res-team"><Crest club={h} size={22} />{h.shortName}</span>
+                  <span className="res-team"><ClubName c={h} crest={22} /></span>
                   <b className="res-score">{resultText(f)}</b>
-                  <span className="res-team right">{a.shortName}<Crest club={a} size={22} /></span>
+                  <span className="res-team right"><ClubName c={a} /><Crest club={a} size={22} /></span>
                   {ser && <small className="res-series muted">{ser.roundName}: {clubById.get(ser.high)!.shortName} {ser.winsHigh}:{ser.winsLow} {clubById.get(ser.low)!.shortName}{ser.winner ? ` – ${clubById.get(ser.winner)!.shortName} weiter` : ''}</small>}
                 </li>
               );
@@ -206,11 +181,11 @@ function NextGame({ fixture, club, seriesInfo }: { fixture: Fixture; club: Club;
         <div className="vs-mid">
           <div className="muted small">Kaderstärke</div>
           <div className="vs-bars">
-            <span>{toDisplay(sHome)}</span>
+            <span data-tip="Kaderstärke der Aufstellung (1–20)">{toDisplay(sHome)}</span>
             <div className="duo"><div style={{ width: `${50 + (sHome - sAway) / 2}%` }} /></div>
             <span>{toDisplay(sAway)}</span>
           </div>
-          <div className="muted small">gegen {opp.name}</div>
+          <div className="muted small">gegen <ClubName c={opp} full /></div>
         </div>
         <div className="vs-team"><Crest club={away} size={60} /><strong>{away.shortName}</strong><small className="muted">{rank(away.id)}. Platz</small></div>
       </div>

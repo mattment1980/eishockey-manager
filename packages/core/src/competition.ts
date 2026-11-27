@@ -12,6 +12,8 @@ import { marketTick } from './market.ts';
 import { coachingCapacity, defaultRules } from './coaching.ts';
 import { updateAfterGames, unitChemistry, teamClimate, captainOf, hasTrait } from './chemistry.ts';
 import { toDisplay } from './ratings.ts';
+import { recoverFitness, updateCondition, restDays } from './condition.ts';
+import { updateFamiliarity } from './familiarity.ts';
 
 /**
  * Saisonablauf nach Ligaformat: Hauptrunde → Pre-Playoffs → Playoffs (mit Neusetzen)
@@ -209,6 +211,7 @@ export function matchInputFor(world: World, fixture: Fixture): MatchInput {
       chemistry: { lines: plan.forwardLines.map((l) => unitChemistry(world, l, byId)), pairs: plan.defensePairs.map((l) => unitChemistry(world, l, byId)) },
       climate: teamClimate(world, c.id),
       captainId: captainOf(world, c)?.id,
+      familiarity: c.familiarity,
     };
   };
   return {
@@ -224,7 +227,14 @@ export function matchInputFor(world: World, fixture: Fixture): MatchInput {
 const emptyLine = (clubId: string): StatLine => ({ clubId, gp: 0, g: 0, a: 0, pim: 0, pm: 0, sog: 0, toi: 0, gs: 0, sa: 0, ga: 0, w: 0, so: 0 });
 
 function record(comp: Competition, fixture: Fixture, res: MatchResult, byId: Map<string, Player>) {
-  fixture.result = { score: res.score, decidedIn: res.decidedIn, shots: [res.teamStats[0].shotsOnGoal, res.teamStats[1].shotsOnGoal] };
+  const teamLine = (t: MatchResult['teamStats'][number]) => ({
+    att: t.shotAttempts, pim: t.pim, pp: t.powerPlays, ppg: t.powerPlayGoals, shg: t.shortHandedGoals,
+    fow: t.faceoffsWon, hits: t.hits, blocks: t.blocks, xg: Math.round(t.xg * 100) / 100,
+  });
+  fixture.result = {
+    score: res.score, decidedIn: res.decidedIn, shots: [res.teamStats[0].shotsOnGoal, res.teamStats[1].shotsOnGoal],
+    team: [teamLine(res.teamStats[0]), teamLine(res.teamStats[1])],
+  };
   const bucket = fixture.stage === 'regular' ? comp.stats.regular : comp.stats.post;
   const clubs = [fixture.home, fixture.away];
   for (const s of res.playerStats) {
@@ -277,16 +287,24 @@ export function playDay(world: World, preplayed: Record<string, MatchResult> = {
   const placeNow = placeLookup(w);
   for (const f of todays) w = bookFixture(w, f, f.stage === 'regular' ? placeNow(f.home) : null);
   // Moral und Chemie
-  w = updateAfterGames(w, todays.map((f) => ({ fixture: f, result: results[f.id] })));
+  const games = todays.map((f) => ({ fixture: f, result: results[f.id] }));
+  w = updateAfterGames(w, games);
+  // Fitness, Form und Taktik-Eingespieltheit
+  w = updateCondition(w, games);
+  w = updateFamiliarity(w, todays);
   // Scouting
   w = updateScouting(w, date, todays.map((f) => ({ home: f.home, away: f.away, result: results[f.id] })));
   // Markt (Entscheidungen, KI-Angebote, Versprechen)
   w = marketTick(w, world.date);
   w = prepareNextDay(w);
+  // Erholung bis zum nächsten Spieltag: Die Fitness zeigt damit immer den Stand zum nächsten Anpfiff
+  const nextDate = w.competition!.fixtures.find((f) => f.day === w.competition!.day + 1)?.date;
+  if (nextDate) w = recoverFitness(w, restDays(date, nextDate));
   if (w.competition!.finished) {
     w = evaluateSeason(w);
     // restliche Monate der Saison bis Ende Juli abrechnen
     w = closeMonthsBetween(w, w.date, `${w.competition!.year + 1}-08-01`, () => null);
+    w = { ...w, offseason: { phase: 0 } };
   }
   return { world: w, results };
 }
@@ -321,4 +339,81 @@ export function stageLabel(comp: Competition): string {
   if (next.some((f) => f.stage === 'regular')) return `Hauptrunde · Spieltag ${comp.day + 1} von ${regularDays(comp)}`;
   const names = [...new Set(next.map((f) => comp.series.find((s) => s.id === f.seriesId)?.roundName).filter(Boolean))];
   return names.join(' · ') || 'Nachsaison';
+}
+
+// ---------------------------------------------------------------- Form & Teamstatistik
+
+export type FormCode = 'S' | 'SnV' | 'NnV' | 'N';
+
+/** Ergebnisse der letzten `n` Spiele eines Vereins (ältestes zuerst) */
+export function lastResults(comp: Competition, clubId: string, n = 5, stage?: Stage): { code: FormCode; fixture: Fixture }[] {
+  const games = comp.fixtures
+    .filter((f) => f.result && (f.home === clubId || f.away === clubId) && (!stage || f.stage === stage))
+    .sort((a, b) => a.day - b.day);
+  return games.slice(-n).map((f) => {
+    const side = f.home === clubId ? 0 : 1;
+    const won = f.result!.score[side] > f.result!.score[1 - side];
+    const ot = f.result!.decidedIn !== 'REG';
+    return { code: won ? (ot ? 'SnV' : 'S') : ot ? 'NnV' : 'N', fixture: f };
+  });
+}
+
+export interface TeamSeasonStats {
+  clubId: string;
+  gp: number;
+  gf: number;
+  ga: number;
+  sog: number;
+  sogA: number;
+  att: number;
+  attA: number;
+  xg: number;
+  xgA: number;
+  pp: number;
+  ppg: number;
+  /** Unterzahlsituationen = Überzahlspiele des Gegners */
+  pk: number;
+  ppgA: number;
+  shg: number;
+  shgA: number;
+  pim: number;
+  fow: number;
+  fol: number;
+  hits: number;
+  blocks: number;
+  /** Spiele mit Detailstatistik (ältere Spielstände haben sie nicht für alle Spiele) */
+  detailed: number;
+}
+
+/** Mannschaftsstatistik für Hauptrunde oder Nachsaison */
+export function teamSeasonStats(world: World, bucket: 'regular' | 'post'): TeamSeasonStats[] {
+  const comp = world.competition!;
+  const ids = world.clubs.filter((c) => c.leagueId === comp.leagueId).map((c) => c.id);
+  const rows = new Map<string, TeamSeasonStats>(ids.map((id) => [id, {
+    clubId: id, gp: 0, gf: 0, ga: 0, sog: 0, sogA: 0, att: 0, attA: 0, xg: 0, xgA: 0, pp: 0, ppg: 0, pk: 0, ppgA: 0,
+    shg: 0, shgA: 0, pim: 0, fow: 0, fol: 0, hits: 0, blocks: 0, detailed: 0,
+  }]));
+  for (const f of comp.fixtures) {
+    if (!f.result || (bucket === 'regular') !== (f.stage === 'regular')) continue;
+    const r = f.result;
+    ([0, 1] as const).forEach((side) => {
+      const row = rows.get(side === 0 ? f.home : f.away);
+      if (!row) return;
+      const o = 1 - side;
+      row.gp++;
+      row.gf += r.score[side]; row.ga += r.score[o];
+      // Penaltyschießen: Siegtreffer zählt nicht als Tor in der Statistik
+      if (r.decidedIn === 'SO') { if (r.score[side] > r.score[o]) row.gf--; else row.ga--; }
+      row.sog += r.shots[side]; row.sogA += r.shots[o];
+      if (r.team) {
+        const m = r.team[side], t = r.team[o];
+        row.detailed++;
+        row.att += m.att; row.attA += t.att; row.xg += m.xg; row.xgA += t.xg;
+        row.pp += m.pp; row.ppg += m.ppg; row.pk += t.pp; row.ppgA += t.ppg;
+        row.shg += m.shg; row.shgA += t.shg; row.pim += m.pim; row.fow += m.fow; row.fol += t.fow;
+        row.hits += m.hits; row.blocks += m.blocks;
+      }
+    });
+  }
+  return [...rows.values()];
 }

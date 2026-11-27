@@ -1,42 +1,44 @@
 # Kalibrierung Match-Engine
 
-Stand: 25.11.2026 (Meilenstein 6b: Chemie & Moral – Traits im Spiel, Reihenchemie, Teamklima, Trainer-Disziplin) – erzeugt mit `pnpm sim calibrate 10` (Welt-Seed 2026). Richtwerte sind Orientierungsgrößen für europäisches Profi-Eishockey, keine offiziellen Ligastatistiken.
+Stand: 27.11.2026 (Runde vor M7: dynamische Fitness und Form, Taktik-Eingespieltheit) – erzeugt mit `pnpm sim calibrate 10` (Welt-Seed 2026). Richtwerte sind Orientierungsgrößen für europäisches Profi-Eishockey, keine offiziellen Ligastatistiken.
 
 ```
-Kalibrierung: 3640 Spiele (10 Saisons à 52 Spieltage) in 41.8 s (11,48 ms/Spiel)
+Kalibrierung: 3640 Spiele (10 Saisons à 52 Spieltage) in 57.9 s (15,90 ms/Spiel)
 
 Kennzahl (je Team und Spiel)             Engine   Richtwert
-Tore                                       3,09   2,8 – 3,3
-Schüsse aufs Tor                           31,0   27 – 32
+Tore                                       3,06   2,8 – 3,3
+Schüsse aufs Tor                           30,9   27 – 32
 Schussversuche (Corsi)                     59,5   50 – 60
 davon geblockt                             15,1   12 – 16
-davon vorbei                               13,4   10 – 14
-Fangquote                                90,0 %   90,5 – 91,5 %
-xG                                         3,09   ≈ Tore
+davon vorbei                               13,6   10 – 14
+Fangquote                                90,1 %   90,5 – 91,5 %
+xG                                         3,08   ≈ Tore
 Tore ins leere Tor (je Spiel)              0,15   0,3 – 0,5
-Überzahlspiele                             3,65   3,0 – 4,0
-Überzahlquote                            16,9 %   17 – 22 %
+Überzahlspiele                             3,67   3,0 – 4,0
+Überzahlquote                            16,7 %   17 – 22 %
 Strafminuten                                7,3   6 – 9
 Checks                                     17,9   15 – 25
-Breakout sauber                          56,8 %   (beobachten)
-kontrollierte Eintritte erfolgreich      60,9 %   (beobachten)
-Dump-ins zurückerobert                   37,3 %   25 – 40 %
+Breakout sauber                          56,7 %   (beobachten)
+kontrollierte Eintritte erfolgreich      60,7 %   (beobachten)
+Dump-ins zurückerobert                   37,4 %   25 – 40 %
 
-Spiele mit Verlängerung                  20,0 %   20 – 25 %
-davon Penaltyschießen                    47,9 %   40 – 55 %
-Heimsiege                                55,6 %   52 – 56 %
-Ein-Tor-Spiele (reguläre Zeit)           23,4 %   25 – 32 %
-Spiele mit Corsi > 2:1                    9,7 %   < 5 %
+Spiele mit Verlängerung                  21,0 %   20 – 25 %
+davon Penaltyschießen                    49,5 %   40 – 55 %
+Heimsiege                                55,7 %   52 – 56 %
+Ein-Tor-Spiele (reguläre Zeit)           23,0 %   25 – 32 %
+Spiele mit Corsi > 2:1                    9,6 %   < 5 %
 
 Siegquote des Favoriten (Stärkeunterschied in Anzeigepunkten)
-ausgeglichen (< 0,3)                     49,0 %   (1320 Spiele)
-leichter Favorit (0,3–0,8)               56,6 %   (1720 Spiele)
-Favorit (0,8–1,5)                        66,4 %   (560 Spiele)
-klarer Favorit (> 1,5)                   77,5 %   (40 Spiele)
+ausgeglichen (< 0,3)                     51,1 %   (1320 Spiele)
+leichter Favorit (0,3–0,8)               56,5 %   (1720 Spiele)
+Favorit (0,8–1,5)                        65,9 %   (560 Spiele)
+klarer Favorit (> 1,5)                   72,5 %   (40 Spiele)
 Ziel klarer Favorit                               ca. 65 – 70 %
 ```
 
 ## Offene Punkte
+
+Neu vor M7: `FITNESS_EFFECT` 0,003 (je Prozentpunkt Fitness unter 100, außerhalb des Charakter-Deckels) und `FAMILIARITY_EFFECT` 0,025 (Taktik-Eingespieltheit ±2,5 %, neutral bei 60, innerhalb des Deckels). Fitness sinkt mit der Eiszeit (`COND` in `condition.ts`) und erholt sich an freien Tagen; Form folgt den Leistungen. Die Ligakennzahlen bleiben praktisch unverändert (Tore 3,06 statt 3,09, Verlängerung 21 % statt 20 %), weil alle Teams gleichermaßen betroffen sind. Hinweis: `calibrate` simuliert Einzelspiele mit frisch erzeugten Welten; den Verlauf von Fitness, Form und Eingespieltheit über eine Saison prüfen die Tests und `pnpm sim season`.
 
 Neue Parameter in 6b: `CLIMATE_FORM` 0,002 (Teamklima → Tagesform), `CHEM_EFFECT` 0,03 (Reihenchemie ±3 %), `CHARACTER_CAP` 0,08 (Deckel für Form + Moral + Traits + Chemie). Die Ligakennzahlen bleiben gegenüber 6a praktisch unverändert; Charaktereffekte verschieben Einzelspiele, nicht den Liga-Schnitt.
 

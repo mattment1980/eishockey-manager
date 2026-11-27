@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
 import type { Player } from '@ehm/schema';
-import { overall, toDisplay, ageOn, offenseRating, defenseRating, perkCost, ROLE_LABEL } from '@ehm/core';
+import { overall, toDisplay, ageOn, offenseRating, defenseRating, perkCost, effectiveRating, talentStars, ROLE_LABEL } from '@ehm/core';
 import { useStore } from '../store.tsx';
-import { PlayerSheet } from '../components/PlayerSheet.tsx';
+import { PlayerName, useUi } from '../ui.tsx';
+import { RatingBadge, EffectiveBadge, FitnessBar } from '../components/Badges.tsx';
+import { Talent } from '../components/Talent.tsx';
 import { Scouting } from './Scouting.tsx';
 import { Market } from './Market.tsx';
 import { Planner } from './Planner.tsx';
@@ -15,7 +17,7 @@ const GROUPS: { title: string; pos: Player['position'][] }[] = [
   { title: 'Tor', pos: ['G'] },
 ];
 
-type Sort = 'overall' | 'age' | 'salary' | 'off' | 'def' | 'points';
+type Sort = 'overall' | 'current' | 'age' | 'salary' | 'off' | 'def' | 'points';
 
 export function Roster() {
   const [mode, setMode] = useState<'roster' | 'locker' | 'planner' | 'market' | 'scouting'>('roster');
@@ -49,7 +51,8 @@ function skillList(p: Player): { label: string; value: number }[] {
 
 function RosterList() {
   const { players, world, club, clubById } = useStore();
-  const [sel, setSel] = useState<Player | null>(null);
+  const { openPlayer } = useUi();
+  const setSel = (p: Player) => openPlayer(p.id);
   const [sort, setSort] = useState<Sort>('overall');
   const [view, setView] = useState<View>('overview');
   const inLineup = useMemo(() => {
@@ -64,6 +67,7 @@ function RosterList() {
     return add(add(z, r), q);
   };
   const key = (p: Player) => {
+    if (sort === 'current') return effectiveRating(p);
     if (sort === 'age') return -ageOn(p.birthDate, world.date);
     if (sort === 'salary') return p.contract?.salary ?? 0;
     if (sort === 'off') return offenseRating(p);
@@ -73,14 +77,12 @@ function RosterList() {
   };
   const statusTag = (p: Player) => (
     <>
-      {p.contract && p.contract.untilSeason <= world.season && !p.nextContract && <span className="tag mix">läuft aus</span>}
-      {p.nextContract && p.nextContract.clubId === club?.id && <span className="tag pos">verlängert</span>}
-      {p.nextContract && p.nextContract.clubId !== club?.id && <span className="tag neg">geht</span>}
+      {p.contract && p.contract.untilSeason <= world.season && !p.nextContract && <span className="tag mix" data-tip="Vertrag endet nach dieser Saison">läuft aus</span>}
+      {p.nextContract && p.nextContract.clubId === club?.id && <span className="tag pos" data-tip="Vertrag für die nächste Saison verlängert">verlängert</span>}
+      {p.nextContract && p.nextContract.clubId !== club?.id && <span className="tag neg" data-tip="Hat bei einem anderen Verein unterschrieben">geht</span>}
     </>
   );
-  const name = (p: Player) => (
-    <span onClick={() => setSel(p)} className="cell-name"><span className={`pos pos-${p.position}`}>{p.position}</span>{p.firstName[0]}. {p.lastName}</span>
-  );
+  const name = (p: Player) => <span className="cell-name"><PlayerName p={p} pos /></span>;
 
   return (
     <div className="stack">
@@ -88,6 +90,7 @@ function RosterList() {
         <h2>Kader <span className="muted small">{players.length}/{world.countries[0].rules.maxRoster}</span></h2>
         <select className="select" value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sortierung">
           <option value="overall">nach Stärke</option>
+          <option value="current">nach aktueller Stärke</option>
           <option value="points">nach Punkten</option>
           <option value="off">nach Offensive</option>
           <option value="def">nach Defensive</option>
@@ -113,18 +116,20 @@ function RosterList() {
                   <li key={p.id} onClick={() => setSel(p)}>
                     <span className={`pos pos-${p.position}`}>{p.position}</span>
                     <div className="roster-main">
-                      <strong>{p.firstName[0]}. {p.lastName}</strong>
+                      <strong><PlayerName p={p} /> <Talent view={{ stars: talentStars(p.hidden.potential) }} compact /></strong>
                       <small className="muted">
                         {ageOn(p.birthDate, world.date)} J · {p.nationalities.join('/')}
-                        {!p.nationalities.includes('DE') && <span className="tag">Import</span>}
-                        {!inLineup.has(p.id) && <span className="tag dim">Tribüne</span>}
+                        {!p.nationalities.includes('DE') && <span className="tag" data-tip="Importspieler: belegt eine Ausländerlizenz">Import</span>}
+                        {!inLineup.has(p.id) && <span className="tag dim" data-tip="Nicht im Spieltagskader">Tribüne</span>}
                         {statusTag(p)}
-                        {p.contract?.promises.some((x) => x.status !== 'ok') && <span className="tag neg">Versprechen</span>}
-                        {p.traits.slice(0, 1).map((t) => <span key={t.id} className={`tag ${TRAIT_LABEL[t.id].tone}`}>{TRAIT_LABEL[t.id].name}</span>)}
+                        {p.contract?.promises.some((x) => x.status !== 'ok') && <span className="tag neg" data-tip="Ein Versprechen ist gefährdet oder gebrochen">Versprechen</span>}
+                        {p.traits.slice(0, 1).map((t) => <span key={t.id} className={`tag ${TRAIT_LABEL[t.id].tone}`} data-tip={TRAIT_LABEL[t.id].text}>{TRAIT_LABEL[t.id].name}</span>)}
                       </small>
                     </div>
                     <small className="muted salary">{euro(p.contract?.salary ?? 0)}</small>
-                    <span className="rating">{toDisplay(overall(p))}</span>
+                    <FitnessBar value={p.condition.fitness} />
+                    <EffectiveBadge p={p} />
+                    <RatingBadge p={p} />
                   </li>
                 ))}
               </ul>
@@ -166,11 +171,11 @@ function RosterList() {
                     <li key={p.id} onClick={() => setSel(p)}>
                       <span className={`pos pos-${p.position}`}>{p.position}</span>
                       <div className="roster-main">
-                        <strong>{p.firstName[0]}. {p.lastName}</strong>
+                        <strong><PlayerName p={p} /></strong>
                         <div className="skill-chips">{skills.slice(0, 4).map((s) => <span key={s.label} className="chip top">{s.label} {s.value}</span>)}</div>
                         <div className="skill-chips">{skills.slice(-4).reverse().map((s) => <span key={s.label} className="chip low">{s.label} {s.value}</span>)}</div>
                       </div>
-                      <span className="rating">{toDisplay(overall(p))}</span>
+                      <RatingBadge p={p} />
                     </li>
                   );
                 })}
@@ -202,7 +207,6 @@ function RosterList() {
           </section>
         );
       })}
-      {sel && <PlayerSheet player={sel} date={world.date} onClose={() => setSel(null)} />}
     </div>
   );
 }

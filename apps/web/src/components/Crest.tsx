@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import type { Club } from '@ehm/schema';
 
 function hash(s: string): number {
@@ -12,7 +13,8 @@ export function Crest({ club, size = 40 }: { club: Pick<Club, 'id' | 'shortName'
   const shape = h % 3;
   const pattern = (h >> 3) % 4;
   const { primary, secondary } = club.colors;
-  const clipId = `crest-${club.id}`;
+  const uid = useId().replace(/:/g, '');
+  const clipId = `crest-${club.id}-${uid}`;
   const outline =
     shape === 0
       ? 'M50 4 L92 16 L88 58 Q80 86 50 98 Q20 86 12 58 L8 16 Z'

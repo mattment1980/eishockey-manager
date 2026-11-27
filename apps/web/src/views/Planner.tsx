@@ -3,6 +3,8 @@ import type { Player } from '@ehm/schema';
 import { overall, toDisplay, ageOn, marketInfo, contractCost, TARGET, formatDate, payrollOf } from '@ehm/core';
 import { useStore } from '../store.tsx';
 import { Negotiation } from '../components/Negotiation.tsx';
+import { PlayerName, ClubName, useUi } from '../ui.tsx';
+import { RatingBadge } from '../components/Badges.tsx';
 import { euro } from '../labels.ts';
 
 const group = (p: Player) => (p.position === 'G' ? 'G' : p.position === 'LD' || p.position === 'RD' ? 'D' : 'F');
@@ -11,6 +13,7 @@ const GROUP_LABEL = { F: 'Sturm', D: 'Verteidigung', G: 'Tor' } as const;
 export function Planner() {
   const { world, club, clubById } = useStore();
   const [nego, setNego] = useState<Player | null>(null);
+  const { openPlayer } = useUi();
   if (!club) return null;
   const season = world.season;
   const next = season + 1;
@@ -28,13 +31,13 @@ export function Planner() {
   const negotiationsOpen = world.date >= `${season}-11-01` || world.competition!.finished;
 
   const row = (p: Player, extra: React.ReactNode, onClick?: () => void) => (
-    <li key={p.id} onClick={onClick} className={onClick ? '' : 'static'}>
+    <li key={p.id} onClick={onClick ?? (() => openPlayer(p.id))}>
       <span className={`pos pos-${p.position}`}>{p.position}</span>
       <div className="roster-main">
-        <strong>{p.firstName[0]}. {p.lastName}</strong>
+        <strong><PlayerName p={p} /></strong>
         <small className="muted">{ageOn(p.birthDate, world.date)} J · {extra}</small>
       </div>
-      <span className="rating">{toDisplay(overall(p))}</span>
+      {p.contract?.clubId === club.id ? <RatingBadge p={p} /> : <span className="rating">{toDisplay(overall(p))}</span>}
     </li>
   );
 
@@ -78,7 +81,7 @@ export function Planner() {
         <h3 className="card-title">Neuzugänge ({arriving.length})</h3>
         <ul className="roster">
           {arriving.length === 0 && <li className="muted static">Noch keine.</li>}
-          {arriving.map((p) => row(p, <>{p.contract ? `kommt von ${clubById.get(p.contract.clubId)?.shortName}` : 'war vereinslos'} · {euro(p.nextContract!.salary)}</>))}
+          {arriving.map((p) => row(p, <>{p.contract ? <>kommt von <ClubName c={clubById.get(p.contract.clubId)!} /></> : 'war vereinslos'} · {euro(p.nextContract!.salary)}</>))}
         </ul>
       </section>
 
@@ -86,7 +89,7 @@ export function Planner() {
         <h3 className="card-title">Abgänge ({leaving.length})</h3>
         <ul className="roster">
           {leaving.length === 0 && <li className="muted static">Keine.</li>}
-          {leaving.map((p) => row(p, <>wechselt zu {clubById.get(p.nextContract!.clubId)?.name}</>))}
+          {leaving.map((p) => row(p, <>wechselt zu <ClubName c={clubById.get(p.nextContract!.clubId)!} full /></>))}
         </ul>
       </section>
 

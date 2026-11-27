@@ -4,6 +4,29 @@ import { DEFAULT_TACTICS } from '@ehm/schema';
 import { useStore } from '../store.tsx';
 import { TACTIC_OPTIONS } from '../labels.ts';
 import { RulesEditor } from './Rules.tsx';
+import { familiarityValue, familiarityLabel, teamFamiliarity, familiarityEffect, ENGINE_CONSTANTS } from '@ehm/core';
+
+/** Eingespieltheit eines Systems als kleiner Balken im Auswahlknopf */
+function Fam({ rec, k }: { rec: Record<string, number>; k: string }) {
+  const v = familiarityValue(rec, k);
+  return <span className="fam" data-tip={`Eingespieltheit ${Math.round(v)}/100 (${familiarityLabel(v)}) – wächst mit jedem Spiel und im Trainingslager, verblasst langsam, wenn das System nicht gespielt wird`}><i style={{ width: `${v}%` }} /></span>;
+}
+
+/** Gesamte Taktik-Eingespieltheit der aktuellen Systeme */
+export function FamiliaritySummary() {
+  const { club } = useStore();
+  const plan = club?.matchplan;
+  if (!club || !plan) return null;
+  const avg = teamFamiliarity(club.familiarity, plan.tactics, plan);
+  const eff = familiarityEffect(avg, ENGINE_CONSTANTS.FAMILIARITY_EFFECT) * 100;
+  return (
+    <section className="card">
+      <div className="row-between"><h3>Taktische Eingespieltheit</h3><b className="rating" data-tip="Durchschnitt über alle gewählten Systeme (5-gegen-5 und Special Teams)">{Math.round(avg)}</b></div>
+      <div className="meter big"><div style={{ width: `${avg}%` }} /></div>
+      <p className="muted small">{familiarityLabel(avg)} · Wirkung im Spiel: {eff >= 0 ? '+' : ''}{eff.toFixed(1).replace('.', ',')} % für alle Spieler. Neue Systeme müssen erst einstudiert werden – häufige Wechsel kosten Leistung. Ein starker Taktiker als Cheftrainer und der „Taktikfuchs“ beschleunigen das Lernen.</p>
+    </section>
+  );
+}
 
 type Mode = 'ev' | 'special' | 'matchups' | 'rules';
 
@@ -28,7 +51,8 @@ export function TacticsView() {
 function EvenStrength() {
   const { club, setMatchplan } = useStore();
   const plan = club?.matchplan;
-  if (!plan) return null;
+  if (!plan || !club) return null;
+  const fam = club.familiarity;
   const t = plan.tactics;
   const update = <K extends keyof Tactics>(k: K, v: Tactics[K]) => setMatchplan({ ...plan, tactics: { ...t, [k]: v } });
   return (
@@ -37,6 +61,7 @@ function EvenStrength() {
         <p className="muted small">Grundtaktik. Coaching-Regeln können sie im Spiel situativ ändern.</p>
         <button className="btn ghost" onClick={() => setMatchplan({ ...plan, tactics: { ...DEFAULT_TACTICS } })}>Zurücksetzen</button>
       </div>
+      <FamiliaritySummary />
       {(Object.keys(TACTIC_OPTIONS) as (keyof Tactics)[]).map((k) => {
         const def = TACTIC_OPTIONS[k];
         const current = def.options.find((o) => o.value === t[k]);
@@ -45,8 +70,9 @@ function EvenStrength() {
             <h3>{def.title}</h3>
             <div className="segmented">
               {def.options.map((o) => (
-                <button key={String(o.value)} className={t[k] === o.value ? 'on' : ''} onClick={() => update(k, o.value as Tactics[typeof k])}>
+                <button key={String(o.value)} className={`fam-btn ${t[k] === o.value ? 'on' : ''}`} onClick={() => update(k, o.value as Tactics[typeof k])}>
                   {o.label}
+                  <Fam rec={fam} k={`${k}:${o.value}`} />
                 </button>
               ))}
             </div>
@@ -74,6 +100,7 @@ function SpecialTeamsView() {
   const plan = club?.matchplan;
   if (!plan) return null;
   const st = plan.specialTeams;
+  const fam = club!.familiarity;
   const set = (patch: Partial<SpecialTeams>) => setMatchplan({ ...plan, specialTeams: { ...st, ...patch } });
   const pp = PP_OPTIONS.find((o) => o.value === st.ppFormation)!;
   const pk = PK_OPTIONS.find((o) => o.value === st.pkFormation)!;
@@ -82,14 +109,14 @@ function SpecialTeamsView() {
       <section className="card">
         <h3>Überzahl-Formation</h3>
         <div className="segmented">
-          {PP_OPTIONS.map((o) => <button key={o.value} className={st.ppFormation === o.value ? 'on' : ''} onClick={() => set({ ppFormation: o.value })}>{o.label}</button>)}
+          {PP_OPTIONS.map((o) => <button key={o.value} className={`fam-btn ${st.ppFormation === o.value ? 'on' : ''}`} onClick={() => set({ ppFormation: o.value })}>{o.label}<Fam rec={fam} k={`pp:${o.value}`} /></button>)}
         </div>
         <p className="muted small hint">{pp.hint}</p>
       </section>
       <section className="card">
         <h3>Unterzahl-Formation</h3>
         <div className="segmented">
-          {PK_OPTIONS.map((o) => <button key={o.value} className={st.pkFormation === o.value ? 'on' : ''} onClick={() => set({ pkFormation: o.value })}>{o.label}</button>)}
+          {PK_OPTIONS.map((o) => <button key={o.value} className={`fam-btn ${st.pkFormation === o.value ? 'on' : ''}`} onClick={() => set({ pkFormation: o.value })}>{o.label}<Fam rec={fam} k={`pk:${o.value}`} /></button>)}
         </div>
         <p className="muted small hint">{pk.hint}</p>
       </section>

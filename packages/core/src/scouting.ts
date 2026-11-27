@@ -1,7 +1,7 @@
 import type { World, Player, ScoutingState, SkaterAttribute, GoalieAttribute, Staff } from '@ehm/schema';
 import { SKATER_ATTRIBUTES, GOALIE_ATTRIBUTES } from '@ehm/schema';
 import { daysBetween, hash01 } from './calendar.ts';
-import { overall, toDisplay } from './ratings.ts';
+import { overall, toDisplay, talentStars } from './ratings.ts';
 import type { MatchResult } from './engine/types.ts';
 
 /**
@@ -30,6 +30,8 @@ export const S = {
   FOREIGN_FREE: 40,
   PER_GAME_FACED: 20,
   PER_VISIT: 60,
+  /** Anteil der Punkte bei Reisen außerhalb der Einsatzregion (nur beobachtete Spieler) */
+  AWAY_FACTOR: 0.5,
   /** Punkte pro Woche und Scout bei Scouting-Wert 0; + Faktor × Wert */
   WEEKLY_BASE: 110,
   WEEKLY_PER_RATING: 0.6,
@@ -81,6 +83,13 @@ export function updateScouting(world: World, newDate: string, results: { home: s
         add(p.id, S.PER_VISIT);
         bank -= S.PER_VISIT;
       }
+      // Beobachtete Spieler außerhalb der Region: Scouts reisen hin (weniger ergiebig)
+      const away = world.players.filter((p) => st.watch.includes(p.id) && p.contract?.clubId !== clubId && regionOf(p) !== region && (st.knowledge[p.id] ?? 0) < 400);
+      for (const p of away) {
+        if (bank < S.PER_VISIT) break;
+        add(p.id, S.PER_VISIT * S.AWAY_FACTOR);
+        bank -= S.PER_VISIT;
+      }
       st.bank[scout.id] = Math.min(bank, 600);
     }
     scouting[clubId] = st;
@@ -105,6 +114,8 @@ export interface PlayerView {
   attrs: Record<string, AttrView>;
   traitsVisible: number;
   potential: string;
+  /** Talent (Entwicklungsobergrenze) in Sternen – exakt oder als Spanne, je nach Kenntnis */
+  talent: { stars: number } | { range: [number, number] } | { hidden: true };
   strengths: string[];
 }
 
@@ -151,8 +162,17 @@ export function playerView(world: World, viewerId: string, player: Player, age: 
     attrs,
     traitsVisible: level >= 4 ? player.traits.length : level === 3 ? Math.min(player.traits.length, 2) : level === 2 ? Math.min(player.traits.length, 1) : 0,
     potential: level >= 2 ? POTENTIAL_TEXT(gap, age) : 'unbekannt',
+    talent: talentView(world, viewerId, player, level),
     strengths,
   };
+}
+
+function talentView(world: World, viewerId: string, player: Player, level: number): PlayerView['talent'] {
+  if (level >= 4) return { stars: talentStars(player.hidden.potential) };
+  if (level === 1) return { hidden: true };
+  const est = talentStars(player.hidden.potential + estimateError(world, viewerId, player, 'talent') * 1.5);
+  const w = level === 3 ? 0.5 : 1;
+  return { range: [Math.max(0.5, est - w), Math.min(5, est + w)] };
 }
 
 export function formatView(v: AttrView): string {

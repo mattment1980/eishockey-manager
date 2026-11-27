@@ -17,6 +17,8 @@ export interface TeamInput {
   /** Teamklima (0–100) */
   climate?: number;
   captainId?: string;
+  /** Taktik-Eingespieltheit (Schlüssel "taktik:wert", 0–100) */
+  familiarity?: Record<string, number>;
 }
 
 export interface MatchInput {

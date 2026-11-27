@@ -1,5 +1,5 @@
 import { WorldSchema, SCHEMA_VERSION, type World } from '@ehm/schema';
-import { defaultRules, seedChemistry, Rng } from '@ehm/core';
+import { defaultRules, seedChemistry, seedFamiliarity, Rng } from '@ehm/core';
 
 /** Ältere Spielstände auf das aktuelle Format heben. */
 export function migrateWorld(raw: unknown): unknown {
@@ -37,15 +37,21 @@ export function migrateWorld(raw: unknown): unknown {
     // Kapitän über Standardwert; Chemie wird nach dem Parsen gesät
     w.schemaVersion = 6;
   }
+  if (w.schemaVersion === 6) {
+    // Taktik-Eingespieltheit und Sommerpause über Standardwerte; Startwerte werden nach dem Parsen gesetzt
+    w.schemaVersion = 7;
+  }
   void SCHEMA_VERSION;
   return w;
 }
 
-/** Alte Spielstände (vor v6): Reihen bekommen eine Anfangschemie */
+/** Alte Spielstände: Reihen bekommen eine Anfangschemie (vor v6), Vereine eine Taktik-Eingespieltheit (vor v7) */
 export function ensureChemistry(world: World): World {
-  if (Object.keys(world.chemistry).length > 0) return world;
-  const rng = new Rng(world.seed + 606);
-  return seedChemistry(world, () => rng.next());
+  let w = seedFamiliarity(world);
+  if (Object.keys(w.chemistry).length > 0) return w;
+  const rng = new Rng(w.seed + 606);
+  w = seedChemistry(w, () => rng.next());
+  return w;
 }
 
 /** Welt als JSON exportieren (Grundlage für Datenpakete und Spielstände). */

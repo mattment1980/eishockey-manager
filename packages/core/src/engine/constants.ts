@@ -95,5 +95,10 @@ export const C = {
   CHEM_EFFECT: 0.03,
   /** Deckel für Form + Moral + Traits + Chemie (±) */
   CHARACTER_CAP: 0.08,
+  // Fitness & Eingespieltheit
+  /** Leistungsverlust je Prozentpunkt Fitness unter 100 (außerhalb des Charakter-Deckels) */
+  FITNESS_EFFECT: 0.003,
+  /** Maximaler Effekt der Taktik-Eingespieltheit des Teams (±) */
+  FAMILIARITY_EFFECT: 0.025,
 } as const;
 

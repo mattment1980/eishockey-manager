@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import type { World, Club, Player, Matchplan, Terms } from '@ehm/schema';
 import { WorldSchema } from '@ehm/schema';
 import { beginSeason, initScouting, submitOffer, withdrawOffer, type OfferResponse } from '@ehm/core';
-import { generateWorld, migrateWorld, seasonTransition, ensureChemistry } from '@ehm/data';
+import { generateWorld, migrateWorld, advanceOffseason, ensureChemistry } from '@ehm/data';
 
 const KEY = 'ehm.save.v1';
 
@@ -21,7 +21,8 @@ interface Store {
   setMatchplan: (plan: Matchplan) => void;
   /** Neue Welt nach gespielten Spieltagen übernehmen (Manager-Änderungen bleiben erhalten) */
   applyWorld: (w: World) => void;
-  newSeason: () => void;
+  /** Sommerpause: zur nächsten Phase (nach der letzten beginnt die Saison) */
+  advanceOffseason: () => void;
   newGame: () => void;
   toggleWatch: (playerId: string) => void;
   makeOffer: (playerId: string, terms: Terms) => OfferResponse;
@@ -103,8 +104,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           });
           return { ...s, world: { ...w, scouting, staff, clubs: w.clubs.map((c) => (mine && c.id === mine.id ? { ...c, matchplan: mine.matchplan } : c)) } };
         }),
-      newSeason: () =>
-        setSave((s) => ({ ...s, world: seasonTransition(s.world) })),
+      advanceOffseason: () =>
+        setSave((s) => ({ ...s, world: advanceOffseason(s.world) })),
       newGame: () => setSave(fresh()),
       makeOffer: (playerId, terms) => {
         if (!save.clubId) return { kind: 'invalid', text: 'Kein Verein gewählt.' };

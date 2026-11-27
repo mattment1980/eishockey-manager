@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Version des Spielstand-Formats. Bei Änderungen erhöhen und Migration ergänzen. */
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 /** Interne Attributskala 1–200 (Anzeige 1–20). */
 export const Rating = z.number().int().min(1).max(200);
@@ -336,6 +336,8 @@ export const ClubSchema = z.object({
   controller: ControllerSchema,
   leagueId: z.string(),
   matchplan: MatchplanSchema.nullable(),
+  /** Eingespieltheit mit Taktik-Optionen (Schlüssel "taktik:wert", z. B. "forecheck:1-2-2" oder "pp:umbrella"), 0–100 */
+  familiarity: z.record(z.number()).default({}),
 });
 export type Club = z.infer<typeof ClubSchema>;
 
@@ -397,10 +399,29 @@ export type Manager = z.infer<typeof ManagerSchema>;
 export const StageSchema = z.enum(['regular', 'prePlayoffs', 'playoffs', 'playdowns']);
 export type Stage = z.infer<typeof StageSchema>;
 
+/** Mannschaftsstatistik eines Spiels (für die Teamstatistik der Liga) */
+export const TeamGameLineSchema = z.object({
+  /** Schussversuche (Corsi) */
+  att: z.number().int(),
+  pim: z.number().int(),
+  /** Überzahlspiele und Überzahltore */
+  pp: z.number().int(),
+  ppg: z.number().int(),
+  /** Unterzahltore */
+  shg: z.number().int(),
+  /** gewonnene Bullys */
+  fow: z.number().int(),
+  hits: z.number().int(),
+  blocks: z.number().int(),
+  xg: z.number(),
+});
+export type TeamGameLine = z.infer<typeof TeamGameLineSchema>;
+
 export const FixtureResultSchema = z.object({
   score: z.tuple([z.number().int(), z.number().int()]),
   decidedIn: z.enum(['REG', 'OT', 'SO']),
   shots: z.tuple([z.number().int(), z.number().int()]),
+  team: z.tuple([TeamGameLineSchema, TeamGameLineSchema]).optional(),
 });
 export type FixtureResult = z.infer<typeof FixtureResultSchema>;
 
@@ -559,5 +580,7 @@ export const WorldSchema = z.object({
   market: MarketSchema.default(EMPTY_MARKET),
   /** Chemie zwischen zwei Spielern (Schlüssel "idA|idB", sortiert), 0–100 */
   chemistry: z.record(z.number()).default({}),
+  /** Sommerpause in Phasen (null = keine Sommerpause, Saison läuft) */
+  offseason: z.object({ phase: z.number().int().min(0) }).nullable().default(null),
 });
 export type World = z.infer<typeof WorldSchema>;

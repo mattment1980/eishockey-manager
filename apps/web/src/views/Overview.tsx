@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { teamStrength, overall, toDisplay, ageOn, regularTable, nextFixtureOf, GOAL_LABEL, formatDate } from '@ehm/core';
 import { useStore } from '../store.tsx';
+import { PlayerName, ClubName } from '../ui.tsx';
+import { RatingBadge } from '../components/Badges.tsx';
 import { Crest } from '../components/Crest.tsx';
 import { PROFILE_LABEL, euro } from '../labels.ts';
 import type { Tab } from '../App.tsx';
@@ -67,8 +69,8 @@ function ClubOverview({ go }: { go: (t: Tab) => void }) {
         <ul className="plain">
           {stars.map((p) => (
             <li key={p.id} className="row-between">
-              <span>{p.firstName} {p.lastName} <span className="muted">· {p.position}</span></span>
-              <span className="rating">{toDisplay(overall(p))}</span>
+              <span><PlayerName p={p} full /> <span className="muted">· {p.position}</span></span>
+              <RatingBadge p={p} />
             </li>
           ))}
         </ul>
@@ -84,7 +86,7 @@ function ClubOverview({ go }: { go: (t: Tab) => void }) {
           <div className="kpi"><span>Punkte</span><strong>{row?.pts ?? 0} aus {row?.gp ?? 0} Spielen</strong></div>
         </div>
         {next && (
-          <p className="small">Nächstes Spiel ({formatDate(next.date, true)}): <b>{clubById.get(next.home)!.shortName} – {clubById.get(next.away)!.shortName}</b> {next.home === club.id ? '(Heim)' : '(Auswärts)'}</p>
+          <p className="small">Nächstes Spiel ({formatDate(next.date, true)}): <b><ClubName c={clubById.get(next.home)!} /> – <ClubName c={clubById.get(next.away)!} /></b> {next.home === club.id ? '(Heim)' : '(Auswärts)'}</p>
         )}
         {played.length === 0 && <p className="muted">Noch keine Spiele. Stelle deine Reihen auf und starte den ersten Spieltag.</p>}
         <ul className="plain">
@@ -95,7 +97,7 @@ function ClubOverview({ go }: { go: (t: Tab) => void }) {
             const r = f.result!;
             return (
               <li key={f.id} className="row-between">
-                <span>{h.shortName} – {a.shortName}</span>
+                <span><ClubName c={h} /> – <ClubName c={a} /></span>
                 <span className={won ? 'win' : 'loss'}>
                   {r.score[0]}:{r.score[1]}{r.decidedIn === 'OT' ? ' n.V.' : r.decidedIn === 'SO' ? ' n.P.' : ''}
                 </span>

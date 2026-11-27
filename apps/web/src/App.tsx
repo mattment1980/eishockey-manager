@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { stageLabel } from '@ehm/core';
+import { stageLabel, OFFSEASON_PHASES } from '@ehm/core';
 import { useStore } from './store.tsx';
 import { Crest } from './components/Crest.tsx';
 import { ClubSelect } from './views/ClubSelect.tsx';
@@ -10,6 +10,7 @@ import { TacticsView } from './views/Tactics.tsx';
 import { Matchday } from './views/Matchday.tsx';
 import { League } from './views/League.tsx';
 import { StaffView } from './views/StaffView.tsx';
+import { UiProvider } from './ui.tsx';
 
 export type Tab = 'overview' | 'roster' | 'lineup' | 'tactics' | 'staff' | 'match' | 'league';
 
@@ -29,12 +30,13 @@ export function App() {
   if (!club) return <ClubSelect />;
 
   return (
+    <UiProvider>
     <div className="app" style={{ ['--club' as string]: club.colors.primary }}>
       <header className="topbar">
         <Crest club={club} size={34} />
         <div className="topbar-title">
           <strong>{club.name}</strong>
-          <span>Saison {world.competition!.year}/{String(world.competition!.year + 1).slice(2)} · {stageLabel(world.competition!)}</span>
+          <span>Saison {world.competition!.year}/{String(world.competition!.year + 1).slice(2)} · {world.offseason || world.competition!.finished ? `Sommerpause · ${OFFSEASON_PHASES[world.offseason?.phase ?? 0].name}` : stageLabel(world.competition!)}</span>
         </div>
       </header>
       <main className="content">
@@ -57,5 +59,6 @@ export function App() {
         ))}
       </nav>
     </div>
+    </UiProvider>
   );
 }

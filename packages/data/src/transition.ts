@@ -144,7 +144,7 @@ export function seasonTransition(world: World): World {
   w = { ...w, players: w.players.map((p) => ({ ...p, condition: { ...p.condition, morale: Math.round((p.condition.morale + 60) / 2) } })) };
   const seedRng = new Rng(w.seed + next * 7);
   w = seedChemistry(w, () => seedRng.next());
-  return beginSeason(w, w.seed + next);
+  return { ...beginSeason(w, w.seed + next), offseason: null };
 }
 
 function forceLineup(world: World, clubId: string): World {

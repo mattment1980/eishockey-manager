@@ -1,6 +1,6 @@
 # Übergabe – Stand der Entwicklung
 
-Stand: 27.11.2026 · letzter Commit „M6b: Chemie & Moral“ (f4b6928)
+Stand: 27.11.2026 · letzter Commit „Anpassungen vor M7: Profile, Mouseover, Markt-Baum, Teamstatistik, Drag & Drop, Fitness/Form, Eingespieltheit, Sommerpause“
 
 Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst zusammen, was gebaut ist, wie der Code aufgebaut ist, was entschieden wurde und was als Nächstes kommt.
 
@@ -24,6 +24,7 @@ Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst z
 | UI-Runde | Staff-Reiter, umschaltbare Kaderansichten, Markt-Filter | ✅ |
 | 6a | Taktik je Situation: Special Teams, Torhüter raus, Matchups, Coaching-Regeln | ✅ |
 | 6b | Chemie & Moral | ✅ |
+| Runde vor M7 | 14 Anpassungen (siehe unten): Spielerprofil überall, Mouseover, Fitness/Form/aktuelle Stärke, Talent, Markt mit Ligenbaum, Vereinskader, Form & Teamstatistik, Tooltips, Drag & Drop, Sommerpause, Taktik-Eingespieltheit | ✅ |
 | **7** | **Saisonwechsel & Daten: Alterung/Entwicklung, Nachwuchs, CSV-Import/Export, Editor** | **als Nächstes** |
 | V1.5 | Multiplayer (Server, Accounts, private Ligen) | später |
 | V2 | Verletzungen & Medizin, Training, Trait-Entwicklung, Manager-Karriere, Ligensystem u. a. | später |
@@ -38,16 +39,16 @@ Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst z
 
 | Paket | Inhalt |
 |---|---|
-| `packages/schema` | Datenmodell (Welt, Land, Liga, Verein, Spieler, Staff, Vertrag, Wettbewerb, Scouting, Markt, Matchplan, Coaching-Regeln, Chemie), aktuell **SCHEMA_VERSION 6** |
-| `packages/core` | Spiellogik: `engine/` (match.ts, types.ts, constants.ts), `competition.ts` (Spielplan, Spieltag, Playoffs), `economy.ts`, `scouting.ts`, `market.ts`, `coaching.ts`, `chemistry.ts`, `lineup.ts`, `ratings.ts` |
-| `packages/data` | Weltgenerator, Namen, Import/Export + Migration v1→v6 (`io.ts`), Saisonwechsel (`transition.ts`) |
-| `apps/web` | Oberfläche (7 Reiter: Verein, Kader, Reihen, Taktik, Staff, Spieltag, Liga) |
+| `packages/schema` | Datenmodell (Welt, Land, Liga, Verein, Spieler, Staff, Vertrag, Wettbewerb, Scouting, Markt, Matchplan, Coaching-Regeln, Chemie), aktuell **SCHEMA_VERSION 7** (neu: `Club.familiarity`, `World.offseason`, `FixtureResult.team`) |
+| `packages/core` | Spiellogik: `engine/` (match.ts, types.ts, constants.ts), `competition.ts` (Spielplan, Spieltag, Playoffs), `economy.ts`, `scouting.ts`, `market.ts`, `coaching.ts`, `chemistry.ts`, `condition.ts` (Fitness & Form), `familiarity.ts` (Taktik-Eingespieltheit), `offseason.ts` (Phasen, Trainingslager), `lineup.ts`, `ratings.ts` (u. a. `effectiveRating`, `talentStars`) |
+| `packages/data` | Weltgenerator, Namen, Import/Export + Migration v1→v7 (`io.ts`), Saisonwechsel (`transition.ts`), Sommerpause-Ablauf (`offseason.ts`) |
+| `apps/web` | Oberfläche (7 Reiter: Verein, Kader, Reihen, Taktik, Staff, Spieltag, Liga); `ui.tsx` = globale Fenster (Spielerprofil, Vereinskader) und Mouseover-Ebene, `PlayerName`/`ClubName` für klickbare Namen, `data-tip` für Tooltips |
 | `apps/sim-cli` | `pnpm sim generate | match | season | calibrate | seasons` |
-| `tests/core.test.ts` | 26 Tests |
+| `tests/core.test.ts` | 32 Tests |
 
 ### Ablauf eines Spieltags (`playDay`)
 
-Monate abschließen → Spiele simulieren → Einnahmen buchen → **Moral & Chemie aktualisieren** → Scouting → Markt-Tick → nächsten Spieltag vorbereiten → am Saisonende Saisonbewertung und Monate bis 1. August abschließen.
+Monate abschließen → Spiele simulieren → Einnahmen buchen → Moral & Chemie → **Fitness, Form, Taktik-Eingespieltheit** → Scouting → Markt-Tick → nächsten Spieltag vorbereiten → **Erholung bis zum nächsten Spieltermin** (Fitness zeigt immer den Stand zum Anpfiff) → am Saisonende Saisonbewertung, Monate bis 1. August abschließen, Sommerpause Phase 0.
 
 ## Was im Spiel steckt
 
@@ -68,11 +69,23 @@ Monate abschließen → Spiele simulieren → Einnahmen buchen → **Moral & Che
 
 **Markt & Verträge:** kaum Ablösen; Wettbieten um auslaufende/ausgelaufene Verträge; Kaderplanung ab November; Vorverträge; Perks (Auto, Wohnung u. a.), Prämien, Klauseln (Ausstieg, Abstieg), Versprechen (Bruch kostet Moral und Glaubwürdigkeit); Etat-Überziehung kostet Vorstandsvertrauen; Wechselfrist 2 Monate vor den Playoffs; KI-Markt wöchentlich; Filter im Markt.
 
+**Runde vor M7 (27.11.2026):**
+- Jeder Spielername ist klickbar (Profil) und zeigt beim Überfahren eine Kurzinfo (Position, Alter, Stärke, Talent, aktuelle Stärke, Fitness/Form/Moral, Charakter, Vertrag); alle Fenster haben oben rechts ein ✕ (und Esc)
+- Fitness (sinkt mit Eiszeit, erholt sich an freien Tagen, Ausdauer/Assistenztrainer helfen) und Form (folgt den Leistungen, Beständigkeit dämpft) sind jetzt dynamisch; Anzeige der **aktuellen Stärke** mit einer Nachkommastelle in Reihen, Kader und Profil
+- Talent = verstecktes Potenzial als 0,5–5 Sterne; je nach Scouting exakt, als Spanne oder unbekannt. (Wirkung auf die Entwicklungsgeschwindigkeit kommt mit M7.)
+- Profil fremder Spieler: „Scoute diesen Spieler“ (Scouts reisen auch außerhalb ihrer Region, mit halber Ausbeute) und – falls möglich – Vertragsangebot
+- Markt mit Ligenbaum: Schnellzugriff (Verhandelbar, Meine Angebote, Beobachtet), Deutschland › Liga › Vereine, Vereinslos, Ausland nach Region (vorerst nur vereinslose Auslandsspieler – ausländische Ligen folgen); auch gebundene Spieler sichtbar
+- Liga: Vereine anklickbar (Kader nach Scouting-Stand), Form-Spalte (letzte 5), Reiter „Teams“ mit Allgemein / Special Teams / Spielkontrolle (sortierbar)
+- Tooltips über `data-tip` für Symbole, Tags, Chips und Spaltenköpfe
+- Reihen per Drag & Drop (Maus; am Handy über den Griff ⠿), Liste ▾ als Alternative
+- Sommerpause in 8 Phasen: Saisonende → Saisonbilanz (Urlaub) → Vertragsgespräche → Transfermarkt → Sommertraining → Saisonwechsel & Trainingsauftakt → Trainingslager → Vorbereitungsspiele → Saisonstart. Trainingsphasen stärken Reihenchemie und Taktik-Eingespieltheit. Platz für Testspiele/Training später.
+- Taktik-Eingespieltheit je System („forecheck:1-2-2“, „pp:umbrella“ …): wächst mit Spielen (Tempo abhängig von Trainer-Taktik und „Taktikfuchs“), verblasst ohne Einsatz und im Urlaub; Wirkung ±2,5 % (`FAMILIARITY_EFFECT`), Anzeige als Balken unter jeder Taktik-Option und in der Kabine. Reihen-Eingespieltheit = bisherige Chemie.
+
 **Saisonwechsel (bisher):** Verträge, Klauseln, Karriereende, neue freie Spieler, KI-Kaderauffüllung, Nachwuchs für den menschlichen Verein, neue Aufstellungen, Chemie-Saat, Moral pendelt sich ein. **Noch nicht:** Alterung/Entwicklung der Spielerwerte.
 
 ## Kalibrierung (10 Saisons, siehe `docs/kalibrierung.md`)
 
-Tore ≈ 3,09 je Team, Schüsse 31,0, Corsi 59,5, Fangquote 90,0 %, Überzahlquote 16,9 %, Verlängerung 20,0 %, Heimsiege 55,6 %, Corsi > 2:1 in 9,7 % der Spiele, klarer Favorit gewinnt 77,5 % (kleine Stichprobe).
+Tore ≈ 3,06 je Team, Schüsse 30,9, Corsi 59,5, Fangquote 90,1 %, Überzahlquote 16,7 %, Verlängerung 21,0 %, Heimsiege 55,7 %, Corsi > 2:1 in 9,6 % der Spiele, klarer Favorit gewinnt 72,5 % (kleine Stichprobe). Neu: `FITNESS_EFFECT` 0,003, `FAMILIARITY_EFFECT` 0,025.
 
 Offene Punkte: Tore ins leere Tor zu selten (0,15 statt 0,3–0,5 je Spiel), Überzahlquote und Fangquote am unteren Rand, Ein-Tor-Spiele etwas zu selten, zu viele einseitige Corsi-Spiele.
 
@@ -94,7 +107,7 @@ Offene Punkte: Tore ins leere Tor zu selten (0,15 statt 0,3–0,5 je Spiel), Üb
 
 ## Nächster Schritt: Meilenstein 7
 
-1. Alterung und Spielerentwicklung (monatlich klein, Sommer groß; Potenzial, Alter, Eiszeit, Trainer/Ausbilder, Mentoren, Perfektionist) – Konzept im Projekt-Dokument „spielerentwicklung“
+1. Alterung und Spielerentwicklung (monatlich klein, Sommer groß; Potenzial, Alter, Eiszeit, Trainer/Ausbilder, Mentoren, Perfektionist) – Konzept im Projekt-Dokument „spielerentwicklung“. **Talent (Sterne) soll die Entwicklungsgeschwindigkeit steuern** (Wunsch Matthias). Der große Sommerschritt gehört in die Sommerpause (Phase „Sommertraining“ bzw. „Saisonwechsel“).
 2. Nachwuchsjahrgang für alle Vereine
 3. CSV-/JSON-Import und -Export mit Validierung und Vorschau
 4. Einfacher Editor für Spieler und Vereine
