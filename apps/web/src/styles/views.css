@@ -304,3 +304,7 @@ h3.row-between { display: flex; justify-content: space-between; align-items: cen
 .week-review h3 { margin: 0; }
 @media (max-width: 560px) { .week-games li { grid-template-columns: minmax(0, 1fr) auto; } .week-games li > span:first-child { grid-column: 1 / -1; } }
 .week-card .row-between .tag { white-space: nowrap; flex: none; }
+.week-games li .week-opp { grid-column: 2 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; color: var(--muted); margin-top: -2px; }
+.week-opp .stronger { color: var(--goal); }
+.week-opp .weaker { color: var(--good); }
+@media (max-width: 560px) { .week-games li .week-opp { grid-column: 1 / -1; } }

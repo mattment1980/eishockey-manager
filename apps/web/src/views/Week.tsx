@@ -1,7 +1,8 @@
 import type { Fixture } from '@ehm/schema';
-import { weekStatus, weekEffect, rosterAverages, INTENSITY, FOCUS, loadLabel, coachPlan, individualFor, formatDate, addDays } from '@ehm/core';
+import { weekStatus, weekEffect, rosterAverages, teamStrength, regularTable, INTENSITY, FOCUS, loadLabel, coachPlan, individualFor, formatDate, addDays } from '@ehm/core';
 import { useStore } from '../store.tsx';
 import { ClubName, PlayerName } from '../ui.tsx';
+import { FormStrip } from '../components/FormStrip.tsx';
 
 const d1 = (v: number) => v.toFixed(1).replace('.', ',');
 const signed = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : '±'}${d1(Math.abs(v))}`;
@@ -73,10 +74,15 @@ export function WeekPanel({ onTraining }: { onTraining: () => void }) {
   );
 }
 
-/** Eigene Spiele einer Woche */
+/** Eigene Spiele einer Woche; bei offenen Spielen mit Tabellenplatz, Kaderstärke und Form des Gegners */
 function WeekGames({ fixtures }: { fixtures: Fixture[] }) {
-  const { club, clubById } = useStore();
+  const { world, club, clubById, byId } = useStore();
   if (!club || !fixtures.length) return null;
+  const comp = world.competition!;
+  const table = regularTable(world);
+  const rank = (id: string) => table.findIndex((r) => r.clubId === id) + 1;
+  const strength = (id: string) => { const c = clubById.get(id); return c?.matchplan ? teamStrength(c.matchplan, byId) : 0; };
+  const mine = strength(club.id);
   return (
     <ul className="week-games">
       {fixtures.map((f) => {
@@ -84,11 +90,20 @@ function WeekGames({ fixtures }: { fixtures: Fixture[] }) {
         const opp = clubById.get(home ? f.away : f.home)!;
         const r = f.result;
         const won = r ? (home ? r.score[0] > r.score[1] : r.score[1] > r.score[0]) : null;
+        const s = strength(opp.id);
+        const diff = (s - mine) / 10;
         return (
-          <li key={f.id} className={r ? (won ? 'w' : 'l') : ''}>
+          <li key={f.id} className={r ? (won ? 'w' : 'l') : 'open'}>
             <span className="muted small">{formatDate(f.date, true)}</span>
             <span>{home ? 'gegen' : 'bei'} <ClubName c={opp} crest={16} /></span>
             <b>{r ? `${home ? r.score[0] : r.score[1]}:${home ? r.score[1] : r.score[0]}${r.decidedIn === 'OT' ? ' n.V.' : r.decidedIn === 'SO' ? ' n.P.' : ''}` : 'offen'}</b>
+            {!r && (
+              <span className="week-opp small">
+                <span data-tip="Tabellenplatz nach der Hauptrunde bzw. aktuell">{rank(opp.id)}. Platz</span>
+                <span className={diff >= 0.5 ? 'stronger' : diff <= -0.5 ? 'weaker' : ''} data-tip={`Kaderstärke der Aufstellung (1–20) – dein Team: ${d1(mine / 10)}`}>Stärke {d1(s / 10)}</span>
+                <span className="week-form" data-tip="Die letzten 5 Spiele (ältestes links)"><FormStrip comp={comp} clubId={opp.id} /></span>
+              </span>
+            )}
           </li>
         );
       })}
