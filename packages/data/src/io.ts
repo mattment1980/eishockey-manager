@@ -57,6 +57,10 @@ export function migrateWorld(raw: unknown): unknown {
     // Training je Verein über Standardwert (Co-Trainer plant)
     w.schemaVersion = 11;
   }
+  if (w.schemaVersion === 11) {
+    // Saisonarchiv und Spielerkarriere über Standardwerte
+    w.schemaVersion = 12;
+  }
   void SCHEMA_VERSION;
   return w;
 }

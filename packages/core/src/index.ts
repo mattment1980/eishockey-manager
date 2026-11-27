@@ -22,3 +22,4 @@ export * from './youth.ts';
 export * from './board.ts';
 export * from './phaseReports.ts';
 export * from './training.ts';
+export * from './history.ts';

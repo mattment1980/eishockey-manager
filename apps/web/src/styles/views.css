@@ -308,3 +308,5 @@ h3.row-between { display: flex; justify-content: space-between; align-items: cen
 .week-opp .stronger { color: var(--goal); }
 .week-opp .weaker { color: var(--good); }
 @media (max-width: 560px) { .week-games li .week-opp { grid-column: 1 / -1; } }
+.season-row { gap: 8px; flex-wrap: wrap; }
+.season-row .segmented { flex: 1 1 auto; }

@@ -13,6 +13,7 @@ import { SKATER_GROUPS, SKATER_LABEL, GOALIE_LABEL, TRAIT_LABEL, POSITION_LABEL,
 import { KnowledgeDots } from './KnowledgeDots.tsx';
 import { Talent } from './Talent.tsx';
 import { Sheet } from './Sheet.tsx';
+import { CareerStats } from './CareerStats.tsx';
 import { fmt1 } from '../format.ts';
 
 const CAT_WIDTH: Record<string, number> = { 'sehr schwach': 25, schwach: 42, solide: 58, stark: 74, 'sehr stark': 90 };
@@ -168,6 +169,8 @@ export function PlayerSheet({ player, date, onClose, view, clubName, children, w
           </div>
         ))
       ))}
+
+      <CareerStats player={p} />
 
       {!view && (
         <div className="attr-group">

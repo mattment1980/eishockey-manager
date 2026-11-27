@@ -2,7 +2,7 @@ import type { World, Player, News, Position } from '@ehm/schema';
 import { makeContract, EMPTY_MARKET } from '@ehm/schema';
 import {
   Rng, overall, toDisplay, ageOn, beginSeason, seedChemistry, refreshLineup, standardTerms, contractCost, TARGET,
-  regionOf,
+  regionOf, archiveSeason,
 } from '@ehm/core';
 import { WorldGenerator } from './generator.ts';
 import { IMPORT_ORIGINS } from './names.ts';
@@ -16,7 +16,9 @@ const isImport = (p: Player) => !p.nationalities.includes('DE');
  * neue vereinslose Spieler kommen auf den Markt, KI-Vereine füllen ihre Kader auf.
  * Die Spielerentwicklung selbst passiert vorher im Sommerschritt (Sommerpause, Phase „Sommertraining“).
  */
-export function seasonTransition(world: World): World {
+export function seasonTransition(input: World): World {
+  // Abgeschlossene Saison archivieren (Tabelle, Teamstatistik, Spielerkarrieren)
+  const world = archiveSeason(input);
   const old = world.season;
   const next = old + 1;
   const comp = world.competition!;

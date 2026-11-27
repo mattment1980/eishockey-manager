@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Version des Spielstand-Formats. Bei Änderungen erhöhen und Migration ergänzen. */
-export const SCHEMA_VERSION = 11;
+export const SCHEMA_VERSION = 12;
 
 /** Interne Attributskala 1–200 (Anzeige 1–20). */
 export const Rating = z.number().int().min(1).max(200);
@@ -179,6 +179,34 @@ export const PlayerDevSchema = z.object({
 });
 export type PlayerDev = z.infer<typeof PlayerDevSchema>;
 
+export const StatLineSchema = z.object({
+  clubId: z.string(),
+  gp: z.number().int(),
+  g: z.number().int(),
+  a: z.number().int(),
+  pim: z.number().int(),
+  pm: z.number().int(),
+  sog: z.number().int(),
+  toi: z.number(),
+  // Torhüter
+  gs: z.number().int(),
+  sa: z.number().int(),
+  ga: z.number().int(),
+  w: z.number().int(),
+  so: z.number().int(),
+});
+export type StatLine = z.infer<typeof StatLineSchema>;
+
+/** Statistik einer abgeschlossenen Saison (Karriere eines Spielers) */
+export const CareerSeasonSchema = z.object({
+  /** Startjahr der Saison (2026 = 2026/27) */
+  season: z.number().int(),
+  leagueId: z.string(),
+  regular: StatLineSchema.nullable(),
+  post: StatLineSchema.nullable(),
+});
+export type CareerSeason = z.infer<typeof CareerSeasonSchema>;
+
 export const PlayerSchema = z.object({
   id: z.string(),
   firstName: z.string(),
@@ -198,6 +226,8 @@ export const PlayerSchema = z.object({
   dev: PlayerDevSchema.default({}),
   /** Nachwuchsspieler aus dem Jahrgang dieses Vereins, noch ohne Profivertrag */
   youthClub: z.string().nullable().default(null),
+  /** Statistik der abgeschlossenen Saisons (neueste zuletzt) */
+  career: z.array(CareerSeasonSchema).default([]),
 });
 export type Player = z.infer<typeof PlayerSchema>;
 
@@ -540,23 +570,6 @@ export const SeriesSchema = z.object({
 });
 export type Series = z.infer<typeof SeriesSchema>;
 
-export const StatLineSchema = z.object({
-  clubId: z.string(),
-  gp: z.number().int(),
-  g: z.number().int(),
-  a: z.number().int(),
-  pim: z.number().int(),
-  pm: z.number().int(),
-  sog: z.number().int(),
-  toi: z.number(),
-  // Torhüter
-  gs: z.number().int(),
-  sa: z.number().int(),
-  ga: z.number().int(),
-  w: z.number().int(),
-  so: z.number().int(),
-});
-export type StatLine = z.infer<typeof StatLineSchema>;
 
 export const CompetitionSchema = z.object({
   leagueId: z.string(),
@@ -645,6 +658,31 @@ export const MarketSchema = z.object({
 export type Market = z.infer<typeof MarketSchema>;
 export const EMPTY_MARKET: Market = { offers: [], decideBy: {}, patience: {}, blocked: [], news: [], lastAiRun: '1900-01-01', credibility: {} };
 
+// ---------- Saisonarchiv ----------
+
+export const StandingRowSchema = z.object({
+  clubId: z.string(), gp: z.number().int(), w: z.number().int(), otw: z.number().int(), otl: z.number().int(), l: z.number().int(),
+  gf: z.number().int(), ga: z.number().int(), pts: z.number().int(),
+});
+const n = z.number();
+export const TeamSeasonStatsSchema = z.object({
+  clubId: z.string(), gp: n, gf: n, ga: n, sog: n, sogA: n, att: n, attA: n, xg: n, xgA: n, pp: n, ppg: n, pk: n, ppgA: n,
+  shg: n, shgA: n, pim: n, fow: n, fol: n, hits: n, blocks: n, detailed: n,
+});
+/** Abgeschlossene Saison einer Liga: Tabelle, Endplatzierung, Mannschaftsstatistik */
+export const SeasonArchiveSchema = z.object({
+  season: z.number().int(),
+  leagueId: z.string(),
+  champion: z.string().nullable(),
+  relegated: z.string().nullable(),
+  table: z.array(StandingRowSchema),
+  finalStandings: z.array(z.string()).nullable(),
+  teams: z.object({ regular: z.array(TeamSeasonStatsSchema), post: z.array(TeamSeasonStatsSchema) }),
+  /** Namen der Vereine zu dieser Zeit */
+  clubs: z.record(z.object({ name: z.string(), shortName: z.string() })),
+});
+export type SeasonArchive = z.infer<typeof SeasonArchiveSchema>;
+
 export const WorldSchema = z.object({
   schemaVersion: z.literal(SCHEMA_VERSION),
   id: z.string(),
@@ -671,5 +709,7 @@ export const WorldSchema = z.object({
     /** Kurzberichte je Phase (Schlüssel = Phasen-ID, z. B. „review“) */
     reports: z.record(PhaseReportSchema).default({}),
   }).nullable().default(null),
+  /** Abgeschlossene Saisons (neueste zuletzt) */
+  archive: z.array(SeasonArchiveSchema).default([]),
 });
 export type World = z.infer<typeof WorldSchema>;

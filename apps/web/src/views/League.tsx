@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Fixture, Series, StatLine } from '@ehm/schema';
-import { regularTable, regularDays, fixturesOfDay, formatDate, teamSeasonStats, type TeamSeasonStats } from '@ehm/core';
+import { regularTable, regularDays, fixturesOfDay, formatDate, teamSeasonStats, seasonLabel, type TeamSeasonStats } from '@ehm/core';
 import { useStore } from '../store.tsx';
 import { Crest } from '../components/Crest.tsx';
 import { FormStrip } from '../components/FormStrip.tsx';
@@ -277,7 +277,12 @@ function TeamStats() {
   const [bucket, setBucket] = useState<'regular' | 'post'>('regular');
   const [view, setView] = useState<TeamView>('general');
   const [sort, setSort] = useState<string>('gfpg');
-  const rows = useMemo(() => teamSeasonStats(world, bucket).filter((r) => r.gp > 0), [world, bucket]);
+  // Saison: laufende oder eine archivierte
+  const past = world.archive.filter((a) => a.leagueId === comp.leagueId).sort((a, b) => b.season - a.season);
+  const [season, setSeason] = useState<number>(comp.year);
+  const archived = season !== comp.year ? past.find((a) => a.season === season) : undefined;
+  const rows = useMemo(() => (archived ? archived.teams[bucket] : teamSeasonStats(world, bucket)).filter((r) => r.gp > 0), [world, bucket, archived]);
+  const clubLabel = (id: string) => { const c = clubById.get(id); return c ? <ClubName c={c} crest={18} /> : <span>{archived?.clubs[id]?.shortName ?? id}</span>; };
   const cols = COLS[view];
   const col = cols.find((c) => c.key === sort) ?? cols[1] ?? cols[0];
   const sorted = [...rows].sort((a, b) => {
@@ -289,13 +294,19 @@ function TeamStats() {
     return [c.key, vals.length ? (c.asc ? Math.min(...vals) : Math.max(...vals)) : null];
   }));
   const partial = rows.some((r) => r.detailed < r.gp);
-  void comp;
   return (
     <>
-      <div className="segmented small-seg">
-        <button className={bucket === 'regular' ? 'on' : ''} onClick={() => setBucket('regular')}>Hauptrunde</button>
-        <button className={bucket === 'post' ? 'on' : ''} onClick={() => setBucket('post')}>Nachsaison</button>
+      <div className="row-between season-row">
+        <div className="segmented small-seg">
+          <button className={bucket === 'regular' ? 'on' : ''} onClick={() => setBucket('regular')}>Hauptrunde</button>
+          <button className={bucket === 'post' ? 'on' : ''} onClick={() => setBucket('post')}>Nachsaison</button>
+        </div>
+        <select className="select" value={season} onChange={(e) => setSeason(Number(e.target.value))} aria-label="Saison" data-tip="Mannschaftsstatistik vergangener Saisons">
+          <option value={comp.year}>Saison {seasonLabel(comp.year)}{comp.finished ? '' : ' (laufend)'}</option>
+          {past.filter((a) => a.season !== comp.year).map((a) => <option key={a.season} value={a.season}>Saison {seasonLabel(a.season)}</option>)}
+        </select>
       </div>
+      {archived && <p className="muted small">Meister {seasonLabel(archived.season)}: <b>{archived.champion ? (clubById.get(archived.champion)?.name ?? archived.clubs[archived.champion]?.name) : '–'}</b>{archived.relegated ? <> · Absteiger: {clubById.get(archived.relegated)?.name ?? archived.clubs[archived.relegated]?.name}</> : null}</p>}
       <div className="segmented small-seg">
         {([['general', 'Allgemein'], ['special', 'Special Teams'], ['control', 'Spielkontrolle']] as [TeamView, string][]).map(([id, l]) => (
           <button key={id} className={view === id ? 'on' : ''} onClick={() => { setView(id); setSort(COLS[id][view === 'general' ? 2 : 1]?.key ?? COLS[id][0].key); }}>{l}</button>
@@ -313,7 +324,7 @@ function TeamStats() {
             <tbody>
               {sorted.map((r) => (
                 <tr key={r.clubId} className={r.clubId === club?.id ? 'me' : ''}>
-                  <td><ClubName c={clubById.get(r.clubId)!} crest={18} /></td>
+                  <td>{clubLabel(r.clubId)}</td>
                   {cols.map((c) => {
                     const v = c.value(r);
                     return <td key={c.key} className={v !== null && v === best.get(c.key) && c.key !== 'gp' ? 'good' : ''}>{v === null ? '–' : c.fmt(v)}</td>;

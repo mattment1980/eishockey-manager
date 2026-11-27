@@ -1,6 +1,6 @@
 # Übergabe – Stand der Entwicklung
 
-Stand: 27.11.2026 · letzter Commit „Wochenablauf: Woche starten, dann Spieltage“
+Stand: 27.11.2026 · letzter Commit „Saisonarchiv: Karriere-Statistik und Teamstatistik vergangener Saisons“
 
 Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst zusammen, was gebaut ist, wie der Code aufgebaut ist, was entschieden wurde und was als Nächstes kommt.
 
@@ -49,12 +49,12 @@ Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst z
 
 | Paket | Inhalt |
 |---|---|
-| `packages/schema` | Datenmodell (Welt, Land, Liga, Verein, Spieler, Staff, Vertrag, Wettbewerb, Scouting, Markt, Matchplan, Coaching-Regeln, Chemie), aktuell **SCHEMA_VERSION 11** (v7: `Club.familiarity`, `World.offseason`, `FixtureResult.team`; v8: `Player.dev`, `Player.youthClub`; v9: `offseason.testDay`; v10: `offseason.reports` = Phasenberichte; v11: `Club.training`) |
-| `packages/core` | Spiellogik: `engine/` (`match.ts` = Zustand und Ablauf; Bereiche als Methoden in `lines`, `rules`, `modifiers`, `phases`, `shots`, `penalties`, `shootout`; dazu `state`, `types`, `constants`), `competition.ts` (Spielplan, Serien), `standings.ts` (Tabelle, Form, Teamstatistik), `matchday.ts` (Ablauf eines Spieltags), `economy.ts`, `scouting.ts`, `market.ts`, `coaching.ts`, `chemistry.ts`, `condition.ts` (Fitness & Form), `familiarity.ts` (Taktik-Eingespieltheit), `offseason.ts` (Phasen, Trainingslager), `board.ts` (Saisonbilanz des Vorstands), `phaseReports.ts` (Kurzberichte der Sommerpause), `training.ts` (Wochenplan, Co-Trainer, Einzeltraining), `lineup.ts`, `ratings.ts` (u. a. `effectiveRating`, `talentStars`) |
-| `packages/data` | Weltgenerator, Namen, Import/Export + Migration v1→v11 (`io.ts`), CSV mit Spaltenzuordnung (`csv.ts`), Datensatz-Neuaufbau (`rebuild.ts`), Nachwuchsjahrgang (`youth.ts`), Saisonwechsel (`transition.ts`), Sommerpause-Ablauf (`offseason.ts`) |
+| `packages/schema` | Datenmodell (Welt, Land, Liga, Verein, Spieler, Staff, Vertrag, Wettbewerb, Scouting, Markt, Matchplan, Coaching-Regeln, Chemie), aktuell **SCHEMA_VERSION 12** (v7: `Club.familiarity`, `World.offseason`, `FixtureResult.team`; v8: `Player.dev`, `Player.youthClub`; v9: `offseason.testDay`; v10: `offseason.reports` = Phasenberichte; v11: `Club.training`; v12: `Player.career`, `World.archive`) |
+| `packages/core` | Spiellogik: `engine/` (`match.ts` = Zustand und Ablauf; Bereiche als Methoden in `lines`, `rules`, `modifiers`, `phases`, `shots`, `penalties`, `shootout`; dazu `state`, `types`, `constants`), `competition.ts` (Spielplan, Serien), `standings.ts` (Tabelle, Form, Teamstatistik), `matchday.ts` (Ablauf eines Spieltags), `economy.ts`, `scouting.ts`, `market.ts`, `coaching.ts`, `chemistry.ts`, `condition.ts` (Fitness & Form), `familiarity.ts` (Taktik-Eingespieltheit), `offseason.ts` (Phasen, Trainingslager), `board.ts` (Saisonbilanz des Vorstands), `phaseReports.ts` (Kurzberichte der Sommerpause), `training.ts` (Wochenplan, Co-Trainer, Einzeltraining), `history.ts` (Saisonarchiv), `lineup.ts`, `ratings.ts` (u. a. `effectiveRating`, `talentStars`) |
+| `packages/data` | Weltgenerator, Namen, Import/Export + Migration v1→v12 (`io.ts`), CSV mit Spaltenzuordnung (`csv.ts`), Datensatz-Neuaufbau (`rebuild.ts`), Nachwuchsjahrgang (`youth.ts`), Saisonwechsel (`transition.ts`), Sommerpause-Ablauf (`offseason.ts`) |
 | `apps/web` | Oberfläche (8 Reiter: Verein, Kader, Reihen, Taktik, Training, Staff, Spieltag, Liga); `store.tsx` = Spielstand mit Aktions-Warteschlange (Eingaben während einer Simulation werden danach erneut angewendet), Export/Import als Datei; `ui.tsx` = globale Fenster (`components/PlayerProfile`, `ClubSheet`, `HoverLayer`), `PlayerName`/`ClubName` für klickbare Namen, `data-tip` für Tooltips; CSS in `styles/` (base, views, components, features) |
 | `apps/sim-cli` | `pnpm sim generate | match | season | calibrate | seasons` |
-| `tests/` | 50 Tests in 7 Dateien (world, engine, season, market, team, development, data) |
+| `tests/` | 51 Tests in 7 Dateien (world, engine, season, market, team, development, data) |
 
 ### Ablauf eines Spieltags (`playDay` in `matchday.ts`)
 
@@ -112,6 +112,13 @@ Monate abschließen → Entwicklung → **Training der Woche** → Spiele simuli
 - KI-Vereine trainieren nach dem Co-Trainer-Plan. Sommerpause: Trainingsauftakt eine Woche, Trainingslager-Wochen zählen anderthalbfach.
 - Langzeit-Balance unverändert (`pnpm sim seasons 10`: Ø Spieler 10,2–10,4, Top 50 ≈ 12,0, Ø Alter 26,7–27,9); Kalibrierung unverändert.
 - **Wochenablauf** (Wunsch Matthias): Der Reiter Spieltag hat zwei Phasen. Zu Wochenbeginn zeigt er den Rückblick auf die letzte Woche (Ergebnisse, Fitness/Moral/Form Ø vorher → jetzt), die Spiele der neuen Woche und den Trainingsplan (Link „Training anpassen“). „Woche starten“ wertet das Training aller Vereine aus (`startWeek`), danach werden die Spieltage der Woche einzeln gespielt (Live oder sofort). Die Spielknöpfe erscheinen erst nach dem Start, wenn der eigene Verein in der Woche spielt (`weekStatus().needsStart`). „Schnell weiter“ läuft ohne Halt, das Training läuft dabei automatisch mit. Kaderschnitt zu Wochenbeginn steht in `training.week.before`. Der Wochenstart ist der Ort für Verletzungs-Entscheidungen (M9) und Termine unter der Woche (M10).
+
+**Wochenvorschau & Saisonarchiv (27.11.2026):**
+- Wochenvorschau im Reiter Spieltag: bei offenen Spielen Tabellenplatz, Kaderstärke (rot/grün im Vergleich zum eigenen Team) und Form der letzten 5 Spiele des Gegners.
+- Saisonarchiv (`core/history.ts`, `archiveSeason` am Anfang von `seasonTransition`): Tabelle, Endplatzierung, Meister/Absteiger und Mannschaftsstatistik (Hauptrunde/Nachsaison) je Saison in `world.archive`; Statistik jedes Spielers in `player.career`.
+- Spielerprofil: Abschnitt „Statistik“ mit laufender Saison (*), vergangenen Saisons und Gesamt, umschaltbar Hauptrunde/Playoffs (Feldspieler Sp/T/V/P/+−/SM/Sch, Torhüter Sp/S/GT60/Fq/Shutout); auch bei fremden Spielern sichtbar.
+- Liga › Teams: Auswahl der Saison (laufend oder archiviert) mit Meister und Absteiger.
+- Archiviert wird ab diesem Stand beim nächsten Saisonwechsel; ältere Saisons laufender Spielstände sind nicht nachträglich verfügbar.
 
 **Saisonwechsel (bisher):** Verträge, Klauseln, Karriereende, neue freie Spieler, KI-Kaderauffüllung, Nachwuchs für den menschlichen Verein, neue Aufstellungen, Chemie-Saat, Moral pendelt sich ein. Alterung/Entwicklung siehe Meilenstein 7.
 

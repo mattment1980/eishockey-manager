@@ -102,3 +102,11 @@ tr.me td.good, tr.me td.bad { background: color-mix(in srgb, var(--ice) 12%, tra
 .sparkline { color: var(--ice); display: block; }
 .badge-dot { display: inline-grid; place-items: center; min-width: 16px; height: 16px; padding: 0 4px; margin-left: 5px; border-radius: 999px; background: var(--warn); color: #1a1200; font-size: 0.65rem; font-weight: 800; vertical-align: 1px; }
 .btn.small { padding: 5px 10px; font-size: 0.78rem; }
+
+/* Spielerprofil: Statistik je Saison */
+.career .row-between { gap: 8px; flex-wrap: wrap; }
+.career-table { width: 100%; font-size: 0.85rem; }
+.career-table th, .career-table td { text-align: right; white-space: nowrap; }
+.career-table th:nth-child(-n+2), .career-table td:nth-child(-n+2) { text-align: left; }
+.career-table tr.current td:first-child { color: var(--ice); }
+.career-table tr.total td { font-weight: 700; border-top: 1px solid var(--line); }

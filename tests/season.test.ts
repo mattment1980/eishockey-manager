@@ -99,3 +99,23 @@ describe('Kalender, Wirtschaft, Scouting', () => {
     expect(playerView(w, me, own, 25).overall).toHaveProperty('exact');
   });
 });
+
+describe('Saisonarchiv', () => {
+  it('Saisonwechsel archiviert Tabelle, Teamstatistik und Spielerkarrieren', async () => {
+    const core = await import('@ehm/core');
+    const data = await import('@ehm/data');
+    let w = data.generateWorld(86);
+    w = core.playDays(w, 400);
+    const year = w.competition!.year;
+    const top = Object.entries(w.competition!.stats.regular).sort((a, b) => b[1].g + b[1].a - a[1].g - a[1].a)[0];
+    while (data.offseasonPhase(w) !== null) w = data.advanceOffseason(w);
+    expect(w.archive).toHaveLength(1);
+    const a = w.archive[0];
+    expect(a.season).toBe(year);
+    expect(a.table).toHaveLength(14);
+    expect(a.teams.regular.every((r) => r.gp === 52)).toBe(true);
+    expect(a.champion).not.toBeNull();
+    const p = w.players.find((x) => x.id === top[0]);
+    if (p) expect(p.career.at(-1)).toMatchObject({ season: year, regular: { g: top[1].g, a: top[1].a } });
+  });
+});

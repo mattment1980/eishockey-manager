@@ -146,6 +146,7 @@ export class WorldGenerator {
       competition: null,
       scouting: {},
       market: structuredClone(EMPTY_MARKET),
+      archive: [],
       chemistry: {},
       offseason: null,
     };
@@ -288,6 +289,7 @@ export class WorldGenerator {
       nextContract: null,
       dev: { ref: {}, history: [] },
       youthClub: null,
+      career: [],
     };
   }
 
