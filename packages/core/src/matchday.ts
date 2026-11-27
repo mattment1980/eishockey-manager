@@ -11,6 +11,7 @@ import { recoverFitness, updateCondition, restDays } from './condition.ts';
 import { updateFamiliarity } from './familiarity.ts';
 import { developMonths } from './development.ts';
 import { runTraining } from './training.ts';
+import { healInjuries, coverInjuries, coverPlan, gameInjuries, matchReady } from './injuries.ts';
 import { leagueOf, regularTable } from './standings.ts';
 import { sanitizePlan } from './lineup.ts';
 import { prepareNextDay, needed } from './competition.ts';
@@ -44,7 +45,10 @@ export function matchInputFor(world: World, fixture: Fixture): MatchInput {
     const c = world.clubs.find((x) => x.id === id)!;
     let plan = planFor(world, c, fixture);
     if (c.controller.type === 'ai' && !(plan.rules ?? []).length) plan = { ...plan, rules: defaultRules() };
-    const players = world.players.filter((p) => p.contract?.clubId === c.id);
+    const roster = world.players.filter((p) => p.contract?.clubId === c.id);
+    // Verletzte ersetzen, angeschlagene Spieler mit Abzug
+    plan = coverPlan(plan, roster, fixture.date).plan;
+    const players = roster.map((p) => matchReady(p, fixture.date));
     const byId = new Map(players.map((p) => [p.id, p]));
     // Formationen nur mit aufgestellten Spielern (z. B. nach Umbau der Reihen)
     plan = sanitizePlan(plan, byId);
@@ -126,6 +130,8 @@ export function playDay(world: World, preplayed: Record<string, MatchResult> = {
   w = developMonths(w, w.date, date);
   // Training der laufenden Woche(n) vor dem Spiel
   if (todays.length) w = runTraining(w, date);
+  // Verletzungen: Genesene zurück, Ausfälle in den Aufstellungen ersetzen
+  w = coverInjuries(healInjuries(w, date), date);
   for (const f of todays) {
     const res = preplayed[f.id] ?? simulateMatch(matchInputFor(w, f));
     results[f.id] = res;
@@ -141,6 +147,7 @@ export function playDay(world: World, preplayed: Record<string, MatchResult> = {
   w = updateAfterGames(w, games);
   // Fitness, Form und Taktik-Eingespieltheit
   w = updateCondition(w, games);
+  w = gameInjuries(w, games, date);
   w = updateFamiliarity(w, todays);
   // Scouting
   w = updateScouting(w, date, todays.map((f) => ({ home: f.home, away: f.away, result: results[f.id] })));

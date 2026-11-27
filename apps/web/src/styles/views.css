@@ -291,7 +291,7 @@ h3.row-between { display: flex; justify-content: space-between; align-items: cen
 .week-card.running { border-left-color: var(--good); }
 .week-card h3 { margin: 0; }
 .week-games { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.week-games li { display: grid; grid-template-columns: minmax(0, 9rem) minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); }
+.week-games li { display: grid; grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); }
 .week-games li:first-child { border-top: 0; }
 .week-games li.w b { color: var(--good); }
 .week-games li.l b { color: var(--goal); }
@@ -310,3 +310,19 @@ h3.row-between { display: flex; justify-content: space-between; align-items: cen
 @media (max-width: 560px) { .week-games li .week-opp { grid-column: 1 / -1; } }
 .season-row { gap: 8px; flex-wrap: wrap; }
 .season-row .segmented { flex: 1 1 auto; }
+
+/* Staff-Markt & medizinische Abteilung */
+.staff-market { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; }
+.staff-market li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.staff-market li:first-child { border-top: 0; }
+.market-opts { margin: 8px 0 2px; gap: 8px; flex-wrap: wrap; }
+.med-summary .kpis { margin-top: 6px; }
+.injury-card { border-left: 4px solid var(--goal); }
+.injury-list { list-style: none; margin: 6px 0; padding: 0; display: flex; flex-direction: column; }
+.injury-list li { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1.2fr) auto; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); }
+.injury-list li:first-child { border-top: 0; }
+.injury-list .inj-toggle { flex: none; }
+.injury-list .inj-toggle button { padding: 4px 8px; font-size: 0.76rem; }
+@media (max-width: 720px) { .injury-list li { grid-template-columns: minmax(0, 1fr) auto; } .injury-list li > span:nth-child(3) { grid-column: 1 / 2; } }
+.week-card .row-between { gap: 8px; }
+.week-card .row-between h3 { flex: 1 1 auto; min-width: 0; }

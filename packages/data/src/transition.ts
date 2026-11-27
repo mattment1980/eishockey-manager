@@ -2,9 +2,9 @@ import type { World, Player, News, Position } from '@ehm/schema';
 import { makeContract, EMPTY_MARKET } from '@ehm/schema';
 import {
   Rng, overall, toDisplay, ageOn, beginSeason, seedChemistry, refreshLineup, standardTerms, contractCost, TARGET,
-  regionOf, archiveSeason,
+  regionOf, archiveSeason, extendStaffContracts,
 } from '@ehm/core';
-import { WorldGenerator } from './generator.ts';
+import { WorldGenerator, ensureStaff } from './generator.ts';
 import { IMPORT_ORIGINS } from './names.ts';
 
 const group = (pos: Position) => (pos === 'G' ? 'G' : pos === 'LD' || pos === 'RD' ? 'D' : 'F');
@@ -154,6 +154,8 @@ export function seasonTransition(input: World): World {
   w = { ...w, players: w.players.map((p) => ({ ...p, condition: { ...p.condition, morale: Math.round((p.condition.morale + 60) / 2) } })) };
   const seedRng = new Rng(w.seed + next * 7);
   w = seedChemistry(w, () => seedRng.next());
+  // Staff: Verträge laufen weiter, Staff-Markt wird aufgefüllt
+  w = ensureStaff(extendStaffContracts(w, next));
   return { ...beginSeason(w, w.seed + next), offseason: null };
 }
 

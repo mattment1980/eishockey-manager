@@ -1,4 +1,5 @@
 import type { Player, Club } from '@ehm/schema';
+import { injuryStatus, injuryLabel, prognosisText } from '@ehm/core';
 import { useStore } from '../store.tsx';
 import { useUi } from '../uiContext.ts';
 import { Crest } from './Crest.tsx';
@@ -17,8 +18,19 @@ export function PlayerName({ p, full, pos }: { p: Player; full?: boolean; pos?: 
     >
       {pos && <span className={`pos pos-${p.position}`}>{p.position}</span>}
       {full ? `${p.firstName} ${p.lastName}` : `${p.firstName[0]}. ${p.lastName}`}
+      <InjuryBadge p={p} />
     </span>
   );
+}
+
+/** Kreuz für verletzte (rot) und angeschlagene (orange) Spieler */
+export function InjuryBadge({ p }: { p: Player }) {
+  const { world } = useStore();
+  if (!p.injury) return null;
+  const st = injuryStatus(p, world.date);
+  if (st === 'fit') return null;
+  const tip = `${st === 'injured' ? 'Verletzt' : 'Angeschlagen'}: ${injuryLabel(p.injury.kind)} – ${prognosisText(p.injury, world.date)}${st === 'knock' ? (p.injury.play ? ' · darf spielen (mit Abzug, Rückfallrisiko)' : ' · wird geschont') : ''}`;
+  return <span className={`inj-badge ${st}`} data-tip={tip} aria-label={tip}>✚</span>;
 }
 
 /** Spielername über die ID (z. B. aus Statistiken) */

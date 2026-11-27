@@ -95,6 +95,11 @@ function adminPerMonth(world: World, club: Club): number {
   return Math.max(club.finances.budget * 0.08, club.finances.budget - fixed) / 12;
 }
 
+/** Ausgabe im laufenden Monat buchen (z. B. Abfindung) */
+export function bookExpense(world: World, clubId: string, cat: LedgerCategory, amount: number): World {
+  return { ...world, clubs: world.clubs.map((c) => (c.id === clubId ? book(c, monthKey(world.date), cat, -amount) : c)) };
+}
+
 function book(club: Club, month: string, cat: LedgerCategory, amount: number): Club {
   const ledger = club.finances.ledger.map((m) => ({ month: m.month, items: { ...m.items } }));
   let entry = ledger.find((m) => m.month === month);

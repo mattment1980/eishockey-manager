@@ -23,3 +23,5 @@ export * from './board.ts';
 export * from './phaseReports.ts';
 export * from './training.ts';
 export * from './history.ts';
+export * from './staff.ts';
+export * from './injuries.ts';

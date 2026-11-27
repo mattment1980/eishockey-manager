@@ -1,5 +1,5 @@
 import type { Fixture } from '@ehm/schema';
-import { weekStatus, weekEffect, rosterAverages, teamStrength, regularTable, INTENSITY, FOCUS, loadLabel, coachPlan, individualFor, formatDate, addDays } from '@ehm/core';
+import { injuryStatus, injuryLabel, prognosisText, daysBetween, weekStatus, weekEffect, rosterAverages, teamStrength, regularTable, INTENSITY, FOCUS, loadLabel, coachPlan, individualFor, formatDate, addDays } from '@ehm/core';
 import { useStore } from '../store.tsx';
 import { ClubName, PlayerName } from '../ui.tsx';
 import { FormStrip } from '../components/FormStrip.tsx';
@@ -21,6 +21,7 @@ export function WeekPanel({ onTraining }: { onTraining: () => void }) {
     // Woche läuft: Training ist erledigt
     const b = t.week.before;
     return (
+      <>
       <section className="card week-card running">
         <div className="row-between">
           <h3>Woche ab {formatDate(st.start)}</h3>
@@ -33,6 +34,8 @@ export function WeekPanel({ onTraining }: { onTraining: () => void }) {
         {b && <p className="small muted">Fitness Ø {d1(b.fitness)} → {d1(now.fitness)} · Moral Ø {d1(b.morale)} → {d1(now.morale)}</p>}
         <WeekGames fixtures={st.fixtures} />
       </section>
+      <InjuryCard />
+      </>
     );
   }
 
@@ -48,6 +51,7 @@ export function WeekPanel({ onTraining }: { onTraining: () => void }) {
   return (
     <>
       {last && <WeekReview start={last.start} before={last.before} now={now} />}
+      <InjuryCard />
       <section className="card week-card">
         <div className="muted small">Neue Woche</div>
         <h3>Woche ab {formatDate(st.start, true)} · {games === 1 ? '1 Spiel' : `${games} Spiele`}</h3>
@@ -134,6 +138,42 @@ function WeekReview({ start, before, now }: { start: string; before?: { fitness:
           {row('Form Ø', before.form, now.form, 'Kaderschnitt zu Wochenbeginn und heute')}
         </div>
       )}
+    </section>
+  );
+}
+
+/** Lazarett: verletzte und angeschlagene Spieler, Rückkehrer */
+export function InjuryCard() {
+  const { world, club, players, setInjuryPlay } = useStore();
+  if (!club?.matchplan) return null;
+  const date = world.date;
+  const hurt = players.filter((p) => injuryStatus(p, date) !== 'fit').sort((a, b) => (a.injury!.out < b.injury!.out ? -1 : 1));
+  const plan = club.matchplan;
+  const dressed = new Set([...plan.forwardLines.flat(), ...plan.defensePairs.flat(), ...plan.goalies]);
+  const back = players.filter((p) => !p.injury && !dressed.has(p.id) && p.injuries.length > 0 && daysBetween(addDays(p.injuries.at(-1)!.date, p.injuries.at(-1)!.days), date) <= 10);
+  if (!hurt.length && !back.length) return null;
+  return (
+    <section className="card injury-card">
+      <h3>Lazarett <span className="muted small">{hurt.length === 0 ? 'alle fit' : hurt.length === 1 ? '1 Ausfall' : `${hurt.length} Ausfälle`}</span></h3>
+      <ul className="injury-list">
+        {hurt.map((p) => {
+          const st = injuryStatus(p, date);
+          const inj = p.injury!;
+          return (
+            <li key={p.id} className={st}>
+              <span><PlayerName p={p} /> <span className="muted small">{p.position}</span></span>
+              <span className="small">{injuryLabel(inj.kind)}{inj.relapses ? ` (Rückfall)` : ''}</span>
+              <span className="small muted">{st === 'knock' ? 'angeschlagen' : 'verletzt'} · {prognosisText(inj, date)}</span>
+              <span className="segmented small-seg inj-toggle" data-tip="Angeschlagen spielen: rund 4–5 % weniger Leistung und ein Rückfallrisiko. Gilt, sobald der Spieler angeschlagen ist.">
+                <button className={!inj.play ? 'on' : ''} onClick={() => setInjuryPlay(p.id, false)}>Schonen</button>
+                <button className={inj.play ? 'on' : ''} onClick={() => setInjuryPlay(p.id, true)}>{st === 'knock' ? 'Einsetzen' : 'Früh einsetzen'}</button>
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      {hurt.length > 0 && <p className="muted small">Ausfälle ersetzt der Co-Trainer automatisch in der Aufstellung. Wer eingesetzt werden darf, holst du unter „Reihen“ selbst zurück in die Aufstellung.</p>}
+      {back.length > 0 && <p className="small">Wieder fit, aber nicht aufgestellt: {back.map((p, i) => <span key={p.id}>{i > 0 && ', '}<PlayerName p={p} /></span>)} – unter „Reihen“ zurückholen.</p>}
     </section>
   );
 }

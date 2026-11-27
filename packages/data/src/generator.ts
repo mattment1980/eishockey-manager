@@ -3,7 +3,7 @@ import {
   type World, type Player, type Position, type Staff, type Club, type Trait, type TraitId,
   type SkaterAttribute, type GoalieAttribute, type StaffRole, type Manager,
 } from '@ehm/schema';
-import { Rng, clamp, autoMatchplan, beginSeason, seedChemistry, seedFamiliarity, seedDevRef } from '@ehm/core';
+import { Rng, clamp, autoMatchplan, beginSeason, seedChemistry, seedFamiliarity, seedDevRef, staffSalary } from '@ehm/core';
 import { DEFAULT_TACTICS, EMPTY_MARKET, makeContract, TrainingSchema, type Tactics } from '@ehm/schema';
 import { NAMES, IMPORT_ORIGINS } from './names.ts';
 import { COUNTRY_DE, LEAGUE_DEL2_MODEL, CLUBS_DEL2_MODEL, BUDGET_BY_PROFILE } from './del2.ts';
@@ -290,6 +290,36 @@ export class WorldGenerator {
       dev: { ref: {}, history: [] },
       youthClub: null,
       career: [],
+      injury: null,
+      injuries: [],
+    };
+  }
+
+  /** Staff-Mitglied mit Rolle und Qualität (für Markt und medizinische Abteilung) */
+  staffMember(role: StaffRole, clubId: string | null, quality: number, untilSeason: number): Staff {
+    const nat = this.rng.chance(0.15) ? this.rng.weighted(IMPORT_ORIGINS.map((o) => o[0]), IMPORT_ORIGINS.map((o) => o[1])) : 'DE';
+    const [firstName, lastName] = this.personName(nat);
+    const q = quality + this.rng.normal(0, 10);
+    const medicalRole = role === 'doctor' || role === 'physio' || role === 'athleticsCoach';
+    const rt = (main: boolean) => r200(main ? q + this.rng.normal(0, 8) : 30 + this.rng.normal(0, 10));
+    const traits: Trait[] = !medicalRole && this.rng.chance(0.5) ? [{ id: this.rng.pick(STAFF_TRAITS), strength: Math.round(this.rng.float(55, 95)) }] : [];
+    const coach = role === 'headCoach' || role === 'assistantCoach';
+    const ratings = {
+      tactics: rt(coach), motivation: rt(coach || role === 'athleticsCoach'), discipline: rt(coach),
+      development: rt(coach || role === 'goalieCoach' || role === 'youthCoach' || role === 'athleticsCoach'),
+      scouting: rt(role === 'scout'), medical: rt(medicalRole),
+    };
+    return {
+      id: this.id('s'),
+      firstName,
+      lastName,
+      birthDate: this.birthDate(this.rng.int(30, 60)),
+      nationalities: [nat],
+      role,
+      ratings,
+      traits,
+      region: role === 'scout' ? this.rng.pick(['DE', 'Skandinavien', 'Nordamerika', 'Osteuropa']) : undefined,
+      contract: clubId ? makeContract({ clubId, salary: staffSalary(role, q), untilSeason, role: 'regular' }) : null,
     };
   }
 
@@ -310,7 +340,7 @@ export class WorldGenerator {
         birthDate: this.birthDate(this.rng.int(34, 62)),
         nationalities: [nat],
         role,
-        ratings: { tactics: rt(), motivation: rt(), discipline: rt(), development: rt(), scouting: rt() },
+        ratings: { tactics: rt(), motivation: rt(), discipline: rt(), development: rt(), scouting: rt(), medical: 60 },
         traits,
         region: role === 'scout' ? this.rng.pick(['DE', 'Skandinavien', 'Nordamerika', 'Osteuropa']) : undefined,
         contract: makeContract({ clubId, salary: Math.round((role === 'headCoach' ? 110_000 : 60_000) * this.rng.float(0.8, 1.3) / 1000) * 1000, untilSeason: this.season + this.rng.int(0, 2), role: 'regular' }),
@@ -319,6 +349,43 @@ export class WorldGenerator {
   }
 }
 
+/** Einzelnes Staff-Mitglied (Staff-Markt, medizinische Abteilung); `q` = Qualität intern (≈ 40–170) */
+export function makeStaffMember(gen: WorldGenerator, role: StaffRole, clubId: string | null, q: number, untilSeason: number): Staff {
+  return gen.staffMember(role, clubId, q, untilSeason);
+}
+
 export function generateWorld(seed: number, opts: Omit<GenerateOptions, 'seed'> = {}): World {
-  return new WorldGenerator({ seed, ...opts }).generate();
+  return ensureStaff(new WorldGenerator({ seed, ...opts }).generate());
+}
+
+export const MEDICAL_ROLES: StaffRole[] = ['doctor', 'physio', 'athleticsCoach'];
+/** Rollen, die es auf dem Staff-Markt gibt */
+export const MARKET_ROLES: StaffRole[] = ['headCoach', 'assistantCoach', 'goalieCoach', 'youthCoach', 'scout', 'doctor', 'physio', 'athleticsCoach'];
+/** freie Staff-Leute je Rolle auf dem Markt */
+const POOL_PER_ROLE = 4;
+
+/**
+ * Medizinische Abteilung und Staff-Markt sicherstellen:
+ * Jeder Verein bekommt (falls nötig) Arzt, Physiotherapeut und Athletiktrainer passend zu seinem Etat,
+ * auf dem Markt stehen je Rolle einige vereinslose Kandidaten. Eigener Zufall, damit die übrige Welt unverändert bleibt.
+ */
+export function ensureStaff(world: World): World {
+  const has = (clubId: string, role: StaffRole) => world.staff.some((x) => x.contract?.clubId === clubId && x.role === role);
+  const missingClubs = world.clubs.filter((c) => MEDICAL_ROLES.some((r) => !has(c.id, r)));
+  const free = (role: StaffRole) => world.staff.filter((x) => !x.contract && x.role === role).length;
+  const poolMissing = MARKET_ROLES.some((r) => free(r) < POOL_PER_ROLE);
+  if (!missingClubs.length && !poolMissing) return world;
+  const gen = new WorldGenerator({ seed: world.seed + world.staff.length * 31 + world.season, season: world.season, idPrefix: `x${world.staff.length.toString(36)}-` });
+  const budgets = world.clubs.map((c) => c.finances.budget);
+  const lo = Math.min(...budgets), hi = Math.max(...budgets);
+  const added: Staff[] = [];
+  for (const c of missingClubs) {
+    const q = 75 + ((c.finances.budget - lo) / Math.max(1, hi - lo)) * 45;
+    for (const r of MEDICAL_ROLES) if (!has(c.id, r)) added.push(gen.staffMember(r, c.id, q, world.season + 1));
+  }
+  for (const r of MARKET_ROLES) {
+    const n = POOL_PER_ROLE - free(r);
+    for (let i = 0; i < n; i++) added.push(gen.staffMember(r, null, 60 + i * 22, world.season));
+  }
+  return { ...world, staff: [...world.staff, ...added] };
 }

@@ -1,6 +1,6 @@
 # Übergabe – Stand der Entwicklung
 
-Stand: 27.11.2026 · letzter Commit „Saisonarchiv: Karriere-Statistik und Teamstatistik vergangener Saisons“
+Stand: 27.11.2026 · letzter Commit „Meilenstein 9: Verletzungen, medizinische Abteilung, Staff-Markt“
 
 Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst zusammen, was gebaut ist, wie der Code aufgebaut ist, was entschieden wurde und was als Nächstes kommt.
 
@@ -29,8 +29,8 @@ Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst z
 | 7 | Saisonwechsel & Daten: Alterung/Entwicklung, Nachwuchs, CSV-Import/Export, Datenwerkstatt | ✅ |
 | 8 | Training: Wochenplan mit 3 Schwerpunkten und Intensität, Co-Trainer, Einzeltraining (siehe `docs/training.md`) | ✅ |
 | 8b | Wochenablauf im Reiter Spieltag: Rückblick → „Woche starten“ (Training) → Spieltage der Woche | ✅ |
-| **9** | **Verletzungen & medizinische Abteilung** (Konzept: „verletzungen-und-medizin“) | **als Nächstes** |
-| 10 | Events: Zufallsereignisse und planbare Termine unter der Woche (Teamevent, Autogrammstunde …) mit Wirkung auf Moral, Frische, Zuschauer, Stimmung, Chemie | geplant |
+| 9 | Verletzungen & medizinische Abteilung, Staff-Markt (siehe `docs/verletzungen.md`) | ✅ |
+| **10** | Events: Zufallsereignisse und planbare Termine unter der Woche (Teamevent, Autogrammstunde …) mit Wirkung auf Moral, Frische, Zuschauer, Stimmung, Chemie | **als Nächstes** |
 | 11 | Sponsoring | geplant |
 | 12a | Stadionbetrieb & Zuschauer: Catering, Eintrittspreise, Veranstaltungen (Sponsorenabend, Kindertag …) mit Einfluss auf die Zuschauer | geplant |
 | 12b | Stadionausbau | geplant |
@@ -49,16 +49,16 @@ Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst z
 
 | Paket | Inhalt |
 |---|---|
-| `packages/schema` | Datenmodell (Welt, Land, Liga, Verein, Spieler, Staff, Vertrag, Wettbewerb, Scouting, Markt, Matchplan, Coaching-Regeln, Chemie), aktuell **SCHEMA_VERSION 12** (v7: `Club.familiarity`, `World.offseason`, `FixtureResult.team`; v8: `Player.dev`, `Player.youthClub`; v9: `offseason.testDay`; v10: `offseason.reports` = Phasenberichte; v11: `Club.training`; v12: `Player.career`, `World.archive`) |
-| `packages/core` | Spiellogik: `engine/` (`match.ts` = Zustand und Ablauf; Bereiche als Methoden in `lines`, `rules`, `modifiers`, `phases`, `shots`, `penalties`, `shootout`; dazu `state`, `types`, `constants`), `competition.ts` (Spielplan, Serien), `standings.ts` (Tabelle, Form, Teamstatistik), `matchday.ts` (Ablauf eines Spieltags), `economy.ts`, `scouting.ts`, `market.ts`, `coaching.ts`, `chemistry.ts`, `condition.ts` (Fitness & Form), `familiarity.ts` (Taktik-Eingespieltheit), `offseason.ts` (Phasen, Trainingslager), `board.ts` (Saisonbilanz des Vorstands), `phaseReports.ts` (Kurzberichte der Sommerpause), `training.ts` (Wochenplan, Co-Trainer, Einzeltraining), `history.ts` (Saisonarchiv), `lineup.ts`, `ratings.ts` (u. a. `effectiveRating`, `talentStars`) |
-| `packages/data` | Weltgenerator, Namen, Import/Export + Migration v1→v12 (`io.ts`), CSV mit Spaltenzuordnung (`csv.ts`), Datensatz-Neuaufbau (`rebuild.ts`), Nachwuchsjahrgang (`youth.ts`), Saisonwechsel (`transition.ts`), Sommerpause-Ablauf (`offseason.ts`) |
+| `packages/schema` | Datenmodell (Welt, Land, Liga, Verein, Spieler, Staff, Vertrag, Wettbewerb, Scouting, Markt, Matchplan, Coaching-Regeln, Chemie), aktuell **SCHEMA_VERSION 13** (v7: `Club.familiarity`, `World.offseason`, `FixtureResult.team`; v8: `Player.dev`, `Player.youthClub`; v9: `offseason.testDay`; v10: `offseason.reports` = Phasenberichte; v11: `Club.training`; v12: `Player.career`, `World.archive`; v13: `Player.injury`, `Player.injuries`, Staff-Rollen Arzt/Physio/Athletik, `Staff.ratings.medical`) |
+| `packages/core` | Spiellogik: `engine/` (`match.ts` = Zustand und Ablauf; Bereiche als Methoden in `lines`, `rules`, `modifiers`, `phases`, `shots`, `penalties`, `shootout`; dazu `state`, `types`, `constants`), `competition.ts` (Spielplan, Serien), `standings.ts` (Tabelle, Form, Teamstatistik), `matchday.ts` (Ablauf eines Spieltags), `economy.ts`, `scouting.ts`, `market.ts`, `coaching.ts`, `chemistry.ts`, `condition.ts` (Fitness & Form), `familiarity.ts` (Taktik-Eingespieltheit), `offseason.ts` (Phasen, Trainingslager), `board.ts` (Saisonbilanz des Vorstands), `phaseReports.ts` (Kurzberichte der Sommerpause), `training.ts` (Wochenplan, Co-Trainer, Einzeltraining), `history.ts` (Saisonarchiv), `injuries.ts` (Verletzungen), `staff.ts` (Staff-Markt), `lineup.ts`, `ratings.ts` (u. a. `effectiveRating`, `talentStars`) |
+| `packages/data` | Weltgenerator, Namen, Import/Export + Migration v1→v13 (`io.ts`), CSV mit Spaltenzuordnung (`csv.ts`), Datensatz-Neuaufbau (`rebuild.ts`), Nachwuchsjahrgang (`youth.ts`), Saisonwechsel (`transition.ts`), Sommerpause-Ablauf (`offseason.ts`) |
 | `apps/web` | Oberfläche (8 Reiter: Verein, Kader, Reihen, Taktik, Training, Staff, Spieltag, Liga); `store.tsx` = Spielstand mit Aktions-Warteschlange (Eingaben während einer Simulation werden danach erneut angewendet), Export/Import als Datei; `ui.tsx` = globale Fenster (`components/PlayerProfile`, `ClubSheet`, `HoverLayer`), `PlayerName`/`ClubName` für klickbare Namen, `data-tip` für Tooltips; CSS in `styles/` (base, views, components, features) |
 | `apps/sim-cli` | `pnpm sim generate | match | season | calibrate | seasons` |
-| `tests/` | 51 Tests in 7 Dateien (world, engine, season, market, team, development, data) |
+| `tests/` | 55 Tests in 7 Dateien (world, engine, season, market, team, development, data) |
 
 ### Ablauf eines Spieltags (`playDay` in `matchday.ts`)
 
-Monate abschließen → Entwicklung → **Training der Woche** → Spiele simulieren → Einnahmen buchen → Moral & Chemie → **Fitness, Form, Taktik-Eingespieltheit** → Scouting → Markt-Tick → nächsten Spieltag vorbereiten → **Erholung bis zum nächsten Spieltermin** (Fitness zeigt immer den Stand zum Anpfiff) → am Saisonende Prämien, Monate bis 1. August abschließen, Sommerpause Phase 0.
+Monate abschließen → Entwicklung → **Training der Woche** (inkl. Überlastungsverletzungen) → Genesene zurück, Ausfälle ersetzen → Spiele simulieren → Einnahmen buchen → Moral & Chemie → **Fitness, Form, Taktik-Eingespieltheit** → Verletzungen im Spiel und Rückfälle → Scouting → Markt-Tick → nächsten Spieltag vorbereiten → **Erholung bis zum nächsten Spieltermin** (Fitness zeigt immer den Stand zum Anpfiff) → am Saisonende Prämien, Monate bis 1. August abschließen, Sommerpause Phase 0.
 
 ## Was im Spiel steckt
 
@@ -120,6 +120,15 @@ Monate abschließen → Entwicklung → **Training der Woche** → Spiele simuli
 - Liga › Teams: Auswahl der Saison (laufend oder archiviert) mit Meister und Absteiger.
 - Archiviert wird ab diesem Stand beim nächsten Saisonwechsel; ältere Saisons laufender Spielstände sind nicht nachträglich verfügbar.
 
+**Meilenstein 9 – Verletzungen & medizinische Abteilung (27.11.2026, Details `docs/verletzungen.md`):**
+- Entscheidungen Matthias: Ausfälle ersetzt der Co-Trainer automatisch, der Manager bekommt einen Hinweis; Arzt, Physiotherapeut und Athletiktrainer werden eingestellt und bezahlt; im Schnitt 1–2 Verletzte je Team, 4 gleichzeitig ist selten.
+- Verletzungen im Spiel (nach der Partie ausgewürfelt: Eiszeit, Anfälligkeit, Fitness, Alter, Härte des Gegners) und durch Überlastung im Training (Wochenbelastung). 9 Arten von Prellung bis schwerer Verletzung. Verletzt → angeschlagen (Manager kann ihn mit Abzug und Rückfallrisiko einsetzen) → fit. KI setzt Angeschlagene nur in den Playoffs ein.
+- Medizinische Abteilung: Athletiktrainer senkt das Risiko, Physio verkürzt Ausfälle, Arzt senkt Rückfälle und macht Prognosen genauer. Unbesetzte Stellen kosten deutlich.
+- Staff-Markt (Reiter Staff): vereinslose Trainer, Scouts und Mediziner einstellen (1–3 Saisons, Gehaltsforderung nach Qualität), entlassen mit Abfindung (halbes Restgehalt). Höchstzahl je Rolle. Staff-Verträge laufen vorerst automatisch weiter. Alte Spielstände bekommen beim Laden eine medizinische Abteilung.
+- Anzeige: rotes/oranges ✚ an jedem Spielernamen, Lazarett-Karte im Wochenablauf (Schonen/Einsetzen, Rückkehrer), Gesundheit und Verletzungshistorie im Profil, Nachrichten bei Verletzung, Ersatz und Rückkehr.
+- Langzeit-Balance unverändert (`pnpm sim seasons 10`: Ø Spieler 10,2–10,4, Top 50 ≈ 12,0, Ø Alter 26,6).
+- Offen: Verletzung mitten im Spiel mit Ticker-Meldung (derzeit nach dem Spiel ausgewürfelt), Vertragsgespräche mit Staff, Ersatzlizenz bei Langzeitverletzung.
+
 **Saisonwechsel (bisher):** Verträge, Klauseln, Karriereende, neue freie Spieler, KI-Kaderauffüllung, Nachwuchs für den menschlichen Verein, neue Aufstellungen, Chemie-Saat, Moral pendelt sich ein. Alterung/Entwicklung siehe Meilenstein 7.
 
 ### Sommerpause – Ausbaustand der Phasen
@@ -161,9 +170,9 @@ Offene Punkte: Tore ins leere Tor zu selten (0,15 statt 0,3–0,5 je Spiel), Üb
 
 ## Nächste Schritte
 
-1. **Meilenstein 9 – Verletzungen & medizinische Abteilung** (baut auf der Belastung aus dem Training auf; `training.week.load` liegt bereit)
+1. **Meilenstein 10 – Events** (Wochenstart ist der Ort für planbare Termine)
 2. Offen aus dem Training: Testspiele in der Vorbereitung, Trainingslager mit Ort/Kosten, Positionsumschulung
-3. Meilenstein 10 – Events
+3. Offen aus M9: Verletzung im Spiel mit Ticker, Staff-Vertragsgespräche
 4. Meilenstein 11 – Sponsoring
 5. Meilenstein 12a/b – Stadionbetrieb & Zuschauer, danach Stadionausbau
 6. Nebenbei: Dominanz des stärksten Vereins, Kalibrierung (leeres Tor, Überzahl- und Fangquote), mehrere Spielstände, Vertragsgespräche und Transfermarkt in der Sommerpause

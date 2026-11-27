@@ -2,7 +2,7 @@ import type { Player } from '@ehm/schema';
 import { GOALIE_ATTRIBUTES } from '@ehm/schema';
 import {
   overall, toDisplay, toDisplay1, effectiveRating, ageOn, talentStars, formLabel, fitnessLabel, PERK_LABEL, PROMISE_LABEL, ROLE_LABEL,
-  attrChange, ovrChange, devFactors, type PlayerView, type AttrView,
+  attrChange, ovrChange, devFactors, injuryStatus, injuryLabel, prognosisText, formatDate, type PlayerView, type AttrView,
 } from '@ehm/core';
 import type { World } from '@ehm/schema';
 import { DevArrow, DevSparkline } from './DevArrow.tsx';
@@ -170,6 +170,7 @@ export function PlayerSheet({ player, date, onClose, view, clubName, children, w
         ))
       ))}
 
+      <InjuryBox player={p} date={date} />
       <CareerStats player={p} />
 
       {!view && (
@@ -203,5 +204,29 @@ export function PlayerSheet({ player, date, onClose, view, clubName, children, w
         </div>
       )}
     </Sheet>
+  );
+}
+
+/** Verletzung und Verletzungshistorie */
+function InjuryBox({ player: p, date }: { player: Player; date: string }) {
+  const st = injuryStatus(p, date);
+  if (st === 'fit' && !p.injuries.length) return null;
+  return (
+    <div className="attr-group">
+      <h4>Gesundheit</h4>
+      {st !== 'fit' && p.injury && (
+        <p className={`small inj-now ${st}`}>
+          <b>{st === 'injured' ? 'Verletzt' : 'Angeschlagen'}:</b> {injuryLabel(p.injury.kind)} seit {formatDate(p.injury.date)} · {prognosisText(p.injury, date)}
+          {p.injury.relapses ? ` · ${p.injury.relapses}× Rückfall` : ''}
+          {st === 'knock' ? (p.injury.play ? ' · darf spielen' : ' · wird geschont') : ''}
+        </p>
+      )}
+      {p.injuries.length > 0 && (
+        <ul className="plain small muted">
+          {[...p.injuries].reverse().slice(0, 6).map((x, i) => <li key={i}>{formatDate(x.date)}: {injuryLabel(x.kind)} – {x.days} Tage</li>)}
+        </ul>
+      )}
+      {p.injuries.length >= 3 && <p className="small muted">Fällt häufiger aus – womöglich verletzungsanfällig.</p>}
+    </div>
   );
 }

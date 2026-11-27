@@ -242,3 +242,68 @@ describe('Wochenablauf', () => {
     expect(st.started).toBe(false);
   });
 });
+
+describe('Verletzungen & medizinische Abteilung', () => {
+  it('Saison: im Schnitt 1–2 Verletzte je Team, Verletzte stehen nie in der Aufstellung eines Spiels', async () => {
+    const core = await import('@ehm/core');
+    let w = generateWorld(88);
+    expect(w.clubs.every((c) => ['doctor', 'physio', 'athleticsCoach'].every((r) => w.staff.some((s) => s.contract?.clubId === c.id && s.role === r)))).toBe(true);
+    const counts: number[] = [];
+    for (let i = 0; i < 60; i++) {
+      w = core.playDay(w).world;
+      for (const c of w.clubs) counts.push(core.injuredCount(w, c.id));
+      const f = w.competition!.fixtures.find((x) => x.day === w.competition!.day + 1);
+      if (f) {
+        const input = core.matchInputFor(w, f);
+        for (const t of [input.home, input.away]) {
+          const ids = [...t.plan.forwardLines.flat(), ...t.plan.defensePairs.flat(), ...t.plan.goalies];
+          const byId = new Map(w.players.map((p) => [p.id, p]));
+          expect(ids.every((id) => core.isAvailable(byId.get(id)!, f.date))).toBe(true);
+        }
+      }
+    }
+    const avg = counts.reduce((a, b) => a + b, 0) / counts.length;
+    expect(avg).toBeGreaterThan(0.6);
+    expect(avg).toBeLessThan(2.6);
+    expect(w.players.some((p) => p.injuries.length > 0 || p.injury)).toBe(true);
+  });
+
+  it('Ausfälle werden ersetzt, Physio verkürzt, Staff-Markt: einstellen und entlassen', async () => {
+    const core = await import('@ehm/core');
+    const w = generateWorld(89);
+    const club = w.clubs[0];
+    const roster = w.players.filter((p) => p.contract?.clubId === club.id);
+    const star = club.matchplan!.forwardLines[0][1];
+    const date = w.competition!.fixtures[0].date;
+    const hurt = roster.map((p) => (p.id === star ? { ...p, injury: core.makeInjury(w, p, date, 'game', 'test') } : p));
+    const { plan, swaps } = core.coverPlan(club.matchplan!, hurt, date);
+    expect(swaps).toHaveLength(1);
+    expect(plan.forwardLines.flat()).not.toContain(star);
+    // Physio: ohne Physiotherapeut dauert es länger
+    const physio = w.staff.find((s) => s.contract?.clubId === club.id && s.role === 'physio')!;
+    const noPhysio = { ...w, staff: w.staff.filter((s) => s.id !== physio.id) };
+    expect(core.medicalFactors(noPhysio, club.id).duration).toBeGreaterThan(core.medicalFactors(w, club.id).duration);
+    // Staff-Markt
+    const before = w.clubs[0].finances.balance;
+    const fired = core.releaseStaff(w, physio.id);
+    expect(fired.staff.find((s) => s.id === physio.id)!.contract).toBeNull();
+    expect(fired.clubs[0].finances.balance).toBeLessThan(before);
+    const cand = fired.staff.find((s) => !s.contract && s.role === 'physio' && s.id !== physio.id)!;
+    const hired = core.hireStaff(fired, club.id, cand.id, 2);
+    expect(hired.error).toBeUndefined();
+    expect(hired.world.staff.find((s) => s.id === cand.id)!.contract!.clubId).toBe(club.id);
+    expect(core.hireStaff(hired.world, club.id, physio.id, 1).error).toBeDefined(); // nur ein Physio
+    expect(WorldSchema.safeParse(hired.world).success).toBe(true);
+  });
+
+  it('alte Spielstände bekommen eine medizinische Abteilung', () => {
+    const w = generateWorld(90);
+    const raw = JSON.parse(exportWorldJson(w));
+    raw.schemaVersion = 12;
+    raw.staff = raw.staff.filter((s: { role: string }) => !['doctor', 'physio', 'athleticsCoach'].includes(s.role));
+    for (const p of raw.players) { delete p.injury; delete p.injuries; }
+    const r = importWorldJson(JSON.stringify(raw));
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.world.clubs.every((c) => r.world.staff.some((s) => s.contract?.clubId === c.id && s.role === 'doctor'))).toBe(true);
+  });
+});

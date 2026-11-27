@@ -2,6 +2,7 @@ import type { World, Club, Player, Fixture, Training, TrainingUnit, TrainingFocu
 import { overall, toDisplay, ageOn } from './ratings.ts';
 import { addDays, daysBetween, hash01 } from './calendar.ts';
 import { pairKey, CHEM_START } from './chemistry.ts';
+import { trainingInjuries, healInjuries, coverInjuries } from './injuries.ts';
 import { familiarityKeys, familiarityValue, learningRate, trainFamiliarity, teamFamiliarity } from './familiarity.ts';
 
 /**
@@ -254,14 +255,18 @@ function trainClubWeek(world: World, club: Club, start: string, boost: number): 
 export function trainWeek(world: World, start: string, boost = 1): World {
   let chemistry = world.chemistry;
   const changed = new Map<string, Player>();
+  const loads = new Map<string, number>();
   const clubs = world.clubs.map((c) => {
     if (!c.matchplan || c.training.week?.start === start) return c;
     const r = trainClubWeek({ ...world, chemistry }, c, start, boost);
     chemistry = r.chemistry;
     for (const [id, p] of r.players) changed.set(id, p);
+    loads.set(c.id, r.club.training.week!.load);
     return r.club;
   });
-  return { ...world, clubs, chemistry, players: changed.size ? world.players.map((p) => changed.get(p.id) ?? p) : world.players };
+  const w = { ...world, clubs, chemistry, players: changed.size ? world.players.map((p) => changed.get(p.id) ?? p) : world.players };
+  // Überlastung: harte Wochen erhöhen das Verletzungsrisiko
+  return loads.size ? trainingInjuries(w, start, loads, boost) : w;
 }
 
 /** Alle Trainingswochen bis einschließlich der Woche von `upto` (höchstens 4 nachholen) */
@@ -368,5 +373,5 @@ export function weekStatus(world: World, clubId: string): WeekStatus | null {
 /** Woche starten: Training aller Vereine bis zur Woche des nächsten Spieltags */
 export function startWeek(world: World): World {
   const date = nextMatchDate(world);
-  return date ? runTraining(world, date) : world;
+  return date ? coverInjuries(healInjuries(runTraining(world, date), date), date) : world;
 }

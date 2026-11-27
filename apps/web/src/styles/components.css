@@ -110,3 +110,10 @@ tr.me td.good, tr.me td.bad { background: color-mix(in srgb, var(--ice) 12%, tra
 .career-table th:nth-child(-n+2), .career-table td:nth-child(-n+2) { text-align: left; }
 .career-table tr.current td:first-child { color: var(--ice); }
 .career-table tr.total td { font-weight: 700; border-top: 1px solid var(--line); }
+
+/* Verletzungen */
+.inj-badge { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 4px; font-size: 0.62rem; font-weight: 900; line-height: 1; color: #fff; background: var(--goal); flex: none; }
+.inj-badge.knock { background: var(--warn); color: #3a2700; }
+.btn.danger { background: color-mix(in srgb, var(--goal) 28%, var(--panel-2)); border-color: var(--goal); color: #fff; }
+.inj-now.injured b { color: var(--goal); } .inj-now.knock b { color: var(--warn); }
+.tag.pos { width: auto; padding: 0 6px; font-size: 0.7rem; font-weight: 400; text-align: left; }

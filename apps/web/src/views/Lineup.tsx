@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Matchplan, Player } from '@ehm/schema';
-import { autoMatchplan, overall, toDisplay, toDisplay1, effectiveRating, isImport, offenseRating, defenseRating, unitChemistry } from '@ehm/core';
+import { autoMatchplan, isAvailable, injuryStatus, overall, toDisplay, toDisplay1, effectiveRating, isImport, offenseRating, defenseRating, unitChemistry } from '@ehm/core';
 import { useStore } from '../store.tsx';
 import { chemLabel, chemClass, chemTip } from './Locker.tsx';
 import { PlayerName, useUi } from '../ui.tsx';
@@ -181,7 +181,7 @@ export function Lineup() {
     const id = get(plan, slot);
     const p = byId.get(id);
     const key = slotKey(slot);
-    const opt = (o: Player) => `${o.lastName} (${o.position}, ${fmt1(toDisplay1(effectiveRating(o, rate(o))))} · Basis ${fmt1(toDisplay1(rate(o)))})${isImport(o, 'DE') ? ' ★' : ''}${!dressed.has(o.id) ? ' – Tribüne' : ''}`;
+    const opt = (o: Player) => `${o.lastName} (${o.position}, ${fmt1(toDisplay1(effectiveRating(o, rate(o))))} · Basis ${fmt1(toDisplay1(rate(o)))})${isImport(o, 'DE') ? ' ★' : ''}${!dressed.has(o.id) ? ' – Tribüne' : ''}${injuryStatus(o, world.date) === 'injured' ? ' ✚ verletzt' : injuryStatus(o, world.date) === 'knock' ? ' ✚ angeschlagen' : ''}`;
     return (
       <div key={key} className={`slot dnd ${over === key ? 'over' : ''} ${drag?.id === id ? 'dragging' : ''}`} data-slot={key} {...(p ? handle(p) : {})}>
         <span className="slot-label">{label}</span>
@@ -210,7 +210,7 @@ export function Lineup() {
     <div className="stack">
       <div className="row-between">
         <h2>Reihen</h2>
-        <button className="btn" onClick={() => setMatchplan(autoMatchplan(players, { countryCode: 'DE', importSlotsGame: rules.importSlotsGame, tactics: plan.tactics, keep: { specialTeams: plan.specialTeams, matchups: plan.matchups, rules: plan.rules, captain: plan.captain } }))}
+        <button className="btn" onClick={() => setMatchplan(autoMatchplan(players.filter((p) => isAvailable(p, world.date)), { countryCode: 'DE', importSlotsGame: rules.importSlotsGame, tactics: plan.tactics, keep: { specialTeams: plan.specialTeams, matchups: plan.matchups, rules: plan.rules, captain: plan.captain } }))}
           data-tip="Aufstellung nach Grundstärke automatisch bauen (Über-/Unterzahl inklusive)">
           Automatisch
         </button>

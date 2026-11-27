@@ -1,3 +1,4 @@
+import { ensureStaff } from './generator.ts';
 import { WorldSchema, SCHEMA_VERSION, type World } from '@ehm/schema';
 import { defaultRules, seedChemistry, seedFamiliarity, seedDevRef, Rng } from '@ehm/core';
 
@@ -61,13 +62,18 @@ export function migrateWorld(raw: unknown): unknown {
     // Saisonarchiv und Spielerkarriere über Standardwerte
     w.schemaVersion = 12;
   }
+  if (w.schemaVersion === 12) {
+    // Verletzungen und medizinische Abteilung: Standardwerte; Staff wird beim Laden ergänzt (ensureChemistry)
+    w.schemaVersion = 13;
+  }
   void SCHEMA_VERSION;
   return w;
 }
 
 /** Alte Spielstände: Reihen bekommen eine Anfangschemie (vor v6), Vereine eine Taktik-Eingespieltheit (vor v7) */
 export function ensureChemistry(world: World): World {
-  let w = seedDevRef(seedFamiliarity(world));
+  // medizinische Abteilung und Staff-Markt (ab v13)
+  let w = ensureStaff(seedDevRef(seedFamiliarity(world)));
   if (Object.keys(w.chemistry).length > 0) return w;
   const rng = new Rng(w.seed + 606);
   w = seedChemistry(w, () => rng.next());

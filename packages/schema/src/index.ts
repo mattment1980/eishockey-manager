@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Version des Spielstand-Formats. Bei Änderungen erhöhen und Migration ergänzen. */
-export const SCHEMA_VERSION = 12;
+export const SCHEMA_VERSION = 13;
 
 /** Interne Attributskala 1–200 (Anzeige 1–20). */
 export const Rating = z.number().int().min(1).max(200);
@@ -207,6 +207,29 @@ export const CareerSeasonSchema = z.object({
 });
 export type CareerSeason = z.infer<typeof CareerSeasonSchema>;
 
+/** Verletzungen (Meilenstein 9) */
+export const INJURY_KINDS = ['prellung', 'zerrung', 'leiste', 'ruecken', 'muskelfaser', 'gehirnerschuetterung', 'baender', 'bruch', 'schwer'] as const;
+export const InjuryKindSchema = z.enum(INJURY_KINDS);
+export type InjuryKind = z.infer<typeof InjuryKindSchema>;
+export const InjurySchema = z.object({
+  kind: InjuryKindSchema,
+  /** Tag der Verletzung */
+  date: z.string(),
+  /** ab diesem Tag wieder voll fit */
+  out: z.string(),
+  /** ab diesem Tag angeschlagen einsetzbar (mit Abzug und Rückfallrisiko) */
+  knock: z.string(),
+  /** Prognose des Arztes in Tagen ab Verletzung (von–bis) */
+  est: z.tuple([z.number().int(), z.number().int()]),
+  /** Manager erlaubt den Einsatz, sobald der Spieler angeschlagen ist */
+  play: z.boolean().default(false),
+  /** Anzahl Rückfälle */
+  relapses: z.number().int().default(0),
+  /** im Spiel oder im Training/durch Überlastung */
+  cause: z.enum(['game', 'training']),
+});
+export type Injury = z.infer<typeof InjurySchema>;
+
 export const PlayerSchema = z.object({
   id: z.string(),
   firstName: z.string(),
@@ -228,10 +251,14 @@ export const PlayerSchema = z.object({
   youthClub: z.string().nullable().default(null),
   /** Statistik der abgeschlossenen Saisons (neueste zuletzt) */
   career: z.array(CareerSeasonSchema).default([]),
+  /** aktuelle Verletzung (null = gesund) */
+  injury: InjurySchema.nullable().default(null),
+  /** Verletzungshistorie (neueste zuletzt, höchstens 20) */
+  injuries: z.array(z.object({ kind: InjuryKindSchema, date: z.string(), days: z.number().int() })).default([]),
 });
 export type Player = z.infer<typeof PlayerSchema>;
 
-export const StaffRoleSchema = z.enum(['headCoach', 'assistantCoach', 'goalieCoach', 'scout', 'youthCoach', 'manager']);
+export const StaffRoleSchema = z.enum(['headCoach', 'assistantCoach', 'goalieCoach', 'scout', 'youthCoach', 'manager', 'doctor', 'physio', 'athleticsCoach']);
 export type StaffRole = z.infer<typeof StaffRoleSchema>;
 
 export const StaffSchema = z.object({
@@ -247,6 +274,8 @@ export const StaffSchema = z.object({
     discipline: Rating,
     development: Rating,
     scouting: Rating,
+    /** Medizin (Arzt, Physiotherapeut, Athletiktrainer) */
+    medical: Rating.default(60),
   }),
   traits: z.array(TraitSchema),
   /** Scouting-Region (nur Scouts) */
