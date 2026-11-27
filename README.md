@@ -17,6 +17,8 @@ Fantasienamen, ereignisbasierte Match-Engine mit Text-Ticker und Live-Statistike
 | 6b Chemie & Moral | Traits im Spiel, Moral, Teamklima, Reihenchemie, Kapitän, Kabine | ✅ |
 | 7 Saisonwechsel & Daten | Entwicklung, Nachwuchs, Import/Export, Editor | offen |
 
+Ausführlicher Stand, Entscheidungen und nächste Schritte: [docs/uebergabe.md](docs/uebergabe.md)
+
 ## Schnellstart
 
 ```bash
