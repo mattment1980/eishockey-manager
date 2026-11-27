@@ -3,8 +3,8 @@ import {
   type World, type Player, type Position, type Staff, type Club, type Trait, type TraitId,
   type SkaterAttribute, type GoalieAttribute, type StaffRole, type Manager,
 } from '@ehm/schema';
-import { Rng, clamp, autoMatchplan, beginSeason, seedChemistry, seedFamiliarity, seedDevRef, staffSalary } from '@ehm/core';
-import { DEFAULT_TACTICS, EMPTY_MARKET, makeContract, TrainingSchema, ClubEventsSchema, type Tactics } from '@ehm/schema';
+import { Rng, clamp, autoMatchplan, beginSeason, seedChemistry, seedFamiliarity, seedDevRef, staffSalary, ensureSponsors } from '@ehm/core';
+import { DEFAULT_TACTICS, EMPTY_MARKET, makeContract, TrainingSchema, ClubEventsSchema, ClubSponsorsSchema, type Tactics } from '@ehm/schema';
 import { NAMES, IMPORT_ORIGINS } from './names.ts';
 import { COUNTRY_DE, LEAGUE_DEL2_MODEL, CLUBS_DEL2_MODEL, BUDGET_BY_PROFILE } from './del2.ts';
 
@@ -117,6 +117,7 @@ export class WorldGenerator {
         training: TrainingSchema.parse({}),
         mood: { fans: 50, sponsors: 50 },
         events: ClubEventsSchema.parse({}),
+        sponsors: ClubSponsorsSchema.parse({}),
       };
       club.matchplan = autoMatchplan(roster, { countryCode: COUNTRY_DE.code, importSlotsGame: COUNTRY_DE.rules.importSlotsGame, tactics: this.rng.pick(TACTIC_STYLES)() });
       clubs.push(club);
@@ -309,7 +310,7 @@ export class WorldGenerator {
     const ratings = {
       tactics: rt(coach), motivation: rt(coach || role === 'athleticsCoach'), discipline: rt(coach),
       development: rt(coach || role === 'goalieCoach' || role === 'youthCoach' || role === 'athleticsCoach'),
-      scouting: rt(role === 'scout'), medical: rt(medicalRole),
+      scouting: rt(role === 'scout'), medical: rt(medicalRole), business: rt(role === 'manager'),
     };
     return {
       id: this.id('s'),
@@ -342,7 +343,7 @@ export class WorldGenerator {
         birthDate: this.birthDate(this.rng.int(34, 62)),
         nationalities: [nat],
         role,
-        ratings: { tactics: rt(), motivation: rt(), discipline: rt(), development: rt(), scouting: rt(), medical: 60 },
+        ratings: { tactics: rt(), motivation: rt(), discipline: rt(), development: rt(), scouting: rt(), medical: 60, business: 60 },
         traits,
         region: role === 'scout' ? this.rng.pick(['DE', 'Skandinavien', 'Nordamerika', 'Osteuropa']) : undefined,
         contract: makeContract({ clubId, salary: Math.round((role === 'headCoach' ? 110_000 : 60_000) * this.rng.float(0.8, 1.3) / 1000) * 1000, untilSeason: this.season + this.rng.int(0, 2), role: 'regular' }),
@@ -357,12 +358,12 @@ export function makeStaffMember(gen: WorldGenerator, role: StaffRole, clubId: st
 }
 
 export function generateWorld(seed: number, opts: Omit<GenerateOptions, 'seed'> = {}): World {
-  return ensureStaff(new WorldGenerator({ seed, ...opts }).generate());
+  return ensureSponsors(ensureStaff(new WorldGenerator({ seed, ...opts }).generate()));
 }
 
 export const MEDICAL_ROLES: StaffRole[] = ['doctor', 'physio', 'athleticsCoach'];
 /** Rollen, die es auf dem Staff-Markt gibt */
-export const MARKET_ROLES: StaffRole[] = ['headCoach', 'assistantCoach', 'goalieCoach', 'youthCoach', 'scout', 'doctor', 'physio', 'athleticsCoach'];
+export const MARKET_ROLES: StaffRole[] = ['headCoach', 'assistantCoach', 'goalieCoach', 'youthCoach', 'scout', 'doctor', 'physio', 'athleticsCoach', 'manager'];
 /** freie Staff-Leute je Rolle auf dem Markt */
 const POOL_PER_ROLE = 4;
 

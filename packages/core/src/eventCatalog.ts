@@ -91,8 +91,8 @@ const TERMIN_LIST: TerminDef[] = [
     resolve: () => out('Die Mannschaft ist heiß – im nächsten Spiel wird alles reingeworfen.', 'neutral', [{ kind: 'gameOfSeason' }]),
   },
   {
-    id: 'sponsorenabend', category: 'economy', label: 'Sponsorenabend / Business-Spieltag',
-    pros: 'Geld und Sponsorenzufriedenheit', cons: 'Pflichttermin für die Spieler: Frische und etwas Moral',
+    id: 'sponsorenabend', category: 'economy', label: 'Sponsorenabend / Business-Spieltag', sponsorTermin: true,
+    pros: 'Geld und Sponsorenzufriedenheit; zählt als Pflichttermin für einen Partner', cons: 'Pflichttermin für die Spieler: Frische und etwas Moral',
     blocked: (ctx) => (ctx.homeGames === 0 ? 'braucht ein Heimspiel in dieser Woche' : null),
     resolve: (ctx) => {
       const k = wear(ctx, 'sponsorenabend');
@@ -103,8 +103,8 @@ const TERMIN_LIST: TerminDef[] = [
     },
   },
   {
-    id: 'werbedreh', category: 'economy', label: 'Werbedreh mit einem Star',
-    pros: 'Geld vom Hauptsponsor', cons: 'der Star verliert Frische; Arbeiter nervt es, Diven lieben es',
+    id: 'werbedreh', category: 'economy', label: 'Werbedreh mit einem Star', sponsorTermin: true,
+    pros: 'Geld vom Hauptsponsor; zählt als Pflichttermin', cons: 'der Star verliert Frische; Arbeiter nervt es, Diven lieben es',
     resolve: (ctx) => {
       const star = top(ctx.roster, overall);
       const diva = hasTrait(star, 'diva');

@@ -2,7 +2,7 @@ import type { World } from '@ehm/schema';
 import type { PhaseReport } from '@ehm/schema';
 import {
   OFFSEASON_PHASES, phaseDate, marketAdvance, daysBetween, trainingCamp, vacation, developSummer, buildTestDay, releaseRemainingYouth, resetDevRef,
-  applySeasonReviews, runTraining, healInjuries, clearTrainingLog, recoverFitness, talksReport, transferReport, summerReport, kickoffReport, trainingReport,
+  applySeasonReviews, runTraining, healInjuries, sponsorSummer, sponsorKickoff, clearTrainingLog, recoverFitness, talksReport, transferReport, summerReport, kickoffReport, trainingReport,
 } from '@ehm/core';
 import { seasonTransition } from './transition.ts';
 import { youthIntake } from './youth.ts';
@@ -40,7 +40,12 @@ export function advanceOffseason(world: World): World {
       const { world: rated, reviews } = applySeasonReviews(w);
       return done(rated, undefined, (hid) => reviews.get(hid)?.report ?? null);
     }
-    if (ph.id === 'talks') return done(w, undefined, (hid) => talksReport(w, hid));
+    if (ph.id === 'talks') {
+      // Sponsoren: Angebote für auslaufende und freie Flächen
+      w = sponsorSummer(w);
+      const out = w;
+      return done(out, undefined, (hid) => talksReport(out, hid));
+    }
     if (ph.id === 'transfer') return done(w, undefined, (hid) => transferReport(w, hid));
     let testDay = world.offseason?.testDay;
     if (ph.id === 'summer') {
@@ -62,6 +67,8 @@ export function advanceOffseason(world: World): World {
   if (ph.id === 'kickoff') {
     const prev = w;
     w = healInjuries(releaseRemainingYouth(w, target), target);
+    // Sponsoren: offene Flächen unterschreibt der Vorstand bzw. der Geschäftsführer
+    w = sponsorKickoff(w);
     w = clearTrainingLog(resetDevRef(seasonTransition(w)));
     w = trainingCamp(w, 0.3, `${w.season}:auftakt`);
     // Trainingsauftakt: erste Trainingswoche nach dem Wochenplan

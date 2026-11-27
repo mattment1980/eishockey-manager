@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Version des Spielstand-Formats. Bei Änderungen erhöhen und Migration ergänzen. */
-export const SCHEMA_VERSION = 14;
+export const SCHEMA_VERSION = 15;
 
 /** Interne Attributskala 1–200 (Anzeige 1–20). */
 export const Rating = z.number().int().min(1).max(200);
@@ -276,6 +276,8 @@ export const StaffSchema = z.object({
     scouting: Rating,
     /** Medizin (Arzt, Physiotherapeut, Athletiktrainer) */
     medical: Rating.default(60),
+    /** Vermarktung und Verhandlung (Geschäftsführer) */
+    business: Rating.default(60),
   }),
   traits: z.array(TraitSchema),
   /** Scouting-Region (nur Scouts) */
@@ -326,6 +328,77 @@ export const TrainingSchema = z.object({
   weeks: z.number().default(0),
 });
 export type Training = z.infer<typeof TrainingSchema>;
+
+// ---------- Sponsoring ----------
+
+export const SPONSOR_SLOTS = ['main', 'sleeve', 'pants', 'helmet', 'ice', 'boards', 'naming', 'outfitter', 'business'] as const;
+export const SponsorSlotSchema = z.enum(SPONSOR_SLOTS);
+export type SponsorSlot = z.infer<typeof SponsorSlotSchema>;
+export const SPONSOR_TYPES = ['mittelstand', 'konzern', 'brauerei', 'autohaus', 'bank', 'startup'] as const;
+export const SponsorTypeSchema = z.enum(SPONSOR_TYPES);
+export type SponsorType = z.infer<typeof SponsorTypeSchema>;
+export const SponsorBonusSchema = z.object({
+  kind: z.enum(['playoffs', 'semifinal', 'title', 'top6', 'attendance']),
+  amount: z.number(),
+  /** bei 'attendance': Zuschauerschnitt (Anteil der Halle) */
+  threshold: z.number().optional(),
+});
+export type SponsorBonus = z.infer<typeof SponsorBonusSchema>;
+
+/** Laufender Sponsorenvertrag */
+export const SponsorDealSchema = z.object({
+  id: z.string(),
+  slot: SponsorSlotSchema,
+  name: z.string(),
+  type: SponsorTypeSchema,
+  /** Grundbetrag pro Saison (€) */
+  base: z.number(),
+  bonuses: z.array(SponsorBonusSchema).default([]),
+  /** Pflichttermine pro Saison und davon erledigt */
+  termine: z.number().int().default(0),
+  termineDone: z.number().int().default(0),
+  /** läuft bis einschließlich dieser Saison (Startjahr) */
+  untilSeason: z.number().int(),
+  /** Zufriedenheit 0–100 */
+  satisfaction: z.number().default(60),
+  /** Ausstieg bei Abstieg */
+  relegationExit: z.boolean().default(false),
+});
+export type SponsorDeal = z.infer<typeof SponsorDealSchema>;
+
+/** Angebot für eine freie Fläche (verhandelbar in bis zu 3 Runden) */
+export const SponsorOfferSchema = z.object({
+  id: z.string(),
+  slot: SponsorSlotSchema,
+  name: z.string(),
+  type: SponsorTypeSchema,
+  base: z.number(),
+  bonuses: z.array(SponsorBonusSchema).default([]),
+  termine: z.number().int(),
+  years: z.number().int(),
+  relegationExit: z.boolean().default(false),
+  /** verdeckte Schmerzgrenze des Partners (Grundbetrag bei gleichen Terminen) */
+  limit: z.number(),
+  /** Verhandlungsrunde 0–3 */
+  round: z.number().int().default(0),
+  /** letzte Antwort des Partners */
+  reply: z.string().optional(),
+  /** gilt bis */
+  until: z.string(),
+});
+export type SponsorOffer = z.infer<typeof SponsorOfferSchema>;
+
+export const ClubSponsorsSchema = z.object({
+  deals: z.array(SponsorDealSchema).default([]),
+  offers: z.array(SponsorOfferSchema).default([]),
+  /** Geschäftsführer verhandelt selbst */
+  delegate: z.boolean().default(false),
+  /** Leitlinie für den Geschäftsführer */
+  strategy: z.enum(['safe', 'balanced', 'bonus']).default('balanced'),
+  /** in dieser Saison ausgezahlte Boni (Anzeige) */
+  paidBonus: z.number().default(0),
+});
+export type ClubSponsors = z.infer<typeof ClubSponsorsSchema>;
 
 // ---------- Events (Termine und Zufallsereignisse) ----------
 
@@ -520,6 +593,8 @@ export const ClubSchema = z.object({
   mood: ClubMoodSchema.default({}),
   /** Termine und Zufallsereignisse */
   events: ClubEventsSchema.default({}),
+  /** Sponsoren: Verträge, Angebote, Geschäftsführer-Leitlinie */
+  sponsors: ClubSponsorsSchema.default({}),
 });
 export type Club = z.infer<typeof ClubSchema>;
 

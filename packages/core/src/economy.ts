@@ -2,6 +2,7 @@ import type { World, Club, Fixture, ClubProfile } from '@ehm/schema';
 import { hash01, monthKey, monthsBetween, nextMonth } from './calendar.ts';
 import { teamStrength } from './lineup.ts';
 import { perkCost } from './market.ts';
+import { sponsorAnnual, sponsorMonth, sponsorSeasonEnd } from './sponsors.ts';
 
 /**
  * Wirtschaft (Basis): Ticketing, Catering, Sponsoren, Medien, Gehälter, Halle, Reisen, Verwaltung.
@@ -110,8 +111,6 @@ function book(club: Club, month: string, cat: LedgerCategory, amount: number): C
 
 /** Zuschlag auf die Hallenauslastung: Fanstimmung (±10 % der Halle) und Event-Bonus (z. B. Autogrammstunde) */
 export const fanFillBonus = (c: Club) => ((c.mood.fans - 50) / 50) * 0.1 + (c.events.attendance?.pct ?? 0);
-/** Faktor auf die Sponsoreneinnahmen aus der Sponsorenzufriedenheit (±8 %) */
-export const sponsorFactor = (c: Club) => 1 + ((c.mood.sponsors - 50) / 50) * 0.08;
 
 /** Zuschauerzahl eines Heimspiels (deterministisch je Spiel). */
 export function attendanceFor(world: World, fixture: Fixture, place: number | null): number {
@@ -156,7 +155,7 @@ export function closeMonth(world: World, month: string, place: (clubId: string) 
     let x = book(c, month, 'salaries', -pay.players / 12);
     if (pay.perks) x = book(x, month, 'perks', -pay.perks / 12);
     x = book(x, month, 'staff', -pay.staff / 12);
-    x = book(x, month, 'sponsors', (c.finances.sponsorIncome / 12) * sponsorFactor(c));
+    x = book(x, month, 'sponsors', sponsorAnnual(c, world.season) / 12);
     x = book(x, month, 'media', c.finances.mediaIncome / 12);
     x = book(x, month, 'admin', -adminPerMonth(world, c));
     // Vorstand
@@ -174,7 +173,11 @@ export function closeMonth(world: World, month: string, place: (clubId: string) 
 /** Alle Monatsabschlüsse zwischen zwei Daten. */
 export function closeMonthsBetween(world: World, fromIso: string, toIso: string, place: (clubId: string) => number | null): World {
   let w = world;
-  for (const m of monthsBetween(monthKey(fromIso), monthKey(toIso))) w = closeMonth(w, m, place);
+  for (const m of monthsBetween(monthKey(fromIso), monthKey(toIso))) {
+    w = closeMonth(w, m, place);
+    // Sponsoren: Zufriedenheit, Ausstiege, Angebote für freie Flächen
+    w = sponsorMonth(w, m, place, (c) => (c.seasonGoal ? GOAL_PLACE[c.seasonGoal] : null));
+  }
   return w;
 }
 
@@ -197,7 +200,9 @@ export function evaluateSeason(world: World): World {
     if (bonus) x = book(x, monthKey(world.date), 'bonus', -bonus);
     return x;
   });
-  return { ...world, clubs };
+  // Sponsoren-Boni (Playoffs, Platzierung, Zuschauer) und fehlende Pflichttermine
+  const sp = sponsorSeasonEnd({ ...world, clubs }, reached);
+  return { ...sp.world, clubs: sp.world.clubs.map((c) => (sp.bonus.get(c.id) ? book(c, monthKey(world.date), 'sponsors', sp.bonus.get(c.id)!) : c)) };
 }
 
 export interface ForecastMonth { month: string; income: number; expense: number; balance: number; actual: boolean }
@@ -221,7 +226,7 @@ export function liquidityForecast(world: World, clubId: string): ForecastMonth[]
   }
   // Plan ab aktuellem Monat
   const pay = payrollOf(world, clubId);
-  const monthly = { inc: (club.finances.sponsorIncome + club.finances.mediaIncome) / 12, exp: (pay.players + pay.perks + pay.staff) / 12 + adminPerMonth(world, club) };
+  const monthly = { inc: (sponsorAnnual(club, world.season) + club.finances.mediaIncome) / 12, exp: (pay.players + pay.perks + pay.staff) / 12 + adminPerMonth(world, club) };
   const expFans = Math.min(1, baseFill(club)) * club.arena.capacity;
   const startMonth = out.length && out[out.length - 1].month >= current ? nextMonth(out[out.length - 1].month) : current;
   balance = running;

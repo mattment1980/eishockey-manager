@@ -5,6 +5,7 @@ import { bookExpense } from './economy.ts';
 import { addDays, daysBetween, hash01 } from './calendar.ts';
 import { pairKey, CHEM_START, hasTrait } from './chemistry.ts';
 import { mondayOf, gamesInWeek } from './training.ts';
+import { creditSponsorTermin } from './sponsors.ts';
 
 /**
  * Events (Meilenstein 10): planbare Termine und Zufallsereignisse mit Entscheidung.
@@ -90,6 +91,8 @@ export interface TerminDef {
   options?: { id: string; label: string }[];
   /** Termin braucht einen Spieler (z. B. Einzelgespräch); Filter für die Auswahl */
   subject?: (p: Player, ctx: EventCtx) => boolean;
+  /** zählt als Pflichttermin für einen Sponsor */
+  sponsorTermin?: boolean;
   /** Grund, warum der Termin diese Woche nicht geht (null = möglich) */
   blocked?: (ctx: EventCtx) => string | null;
   resolve: (ctx: EventCtx) => Outcome;
@@ -286,6 +289,7 @@ function runTermine(world: World, clubId: string, date: string): World {
     const out = def.resolve(ctx);
     w = applyEffects(w, clubId, out.effects, out.subject ? { ...ctx, subject: out.subject } : ctx);
     w = logEvent(w, clubId, { date, defId: def.id, title: def.label, text: out.text, tone: out.tone }, def.id);
+    if (def.sponsorTermin) w = creditSponsorTermin(w, clubId);
   }
   return { ...w, clubs: w.clubs.map((c) => (c.id === clubId ? { ...c, events: { ...c.events, plan: [] } } : c)) };
 }

@@ -1,6 +1,6 @@
 # Übergabe – Stand der Entwicklung
 
-Stand: 27.11.2026 · letzter Commit „Meilenstein 10: Events (Termine, Zufallsereignisse, Fan- und Sponsorenstimmung)“
+Stand: 27.11.2026 · letzter Commit „Meilenstein 11: Sponsoring (Werbeflächen, Verhandlung, Geschäftsführer)“
 
 Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst zusammen, was gebaut ist, wie der Code aufgebaut ist, was entschieden wurde und was als Nächstes kommt.
 
@@ -31,8 +31,8 @@ Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst z
 | 8b | Wochenablauf im Reiter Spieltag: Rückblick → „Woche starten“ (Training) → Spieltage der Woche | ✅ |
 | 9 | Verletzungen & medizinische Abteilung, Staff-Markt (siehe `docs/verletzungen.md`) | ✅ |
 | 10 | Events: Termine (ersetzen Trainingseinheiten) und Zufallsereignisse mit Entscheidung, Fanstimmung, Sponsorenzufriedenheit (siehe `docs/events.md`) | ✅ |
-| **11** | **Sponsoring** | **als Nächstes** |
-| 12a | Stadionbetrieb & Zuschauer: Catering, Eintrittspreise, Veranstaltungen (Sponsorenabend, Kindertag …) mit Einfluss auf die Zuschauer | geplant |
+| 11 | Sponsoring: 9 Werbeflächen, 6 Partner-Typen, Verhandlung über 3 Runden mit Pflichtterminen, Geschäftsführer (siehe `docs/sponsoring.md`) | ✅ |
+| **12a** | **Stadionbetrieb & Zuschauer: Catering, Eintrittspreise, Veranstaltungen (Sponsorenabend, Kindertag …) mit Einfluss auf die Zuschauer** | **als Nächstes** |
 | 12b | Stadionausbau | geplant |
 | nebenbei | Dominanz des stärksten Vereins, offene Kalibrierungspunkte, mehrere Spielstände, Vertragsgespräche/Transfermarkt in der Sommerpause | offen |
 | später | Multiplayer (Server, Accounts, private Ligen) – bewusst hinten angestellt (Matthias, 27.11.2026) | später |
@@ -49,12 +49,12 @@ Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst z
 
 | Paket | Inhalt |
 |---|---|
-| `packages/schema` | Datenmodell (Welt, Land, Liga, Verein, Spieler, Staff, Vertrag, Wettbewerb, Scouting, Markt, Matchplan, Coaching-Regeln, Chemie), aktuell **SCHEMA_VERSION 14** (v7: `Club.familiarity`, `World.offseason`, `FixtureResult.team`; v8: `Player.dev`, `Player.youthClub`; v9: `offseason.testDay`; v10: `offseason.reports` = Phasenberichte; v11: `Club.training`; v12: `Player.career`, `World.archive`; v13: `Player.injury`, `Player.injuries`, Staff-Rollen Arzt/Physio/Athletik, `Staff.ratings.medical`; v14: `Club.mood`, `Club.events`) |
-| `packages/core` | Spiellogik: `engine/` (`match.ts` = Zustand und Ablauf; Bereiche als Methoden in `lines`, `rules`, `modifiers`, `phases`, `shots`, `penalties`, `shootout`; dazu `state`, `types`, `constants`), `competition.ts` (Spielplan, Serien), `standings.ts` (Tabelle, Form, Teamstatistik), `matchday.ts` (Ablauf eines Spieltags), `economy.ts`, `scouting.ts`, `market.ts`, `coaching.ts`, `chemistry.ts`, `condition.ts` (Fitness & Form), `familiarity.ts` (Taktik-Eingespieltheit), `offseason.ts` (Phasen, Trainingslager), `board.ts` (Saisonbilanz des Vorstands), `phaseReports.ts` (Kurzberichte der Sommerpause), `training.ts` (Wochenplan, Co-Trainer, Einzeltraining), `history.ts` (Saisonarchiv), `injuries.ts` (Verletzungen), `staff.ts` (Staff-Markt), `events.ts` + `eventCatalog.ts` (Termine, Zufallsereignisse, Stimmung), `lineup.ts`, `ratings.ts` (u. a. `effectiveRating`, `talentStars`) |
-| `packages/data` | Weltgenerator, Namen, Import/Export + Migration v1→v14 (`io.ts`), CSV mit Spaltenzuordnung (`csv.ts`), Datensatz-Neuaufbau (`rebuild.ts`), Nachwuchsjahrgang (`youth.ts`), Saisonwechsel (`transition.ts`), Sommerpause-Ablauf (`offseason.ts`) |
+| `packages/schema` | Datenmodell (Welt, Land, Liga, Verein, Spieler, Staff, Vertrag, Wettbewerb, Scouting, Markt, Matchplan, Coaching-Regeln, Chemie), aktuell **SCHEMA_VERSION 15** (v7: `Club.familiarity`, `World.offseason`, `FixtureResult.team`; v8: `Player.dev`, `Player.youthClub`; v9: `offseason.testDay`; v10: `offseason.reports` = Phasenberichte; v11: `Club.training`; v12: `Player.career`, `World.archive`; v13: `Player.injury`, `Player.injuries`, Staff-Rollen Arzt/Physio/Athletik, `Staff.ratings.medical`; v14: `Club.mood`, `Club.events`; v15: `Club.sponsors`, `Staff.ratings.business`) |
+| `packages/core` | Spiellogik: `engine/` (`match.ts` = Zustand und Ablauf; Bereiche als Methoden in `lines`, `rules`, `modifiers`, `phases`, `shots`, `penalties`, `shootout`; dazu `state`, `types`, `constants`), `competition.ts` (Spielplan, Serien), `standings.ts` (Tabelle, Form, Teamstatistik), `matchday.ts` (Ablauf eines Spieltags), `economy.ts`, `scouting.ts`, `market.ts`, `coaching.ts`, `chemistry.ts`, `condition.ts` (Fitness & Form), `familiarity.ts` (Taktik-Eingespieltheit), `offseason.ts` (Phasen, Trainingslager), `board.ts` (Saisonbilanz des Vorstands), `phaseReports.ts` (Kurzberichte der Sommerpause), `training.ts` (Wochenplan, Co-Trainer, Einzeltraining), `history.ts` (Saisonarchiv), `injuries.ts` (Verletzungen), `staff.ts` (Staff-Markt), `events.ts` + `eventCatalog.ts` (Termine, Zufallsereignisse, Stimmung), `sponsors.ts` (Sponsoring), `lineup.ts`, `ratings.ts` (u. a. `effectiveRating`, `talentStars`) |
+| `packages/data` | Weltgenerator, Namen, Import/Export + Migration v1→v15 (`io.ts`), CSV mit Spaltenzuordnung (`csv.ts`), Datensatz-Neuaufbau (`rebuild.ts`), Nachwuchsjahrgang (`youth.ts`), Saisonwechsel (`transition.ts`), Sommerpause-Ablauf (`offseason.ts`) |
 | `apps/web` | Oberfläche (8 Reiter: Verein, Kader, Reihen, Taktik, Training, Staff, Spieltag, Liga); `store.tsx` = Spielstand mit Aktions-Warteschlange (Eingaben während einer Simulation werden danach erneut angewendet), Export/Import als Datei; `ui.tsx` = globale Fenster (`components/PlayerProfile`, `ClubSheet`, `HoverLayer`), `PlayerName`/`ClubName` für klickbare Namen, `data-tip` für Tooltips; CSS in `styles/` (base, views, components, features) |
 | `apps/sim-cli` | `pnpm sim generate | match | season | calibrate | seasons` |
-| `tests/` | 58 Tests in 7 Dateien (world, engine, season, market, team, development, data) |
+| `tests/` | 61 Tests in 7 Dateien (world, engine, season, market, team, development, data) |
 
 ### Ablauf eines Spieltags (`playDay` in `matchday.ts`)
 
@@ -136,6 +136,13 @@ Monate abschließen → Entwicklung → **Training der Woche** (inkl. Überlastu
 - Neue Werte Fanstimmung (Zuschauer bis ±10 % der Halle) und Sponsorenzufriedenheit (Sponsoreneinnahmen ±8 %), Anzeige im Reiter Verein; „Vereinsleben“ listet die Ergebnisse.
 - Langzeit-Balance unverändert (`pnpm sim seasons 10`).
 
+**Meilenstein 11 – Sponsoring (27.11.2026, Details `docs/sponsoring.md`):**
+- Entscheidungen Matthias: 7 Bereiche (9 Flächen), Verhandeln über 3 Runden, Geschäftsführer gleich mit, Pflichttermine Teil der Verhandlung.
+- Verträge je Fläche mit Grundbetrag, Boni (Playoffs, Halbfinale, Titel, Top 6, Zuschauerschnitt), Pflichtterminen, Laufzeit, Abstiegsklausel; sechs Partner-Typen mit eigenen Wünschen und eigener Zufriedenheit. Daten und Ablauf in `core/sponsors.ts` (`SLOT`, `TYPE`, `SPON`).
+- Einnahmen kommen jetzt aus den Verträgen (`sponsorAnnual`) statt aus `finances.sponsorIncome`; Boni in der Saisonbilanz. Pflichttermine über „Sponsorenabend“/„Werbedreh“.
+- Sommerpause: Angebote in den Vertragsgesprächen (`sponsorSummer`), Saisonwechsel unterschreibt Offenes (`sponsorKickoff`, Notlösung für leere Flächen). Geschäftsführer (`manager`, `ratings.business`) auf dem Staff-Markt (`MARKET_ROLES`), kann delegiert verhandeln.
+- Reiter Verein › Sponsoren. Langzeit-Balance unverändert.
+
 **Saisonwechsel (bisher):** Verträge, Klauseln, Karriereende, neue freie Spieler, KI-Kaderauffüllung, Nachwuchs für den menschlichen Verein, neue Aufstellungen, Chemie-Saat, Moral pendelt sich ein. Alterung/Entwicklung siehe Meilenstein 7.
 
 ### Sommerpause – Ausbaustand der Phasen
@@ -177,10 +184,10 @@ Offene Punkte: Tore ins leere Tor zu selten (0,15 statt 0,3–0,5 je Spiel), Üb
 
 ## Nächste Schritte
 
-1. **Meilenstein 11 – Sponsoring** (baut auf der Sponsorenzufriedenheit auf)
+1. **Meilenstein 12a – Stadionbetrieb & Zuschauer** (baut auf Fanstimmung und Sponsoren auf; Sponsorenevent als Pflichttermin), danach 12b Stadionausbau
 2. Offen aus dem Training: Testspiele in der Vorbereitung, Trainingslager mit Ort/Kosten, Positionsumschulung
 3. Offen aus M9: Verletzung im Spiel mit Ticker, Staff-Vertragsgespräche
 4. Offen aus M10: Eiszeit-Versprechen nachverfolgen, Sperre automatisch, Events für KI-Vereine
-5. Meilenstein 12a/b – Stadionbetrieb & Zuschauer (baut auf der Fanstimmung auf), danach Stadionausbau
+5. Offen aus M11: Sponsorenzeile in den Phasenberichten, Partner mit Bedingungen
 6. Nebenbei: Dominanz des stärksten Vereins, Kalibrierung (leeres Tor, Überzahl- und Fangquote), mehrere Spielstände, Vertragsgespräche und Transfermarkt in der Sommerpause
 7. Multiplayer später
