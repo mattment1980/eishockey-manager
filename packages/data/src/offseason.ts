@@ -1,5 +1,9 @@
 import type { World } from '@ehm/schema';
-import { OFFSEASON_PHASES, phaseDate, marketAdvance, daysBetween, trainingCamp, vacation, developSummer, buildTestDay, releaseRemainingYouth, resetDevRef } from '@ehm/core';
+import type { PhaseReport } from '@ehm/schema';
+import {
+  OFFSEASON_PHASES, phaseDate, marketAdvance, daysBetween, trainingCamp, vacation, developSummer, buildTestDay, releaseRemainingYouth, resetDevRef,
+  applySeasonReviews, talksReport, transferReport, summerReport, kickoffReport, trainingReport,
+} from '@ehm/core';
 import { seasonTransition } from './transition.ts';
 import { youthIntake } from './youth.ts';
 
@@ -20,9 +24,24 @@ export function advanceOffseason(world: World): World {
   if (next >= OFFSEASON_PHASES.length) return { ...w, offseason: null };
   const ph = OFFSEASON_PHASES[next];
   const target = phaseDate(oldSeason, next)!;
+  const human = world.clubs.find((c) => c.controller.type === 'human');
+  const reports: Record<string, PhaseReport> = { ...(world.offseason?.reports ?? {}) };
+  /** Bericht der neuen Phase für den Verein des Managers ablegen */
+  const done = (out: World, testDay = world.offseason?.testDay, make?: (hid: string) => PhaseReport | null): World => {
+    const r = human && make ? make(human.id) : null;
+    if (r) reports[ph.id] = r;
+    return { ...out, offseason: { phase: next, reports, ...(testDay ? { testDay } : {}) } };
+  };
   if (!ph.newSeason) {
     w = marketAdvance(w, Math.max(0, daysBetween(w.date, target)));
-    if (ph.id === 'review') w = vacation(w);
+    if (ph.id === 'review') {
+      w = vacation(w);
+      // Saisonbilanz: Der Vorstand bewertet alle Vereine und passt das Vertrauen an
+      const { world: rated, reviews } = applySeasonReviews(w);
+      return done(rated, undefined, (hid) => reviews.get(hid)?.report ?? null);
+    }
+    if (ph.id === 'talks') return done(w, undefined, (hid) => talksReport(w, hid));
+    if (ph.id === 'transfer') return done(w, undefined, (hid) => transferReport(w, hid));
     let testDay = world.offseason?.testDay;
     if (ph.id === 'summer') {
       // Großer Entwicklungsschritt: Wachstum der Jungen, Abbau der Älteren.
@@ -30,7 +49,6 @@ export function advanceOffseason(world: World): World {
       const prev = w;
       const { world: dev, report } = developSummer(w, oldSeason + 1);
       w = dev;
-      const human = w.clubs.find((c) => c.controller.type === 'human');
       if (human) {
         testDay = buildTestDay(prev, w, report, human.id);
         w = { ...w, market: { ...w.market, news: [{ date: target, kind: 'info' as const, mine: true, text: 'Tag der Leistungstests: Die Ergebnisse des Sommertrainings liegen vor (Spieltag › Sommerpause).' }, ...w.market.news].slice(0, 120) } };
@@ -38,15 +56,20 @@ export function advanceOffseason(world: World): World {
       // Nachwuchsjahrgang für alle Vereine
       w = youthIntake(w, oldSeason + 1);
     }
-    return { ...w, offseason: { phase: next, ...(testDay ? { testDay } : {}) } };
+    const out = w;
+    return done(out, testDay, (hid) => summerReport(out, hid, testDay?.clubId === hid ? testDay : undefined));
   }
   if (ph.id === 'kickoff') {
+    const prev = w;
     w = releaseRemainingYouth(w, target);
     w = resetDevRef(seasonTransition(w));
     w = trainingCamp(w, 0.3, `${w.season}:auftakt`);
-    return { ...w, offseason: { phase: next, ...(world.offseason?.testDay ? { testDay: world.offseason.testDay } : {}) } };
+    const out = w;
+    return done(out, undefined, (hid) => kickoffReport(prev, out, hid));
   }
+  const prev = w;
   w = marketAdvance(w, Math.max(0, daysBetween(w.date, target)));
   w = trainingCamp(w, ph.id === 'camp' ? 1 : 0.6, `${w.season}:${ph.id}`);
-  return { ...w, offseason: { phase: next, ...(world.offseason?.testDay ? { testDay: world.offseason.testDay } : {}) } };
+  const out = w;
+  return done(out, undefined, (hid) => trainingReport(prev, out, hid, ph.id === 'preseason'));
 }

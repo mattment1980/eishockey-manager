@@ -1,6 +1,6 @@
 # Übergabe – Stand der Entwicklung
 
-Stand: 27.11.2026 · letzter Commit „M7 Teil 2: Datenwerkstatt, CSV-Import/-Export“
+Stand: 27.11.2026 · letzter Commit „Sommerpause: Bericht je Phase, Saisonbilanz des Vorstands“
 
 Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst zusammen, was gebaut ist, wie der Code aufgebaut ist, was entschieden wurde und was als Nächstes kommt.
 
@@ -42,16 +42,16 @@ Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst z
 
 | Paket | Inhalt |
 |---|---|
-| `packages/schema` | Datenmodell (Welt, Land, Liga, Verein, Spieler, Staff, Vertrag, Wettbewerb, Scouting, Markt, Matchplan, Coaching-Regeln, Chemie), aktuell **SCHEMA_VERSION 8** (v7: `Club.familiarity`, `World.offseason`, `FixtureResult.team`; v8: `Player.dev`, `Player.youthClub`) |
-| `packages/core` | Spiellogik: `engine/` (`match.ts` = Zustand und Ablauf; Bereiche als Methoden in `lines`, `rules`, `modifiers`, `phases`, `shots`, `penalties`, `shootout`; dazu `state`, `types`, `constants`), `competition.ts` (Spielplan, Serien), `standings.ts` (Tabelle, Form, Teamstatistik), `matchday.ts` (Ablauf eines Spieltags), `economy.ts`, `scouting.ts`, `market.ts`, `coaching.ts`, `chemistry.ts`, `condition.ts` (Fitness & Form), `familiarity.ts` (Taktik-Eingespieltheit), `offseason.ts` (Phasen, Trainingslager), `lineup.ts`, `ratings.ts` (u. a. `effectiveRating`, `talentStars`) |
-| `packages/data` | Weltgenerator, Namen, Import/Export + Migration v1→v8 (`io.ts`), CSV mit Spaltenzuordnung (`csv.ts`), Datensatz-Neuaufbau (`rebuild.ts`), Nachwuchsjahrgang (`youth.ts`), Saisonwechsel (`transition.ts`), Sommerpause-Ablauf (`offseason.ts`) |
+| `packages/schema` | Datenmodell (Welt, Land, Liga, Verein, Spieler, Staff, Vertrag, Wettbewerb, Scouting, Markt, Matchplan, Coaching-Regeln, Chemie), aktuell **SCHEMA_VERSION 10** (v7: `Club.familiarity`, `World.offseason`, `FixtureResult.team`; v8: `Player.dev`, `Player.youthClub`; v9: `offseason.testDay`; v10: `offseason.reports` = Phasenberichte) |
+| `packages/core` | Spiellogik: `engine/` (`match.ts` = Zustand und Ablauf; Bereiche als Methoden in `lines`, `rules`, `modifiers`, `phases`, `shots`, `penalties`, `shootout`; dazu `state`, `types`, `constants`), `competition.ts` (Spielplan, Serien), `standings.ts` (Tabelle, Form, Teamstatistik), `matchday.ts` (Ablauf eines Spieltags), `economy.ts`, `scouting.ts`, `market.ts`, `coaching.ts`, `chemistry.ts`, `condition.ts` (Fitness & Form), `familiarity.ts` (Taktik-Eingespieltheit), `offseason.ts` (Phasen, Trainingslager), `board.ts` (Saisonbilanz des Vorstands), `phaseReports.ts` (Kurzberichte der Sommerpause), `lineup.ts`, `ratings.ts` (u. a. `effectiveRating`, `talentStars`) |
+| `packages/data` | Weltgenerator, Namen, Import/Export + Migration v1→v10 (`io.ts`), CSV mit Spaltenzuordnung (`csv.ts`), Datensatz-Neuaufbau (`rebuild.ts`), Nachwuchsjahrgang (`youth.ts`), Saisonwechsel (`transition.ts`), Sommerpause-Ablauf (`offseason.ts`) |
 | `apps/web` | Oberfläche (7 Reiter: Verein, Kader, Reihen, Taktik, Staff, Spieltag, Liga); `store.tsx` = Spielstand mit Aktions-Warteschlange (Eingaben während einer Simulation werden danach erneut angewendet), Export/Import als Datei; `ui.tsx` = globale Fenster (`components/PlayerProfile`, `ClubSheet`, `HoverLayer`), `PlayerName`/`ClubName` für klickbare Namen, `data-tip` für Tooltips; CSS in `styles/` (base, views, components, features) |
 | `apps/sim-cli` | `pnpm sim generate | match | season | calibrate | seasons` |
-| `tests/` | 45 Tests in 7 Dateien (world, engine, season, market, team, development, data) |
+| `tests/` | 46 Tests in 7 Dateien (world, engine, season, market, team, development, data) |
 
 ### Ablauf eines Spieltags (`playDay` in `matchday.ts`)
 
-Monate abschließen → Spiele simulieren → Einnahmen buchen → Moral & Chemie → **Fitness, Form, Taktik-Eingespieltheit** → Scouting → Markt-Tick → nächsten Spieltag vorbereiten → **Erholung bis zum nächsten Spieltermin** (Fitness zeigt immer den Stand zum Anpfiff) → am Saisonende Saisonbewertung, Monate bis 1. August abschließen, Sommerpause Phase 0.
+Monate abschließen → Spiele simulieren → Einnahmen buchen → Moral & Chemie → **Fitness, Form, Taktik-Eingespieltheit** → Scouting → Markt-Tick → nächsten Spieltag vorbereiten → **Erholung bis zum nächsten Spieltermin** (Fitness zeigt immer den Stand zum Anpfiff) → am Saisonende Prämien, Monate bis 1. August abschließen, Sommerpause Phase 0.
 
 ## Was im Spiel steckt
 
@@ -92,6 +92,11 @@ Monate abschließen → Spiele simulieren → Einnahmen buchen → Moral & Chemi
 - **Langzeit-Balance** (`pnpm sim seasons 10`): Ø Spielerstärke 10,2 → 10,4, Top 50 12,2 → 11,9, Ø Alter 26,5–27,3, Vereinsstärke 10–12 über 10 Saisons stabil. Beobachtung: Falkenstein (Profil „corporate“, höchstes Grundniveau) wird in der Simulation fast jedes Jahr Meister – prüfen, ob Etat/Markt die Dominanz zu wenig bremsen.
 - **Datenwerkstatt** (Startbildschirm und Verein › Spielstand): Vereine (Name, Kürzel, Farben, Halle, Profil, Etat) und Spieler (alle Werte, Vertrag, Charakter, Potenzial; anlegen/löschen) vor Spielbeginn; im laufenden Spiel nur Namen/Farben. Vorlage im Browser speichern und bei der Vereinswahl laden.
 - **Import/Export:** CSV für Spieler und Vereine (Trennzeichen automatisch, Werte 1–20, deutsche/englische Kopfzeilen automatisch erkannt, frei zuordenbar), Prüfung je Zeile, Vorschau, Zusammenführen (über ID oder Name) oder Ersetzen (vor Spielbeginn; Vereine zeilenweise umbenennen). Einfache Listen (Name, Position, Verein, Stärke, Alter) reichen – fehlende Werte werden passend erzeugt. JSON = kompletter Datensatz.
+
+**Sommerpause: Berichte je Phase (27.11.2026):**
+- **Saisonbilanz des Vorstands** (`core/board.ts`): Noten von „sehr gut“ bis „mangelhaft“ für Sportlich (erreichte Runde gegen Saisonziel), Finanzen (Saisonergebnis im Verhältnis zum Etat, Gehaltsrahmen), Kaderplanung (Rang Kaderstärke gegen Rang Gehaltskosten), Junge Spieler (Entwicklung bis 23 J.) und Zuschauer (Auslastung gegen Erwartung). Gewichte `BOARD_WEIGHTS` (Sport 7, Finanzen 4, Kader 2, Jugend 1, Zuschauer 1 Punkt je Notenstufe, gedeckelt ±25) ergeben die Veränderung des Vorstandsvertrauens; Gesamturteil in einem Satz („Sportlich stark – aber finanziell zu teuer erkauft.“) und Aussage zur Position des Managers. Ersetzt die frühere pauschale ±12 nach dem letzten Spiel; gilt für alle Vereine der Liga.
+- **Kurzberichte** (`core/phaseReports.ts`) für den eigenen Verein: Vertragsgespräche (verlängert / offen / gehen / Neuzugänge), Transfermarkt (Zu- und Abgänge, ohne Anschlussvertrag, Bilanz, größte Wechsel der Liga), Sommertraining (Kaderstärke vorher/nachher, Gewinner/Verlierer, Nachwuchsjahrgang), Saisonwechsel (Kadergröße, Ausländerlizenzen, Gehaltsrahmen, Rang Kaderstärke, neues Ziel, Karriereenden), Trainingslager und Vorbereitung (Reihen-Chemie und Taktik-Eingespieltheit vorher/nachher, Experten-Tipp mit Favoriten).
+- Ablage in `world.offseason.reports` (Spieler als IDs, Anzeige über `PlayerName`); Anzeige als Karte unter der Phase, frühere Berichte per Klick auf die Zeitleiste.
 
 **Saisonwechsel (bisher):** Verträge, Klauseln, Karriereende, neue freie Spieler, KI-Kaderauffüllung, Nachwuchs für den menschlichen Verein, neue Aufstellungen, Chemie-Saat, Moral pendelt sich ein. **Noch nicht:** Alterung/Entwicklung der Spielerwerte.
 

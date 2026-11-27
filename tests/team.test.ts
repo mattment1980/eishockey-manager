@@ -104,6 +104,24 @@ describe('Zustand, Eingespieltheit, Sommerpause (vor M7)', async () => {
     expect(w.competition!.day).toBe(1);
   });
 
+  it('Sommerpause: Vorstand bewertet die Saison, jede Phase hat einen Bericht', () => {
+    let w = data.generateWorld(82);
+    const me = w.clubs[0].id;
+    w = { ...w, clubs: w.clubs.map((c) => (c.id === me ? { ...c, controller: { type: 'human' as const } } : c)) };
+    w = core.playDays(w, 400);
+    const before = w.clubs.find((c) => c.id === me)!.boardConfidence;
+    w = data.advanceOffseason(w);
+    const review = w.offseason!.reports.review!;
+    expect(review.lines.map((l) => l.label)).toEqual(expect.arrayContaining(['Sportlich', 'Finanzen', 'Kaderplanung', 'Zuschauer']));
+    expect(review.notes[0]).toContain(`${before} %`);
+    expect(w.clubs.find((c) => c.id === me)!.boardConfidence).toBe(core.seasonReview({ ...w, clubs: w.clubs.map((c) => (c.id === me ? { ...c, boardConfidence: before } : c)) }, me).confidenceAfter);
+    while (w.offseason && w.offseason.phase < 7) w = data.advanceOffseason(w);
+    expect(Object.keys(w.offseason!.reports)).toEqual(['review', 'talks', 'transfer', 'summer', 'kickoff', 'camp', 'preseason']);
+    for (const r of Object.values(w.offseason!.reports)) expect(r.headline.length).toBeGreaterThan(5);
+    if (process.env.SHOW_REPORTS) for (const [k, r] of Object.entries(w.offseason!.reports)) console.log(k, JSON.stringify(r, null, 1));
+    expect(WorldSchema.safeParse(w).success).toBe(true);
+  });
+
   it('Talent ist je nach Scouting exakt, als Spanne oder unbekannt', () => {
     const w = data.generateWorld(81);
     const clubId = w.clubs[0].id;

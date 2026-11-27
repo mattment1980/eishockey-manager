@@ -114,3 +114,26 @@ button.trait { cursor: pointer; font-family: inherit; }
 .td-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; text-align: left; }
 .td-columns h4 { margin: 0 0 6px; }
 @media (prefers-reduced-motion: reduce) { .td-player, .td-result, .td-banner, .td-number.measuring { animation: none; } }
+
+/* Sommerpause: Kurzbericht je Phase */
+.phases li.has-report { cursor: pointer; }
+.phases li.has-report:hover { border-color: var(--ice); }
+.phases li.viewing { outline: 2px solid color-mix(in srgb, var(--ice) 60%, transparent); outline-offset: 1px; }
+.phase-report { border-left: 4px solid var(--line); }
+.phase-report.tone-good { border-left-color: var(--good); }
+.phase-report.tone-mixed { border-left-color: var(--warn); }
+.phase-report.tone-bad { border-left-color: var(--goal); }
+.phase-report h3 { margin: 2px 0 10px; }
+.pr-lines { margin: 0; display: grid; gap: 6px; }
+.pr-line { display: grid; grid-template-columns: minmax(0, 11rem) minmax(0, 1fr); gap: 10px; align-items: baseline; padding: 4px 0; border-top: 1px solid var(--line); }
+.pr-line:first-child { border-top: 0; }
+.pr-line dt { color: var(--muted); font-size: 0.85rem; }
+.pr-line dd { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; min-width: 0; }
+.pr-val { font-weight: 800; }
+.pr-val.t-good { color: var(--good); }
+.pr-val.t-mixed { color: var(--warn); }
+.pr-val.t-bad { color: var(--goal); }
+.pr-players { flex-basis: 100%; }
+.pr-notes { margin: 10px 0 0; padding-left: 18px; color: var(--muted); }
+.pr-notes li + li { margin-top: 3px; }
+@media (max-width: 560px) { .pr-line { grid-template-columns: minmax(0, 1fr); gap: 2px; } }

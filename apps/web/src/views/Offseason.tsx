@@ -5,6 +5,7 @@ import { Crest } from '../components/Crest.tsx';
 import { FamiliaritySummary } from './Tactics.tsx';
 import { YouthDecisions } from './Youth.tsx';
 import { TestDayShow } from '../components/testday/TestDayShow.tsx';
+import { PhaseReportCard } from '../components/PhaseReportCard.tsx';
 import { useEffect, useState } from 'react';
 
 /** Sommerpause in Phasen: Saisonbilanz, Verhandlungen, Saisonwechsel, Trainingslager, Vorbereitung */
@@ -13,6 +14,10 @@ export function Offseason() {
   const phase = offseasonPhase(world) ?? 0;
   const testDay = world.offseason?.testDay;
   const [showTests, setShowTests] = useState(false);
+  const reports = world.offseason?.reports ?? {};
+  // angezeigter Bericht: standardmäßig der der aktuellen Phase, ältere per Klick auf die Zeitleiste
+  const [viewing, setViewing] = useState<string | null>(null);
+  useEffect(() => setViewing(null), [phase]);
   // Beim Erreichen des Sommertrainings öffnet sich der Tag der Leistungstests von selbst
   useEffect(() => { if (testDay && !testDay.seen) setShowTests(true); }, [testDay?.seen, testDay?.lines.length]);
   if (!club) return null;
@@ -21,6 +26,8 @@ export function Offseason() {
   const next = OFFSEASON_PHASES[phase + 1];
   const oldSeason = ph.newSeason ? world.season - 1 : world.season;
   const nextLabel = next ? `Weiter: ${next.name}` : 'Saison starten';
+  const shown = viewing ?? (reports[ph.id] ? ph.id : null);
+  const shownPhase = OFFSEASON_PHASES.find((p) => p.id === shown);
   const firstGame = !next || ph.newSeason ? comp.fixtures.find((f) => f.day === 1)?.date : null;
 
   return (
@@ -33,7 +40,9 @@ export function Offseason() {
       <section className="card">
         <ol className="phases">
           {OFFSEASON_PHASES.map((p, i) => (
-            <li key={p.id} className={i < phase ? 'done' : i === phase ? 'now' : ''} data-tip={`${p.name}${phaseDate(oldSeason, i) ? ` · ab ${formatDate(phaseDate(oldSeason, i)!)}` : ''}: ${p.text}`}>
+            <li key={p.id} className={`${i < phase ? 'done' : i === phase ? 'now' : ''}${reports[p.id] ? ' has-report' : ''}${shown === p.id ? ' viewing' : ''}`}
+              onClick={reports[p.id] ? () => setViewing(p.id) : undefined}
+              data-tip={`${p.name}${phaseDate(oldSeason, i) ? ` · ab ${formatDate(phaseDate(oldSeason, i)!)}` : ''}: ${p.text}${reports[p.id] ? ' – Klick zeigt den Bericht' : ''}`}>
               <i>{i < phase ? '✓' : i + 1}</i><span>{p.name}</span>
             </li>
           ))}
@@ -52,6 +61,10 @@ export function Offseason() {
         {firstGame && <p className="muted small">Erster Spieltag: {formatDate(firstGame, true)}</p>}
         <button className="btn primary big block" onClick={advanceOffseason}>{nextLabel}</button>
       </section>
+
+      {shown && shownPhase && reports[shown] && (
+        <PhaseReportCard title={`${shown === 'review' ? 'Der Vorstand bewertet die Saison' : `Bericht: ${shownPhase.name}`}${shown !== ph.id ? ' (frühere Phase)' : ''}`} report={reports[shown]} />
+      )}
 
       {testDay && (
         <section className={`card td-teaser ${testDay.seen ? '' : 'fresh'}`}>

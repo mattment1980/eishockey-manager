@@ -19,3 +19,5 @@ export * from './standings.ts';
 export * from './matchday.ts';
 export * from './development.ts';
 export * from './youth.ts';
+export * from './board.ts';
+export * from './phaseReports.ts';

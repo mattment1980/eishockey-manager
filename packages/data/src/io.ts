@@ -49,6 +49,10 @@ export function migrateWorld(raw: unknown): unknown {
     // Tag der Leistungstests: optionales Feld in der Sommerpause
     w.schemaVersion = 9;
   }
+  if (w.schemaVersion === 9) {
+    // Phasenberichte der Sommerpause über Standardwert
+    w.schemaVersion = 10;
+  }
   void SCHEMA_VERSION;
   return w;
 }

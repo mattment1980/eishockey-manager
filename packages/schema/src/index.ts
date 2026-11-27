@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Version des Spielstand-Formats. Bei Änderungen erhöhen und Migration ergänzen. */
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
 
 /** Interne Attributskala 1–200 (Anzeige 1–20). */
 export const Rating = z.number().int().min(1).max(200);
@@ -142,6 +142,16 @@ export function makeContract(base: Pick<Contract, 'clubId' | 'salary' | 'untilSe
     ...base,
   };
 }
+
+/** Kurzbericht zu einer Phase der Sommerpause (für den Verein des Managers) */
+export const PhaseReportSchema = z.object({
+  headline: z.string(),
+  tone: z.enum(['good', 'mixed', 'bad', 'neutral']),
+  /** Bewertungszeilen, z. B. „Sportlich – gut – Ziel Halbfinale erreicht“ */
+  lines: z.array(z.object({ label: z.string(), value: z.string(), tone: z.enum(['good', 'mixed', 'bad', 'neutral']), note: z.string().optional(), players: z.array(z.string()).optional(), tags: z.array(z.string()).optional() })),
+  notes: z.array(z.string()),
+});
+export type PhaseReport = z.infer<typeof PhaseReportSchema>;
 
 /** Tag der Leistungstests: Ergebnis des Sommerschritts für den Verein des Managers */
 export const TestDaySchema = z.object({
@@ -610,6 +620,11 @@ export const WorldSchema = z.object({
   /** Chemie zwischen zwei Spielern (Schlüssel "idA|idB", sortiert), 0–100 */
   chemistry: z.record(z.number()).default({}),
   /** Sommerpause in Phasen (null = keine Sommerpause, Saison läuft) */
-  offseason: z.object({ phase: z.number().int().min(0), testDay: TestDaySchema.optional() }).nullable().default(null),
+  offseason: z.object({
+    phase: z.number().int().min(0),
+    testDay: TestDaySchema.optional(),
+    /** Kurzberichte je Phase (Schlüssel = Phasen-ID, z. B. „review“) */
+    reports: z.record(PhaseReportSchema).default({}),
+  }).nullable().default(null),
 });
 export type World = z.infer<typeof WorldSchema>;

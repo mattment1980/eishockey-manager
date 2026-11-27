@@ -150,7 +150,7 @@ export function playDay(world: World, preplayed: Record<string, MatchResult> = {
     const seasonEnd = `${w.competition!.year + 1}-08-01`;
     w = developMonths(w, w.date, seasonEnd);
     w = closeMonthsBetween(w, w.date, seasonEnd, () => null);
-    w = { ...w, offseason: { phase: 0 } };
+    w = { ...w, offseason: { phase: 0, reports: {} } };
   }
   return { world: w, results };
 }

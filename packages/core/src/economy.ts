@@ -48,7 +48,7 @@ export function payrollOf(world: World, clubId: string): { players: number; perk
   return { players, perks, staff };
 }
 
-function baseFill(club: Club): number {
+export function baseFill(club: Club): number {
   return 0.5 + 0.4 * (club.fanBase / 100);
 }
 function homeGames(world: World, clubId: string): number {
@@ -167,19 +167,13 @@ export function closeMonthsBetween(world: World, fromIso: string, toIso: string,
   return w;
 }
 
-/** Saisonbewertung durch den Vorstand nach dem letzten Spiel. */
+/** Nach dem letzten Spiel: Prämien auszahlen. */
 export function evaluateSeason(world: World): World {
   const comp = world.competition!;
   const reached = (clubId: string, round: string) => comp.series.some((s) => s.roundName === round && (s.high === clubId || s.low === clubId));
   const clubs = world.clubs.map((c) => {
-    const place = (comp.finalStandings?.indexOf(c.id) ?? 99) + 1;
-    const ok =
-      c.seasonGoal === 'title' ? reached(c.id, 'Finale')
-      : c.seasonGoal === 'semifinal' ? reached(c.id, 'Halbfinale') || reached(c.id, 'Finale')
-      : c.seasonGoal === 'quarterfinal' ? place <= 6
-      : c.seasonGoal === 'prePlayoffs' ? place <= 10
-      : comp.relegated !== c.id;
-    let x = { ...c, boardConfidence: Math.max(0, Math.min(100, c.boardConfidence + (ok ? 12 : -12))) };
+    // Das Vertrauen bewertet der Vorstand erst in der Saisonbilanz (board.ts)
+    let x = c;
     // Prämien auszahlen
     const quarter = reached(c.id, 'Viertelfinale') || reached(c.id, 'Halbfinale') || reached(c.id, 'Finale');
     let bonus = 0;
