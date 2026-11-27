@@ -58,7 +58,7 @@ export function App() {
         {tab === 'lineup' && <Lineup />}
         {tab === 'tactics' && <TacticsView />}
         {tab === 'training' && <TrainingView />}
-        {tab === 'match' && <Matchday onTraining={() => setTab('training')} />}
+        {tab === 'match' && <Matchday onTraining={() => setTab('training')} onLeague={() => setTab('league')} />}
         {tab === 'league' && <League />}
         {tab === 'staff' && <StaffView />}
         {tab === 'data' && <Workshop mode="game" onClose={() => setTab('overview')} />}

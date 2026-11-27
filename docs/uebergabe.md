@@ -33,6 +33,7 @@ Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst z
 | 10 | Events: Termine (ersetzen Trainingseinheiten) und Zufallsereignisse mit Entscheidung, Fanstimmung, Sponsorenzufriedenheit (siehe `docs/events.md`) | ✅ |
 | 11 | Sponsoring: 9 Werbeflächen, 6 Partner-Typen, Verhandlung über 3 Runden mit Pflichtterminen, Geschäftsführer (siehe `docs/sponsoring.md`) | ✅ |
 | 12a | Stadionbetrieb & Zuschauer: 3 Platzbereiche mit Preisen, Nachfragemodell, Catering (Eigenbetrieb/Pächter), Fanshop, Spieltagsaktionen, Heimvorteil aus Zuschauern (siehe `docs/stadion.md`) | ✅ |
+| UI-Runde | Spieltag-Reiter als Wochencockpit (Kopfleiste mit Aktionen, Wochenstreifen Mo–So, Kacheln) | ✅ |
 | **12b** | **Stadionausbau** | **als Nächstes** |
 | nebenbei | Dominanz des stärksten Vereins, offene Kalibrierungspunkte, mehrere Spielstände, Vertragsgespräche/Transfermarkt in der Sommerpause | offen |
 | später | Multiplayer (Server, Accounts, private Ligen) – bewusst hinten angestellt (Matthias, 27.11.2026) | später |
@@ -152,6 +153,13 @@ Monate abschließen → Entwicklung → **Training der Woche** (inkl. Überlastu
 - Fanbasis ändert sich beim Saisonwechsel (±3). Reiter Verein › Stadion (Prognose mit Faktoren, Preise mit Vorschau, Catering/Fanshop, Aktionsplan, Heimspiel-Berichte).
 - Langzeit-Balance unverändert (`pnpm sim seasons 10`); Wirtschaftsprüfung mit `npx tsx scripts/econ-check.ts 4 2026`.
 
+**Wochencockpit im Reiter Spieltag (28.11.2026, Variante A gewählt von Matthias):**
+- Feste Kopfleiste: Woche, Wettbewerbsstand, Ablauf (1 Woche planen → 2 Spiele) und nur die gerade passenden Knöpfe (Woche starten / Live gegen … / Sofort / Spieltag simulieren; bei offenem Zufallsereignis „Entscheidung offen ↓“), „Schnell weiter“ als Ausklappmenü.
+- Wochenstreifen Mo–So: Trainingseinheiten und Termine auf den spielfreien Tagen, Spiele mit Gegner und Ergebnis, nächstes Spiel hervorgehoben, Spieltagsaktion direkt am Heimspiel wählbar, Zuschauer nach dem Heimspiel.
+- Eine Zeile Rückblick (Vorwoche) bzw. Stand der Woche (Training erledigt, Fitness/Moral/Form vorher → jetzt); Planung (Training | Termine) nebeneinander nur vor dem Wochenstart.
+- Kacheln: Nächstes Spiel (Stärke, Form des Gegners, Zuschauerprognose), Tabellenausschnitt bzw. Serien in der Nachsaison, Kabine (Fitness/Moral/Form, Lazarett mit Schonen/Einsetzen). Darunter letzter Spieltag und Nachrichten (6, „alle anzeigen“). Vereinsleben steht in den Nachrichten und unter Verein.
+- Code: `views/Matchday.tsx` (Ablauf, Kopfleiste), `views/Week.tsx` (Streifen, Planung, Kacheln), Styles im Block „Spieltag-Cockpit“ in `views.css`. Live-Spiel unverändert.
+
 **Saisonwechsel (bisher):** Verträge, Klauseln, Karriereende, neue freie Spieler, KI-Kaderauffüllung, Nachwuchs für den menschlichen Verein, neue Aufstellungen, Chemie-Saat, Moral pendelt sich ein. Alterung/Entwicklung siehe Meilenstein 7.
 
 ### Sommerpause – Ausbaustand der Phasen
@@ -194,7 +202,7 @@ Offene Punkte: Tore ins leere Tor zu selten (0,15 statt 0,3–0,5 je Spiel), Üb
 
 ## Nächste Schritte
 
-1. **Als Nächstes (Reihenfolge Matthias, 28.11.2026):** Spieltag-Reiter zum aufgeräumten „Wochencockpit“ umbauen → Sommerpause ausprogrammieren (Vertragsgespräche, Transfermarkt, Trainingslager, Vorbereitungsspiele, Dauerkarten) → 12b Stadionausbau
+1. **Als Nächstes (Reihenfolge Matthias, 28.11.2026):** ~~Wochencockpit~~ (erledigt) → Sommerpause ausprogrammieren (Vertragsgespräche, Transfermarkt, Trainingslager, Vorbereitungsspiele, Dauerkarten) → 12b Stadionausbau
 2. **Meilenstein 12b – Stadionausbau** (Plätze je Bereich, Komfort, Logen, Bauzeit, Finanzierung; Nachfrage-Überhang aus 12a als Grundlage)
 3. Neu vorgemerkt (28.11.2026, später mit den offenen Punkten): **Jugendarbeit mit Investition** – mehr Geld in die Nachwuchsarbeit (Akademie, Jugendtrainer) = bessere Nachwuchsjahrgänge; **Spielfeld-Grafik im Live-Spiel** – Eisfläche parallel zum Ticker, auf der man sieht, wo sich das Spiel gerade abspielt, Schüsse und Tore als Punkte
 4. Offen aus M12a: Dauerkarten (mit Sommerpause), Spieltagsaktionen für KI-Vereine, Rivalitäten in der Datenwerkstatt, Zuschauer/Stimmung im Live-Ticker
