@@ -4,7 +4,7 @@ import {
   type SkaterAttribute, type GoalieAttribute, type StaffRole, type Manager,
 } from '@ehm/schema';
 import { Rng, clamp, autoMatchplan, beginSeason, seedChemistry, seedFamiliarity, seedDevRef, staffSalary } from '@ehm/core';
-import { DEFAULT_TACTICS, EMPTY_MARKET, makeContract, TrainingSchema, type Tactics } from '@ehm/schema';
+import { DEFAULT_TACTICS, EMPTY_MARKET, makeContract, TrainingSchema, ClubEventsSchema, type Tactics } from '@ehm/schema';
 import { NAMES, IMPORT_ORIGINS } from './names.ts';
 import { COUNTRY_DE, LEAGUE_DEL2_MODEL, CLUBS_DEL2_MODEL, BUDGET_BY_PROFILE } from './del2.ts';
 
@@ -115,6 +115,8 @@ export class WorldGenerator {
         matchplan: null,
         familiarity: {},
         training: TrainingSchema.parse({}),
+        mood: { fans: 50, sponsors: 50 },
+        events: ClubEventsSchema.parse({}),
       };
       club.matchplan = autoMatchplan(roster, { countryCode: COUNTRY_DE.code, importSlotsGame: COUNTRY_DE.rules.importSlotsGame, tactics: this.rng.pick(TACTIC_STYLES)() });
       clubs.push(club);

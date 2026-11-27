@@ -156,6 +156,8 @@ export function seasonTransition(input: World): World {
   w = seedChemistry(w, () => seedRng.next());
   // Staff: Verträge laufen weiter, Staff-Markt wird aufgefüllt
   w = ensureStaff(extendStaffContracts(w, next));
+  // Stimmung im Umfeld pendelt über den Sommer Richtung Mitte; Event-Boni verfallen
+  w = { ...w, clubs: w.clubs.map((c) => ({ ...c, mood: { fans: Math.round(50 + (c.mood.fans - 50) * 0.6), sponsors: Math.round(50 + (c.mood.sponsors - 50) * 0.6) }, events: { ...c.events, attendance: null, gameOfSeason: null, pending: null, plan: [] } })) };
   return { ...beginSeason(w, w.seed + next), offseason: null };
 }
 

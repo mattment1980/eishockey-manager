@@ -66,6 +66,10 @@ export function migrateWorld(raw: unknown): unknown {
     // Verletzungen und medizinische Abteilung: Standardwerte; Staff wird beim Laden ergänzt (ensureChemistry)
     w.schemaVersion = 13;
   }
+  if (w.schemaVersion === 13) {
+    // Events: Fanstimmung, Sponsorenzufriedenheit und Termine über Standardwerte
+    w.schemaVersion = 14;
+  }
   void SCHEMA_VERSION;
   return w;
 }

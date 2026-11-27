@@ -307,3 +307,49 @@ describe('Verletzungen & medizinische Abteilung', () => {
     if (r.ok) expect(r.world.clubs.every((c) => r.world.staff.some((s) => s.contract?.clubId === c.id && s.role === 'doctor'))).toBe(true);
   });
 });
+
+describe('Events', () => {
+  it('Katalog: eindeutige IDs, jede Standardantwort existiert', async () => {
+    const core = await import('@ehm/core');
+    expect(core.TERMINE.length).toBeGreaterThanOrEqual(12);
+    expect(core.RANDOM_EVENTS.length).toBeGreaterThanOrEqual(15);
+    const ids = [...core.TERMINE, ...core.RANDOM_EVENTS].map((d) => d.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const r of core.RANDOM_EVENTS) expect(r.options.some((o) => o.id === r.fallback)).toBe(true);
+  });
+
+  it('Termine ersetzen Trainingseinheiten und wirken; „Spiel der Saison“ gibt Formschub', async () => {
+    const core = await import('@ehm/core');
+    let w = generateWorld(91);
+    const me = w.clubs[0].id;
+    w = { ...w, clubs: w.clubs.map((c) => (c.id === me ? { ...c, controller: { type: 'human' as const }, events: { ...c.events, plan: [{ id: 'teamabend' }, { id: 'spielDerSaison' }] } } : c)) };
+    const before = w.players.filter((p) => p.contract?.clubId === me).reduce((s, p) => s + p.condition.morale, 0);
+    w = core.startWeek(w);
+    const club = w.clubs.find((c) => c.id === me)!;
+    expect(club.training.week!.units).toHaveLength(1);
+    expect(club.events.plan).toHaveLength(0);
+    expect(club.events.log.map((l) => l.defId)).toEqual(expect.arrayContaining(['teamabend', 'spielDerSaison']));
+    expect(club.events.gameOfSeason).not.toBeNull();
+    const fx = w.competition!.fixtures.find((f) => f.id === club.events.gameOfSeason)!;
+    const input = core.matchInputFor(w, fx);
+    const team = fx.home === me ? input.home : input.away;
+    const p0 = team.players[0];
+    expect(p0.condition.form).toBeGreaterThan(w.players.find((p) => p.id === p0.id)!.condition.form);
+    const after = w.players.filter((p) => p.contract?.clubId === me).reduce((s, p) => s + p.condition.morale, 0);
+    expect(after).not.toBe(before);
+  });
+
+  it('Saison: Zufallsereignisse etwa alle 2–3 Wochen, Stimmungswerte bleiben im Rahmen', async () => {
+    const core = await import('@ehm/core');
+    let w = generateWorld(92);
+    const me = w.clubs[3].id;
+    w = { ...w, clubs: w.clubs.map((c) => (c.id === me ? { ...c, controller: { type: 'human' as const } } : c)) };
+    w = core.playDays(w, 60);
+    const club = w.clubs.find((c) => c.id === me)!;
+    const randoms = club.events.log.filter((l) => core.RANDOM_EVENTS.some((r) => r.id === l.defId));
+    expect(randoms.length).toBeGreaterThanOrEqual(4);
+    expect(randoms.length).toBeLessThanOrEqual(14);
+    for (const c of w.clubs) { expect(c.mood.fans).toBeGreaterThanOrEqual(0); expect(c.mood.fans).toBeLessThanOrEqual(100); }
+    expect(WorldSchema.safeParse(w).success).toBe(true);
+  });
+});

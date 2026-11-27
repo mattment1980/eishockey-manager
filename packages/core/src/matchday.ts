@@ -11,6 +11,10 @@ import { recoverFitness, updateCondition, restDays } from './condition.ts';
 import { updateFamiliarity } from './familiarity.ts';
 import { developMonths } from './development.ts';
 import { runTraining } from './training.ts';
+import { runWeekEvents, resolvePending, updateMoods, isGameOfSeason, EVT } from './events.ts';
+
+/** Offene Zufallsereignisse: Der Co-Trainer entscheidet, wenn der Spieltag beginnt */
+const resolveOpenEvents = (w: World): World => w.clubs.reduce((acc, c) => (c.events.pending ? resolvePending(acc, c.id) : acc), w);
 import { healInjuries, coverInjuries, coverPlan, gameInjuries, matchReady } from './injuries.ts';
 import { leagueOf, regularTable } from './standings.ts';
 import { sanitizePlan } from './lineup.ts';
@@ -48,7 +52,9 @@ export function matchInputFor(world: World, fixture: Fixture): MatchInput {
     const roster = world.players.filter((p) => p.contract?.clubId === c.id);
     // Verletzte ersetzen, angeschlagene Spieler mit Abzug
     plan = coverPlan(plan, roster, fixture.date).plan;
-    const players = roster.map((p) => matchReady(p, fixture.date));
+    // „Spiel der Saison“: Formschub für alle
+    const gos = isGameOfSeason(c, fixture.id);
+    const players = roster.map((p) => matchReady(p, fixture.date)).map((p) => (gos ? { ...p, condition: { ...p.condition, form: Math.min(100, p.condition.form + EVT.GOS_FORM) } } : p));
     const byId = new Map(players.map((p) => [p.id, p]));
     // Formationen nur mit aufgestellten Spielern (z. B. nach Umbau der Reihen)
     plan = sanitizePlan(plan, byId);
@@ -132,6 +138,9 @@ export function playDay(world: World, preplayed: Record<string, MatchResult> = {
   if (todays.length) w = runTraining(w, date);
   // Verletzungen: Genesene zurück, Ausfälle in den Aufstellungen ersetzen
   w = coverInjuries(healInjuries(w, date), date);
+  // Events: Termine der Woche, Zufallsereignis (offene Entscheidung übernimmt der Co-Trainer)
+  if (todays.length) w = runWeekEvents(w, date);
+  if (todays.length) w = resolveOpenEvents(w);
   for (const f of todays) {
     const res = preplayed[f.id] ?? simulateMatch(matchInputFor(w, f));
     results[f.id] = res;
@@ -148,6 +157,7 @@ export function playDay(world: World, preplayed: Record<string, MatchResult> = {
   // Fitness, Form und Taktik-Eingespieltheit
   w = updateCondition(w, games);
   w = gameInjuries(w, games, date);
+  w = updateMoods(w, games);
   w = updateFamiliarity(w, todays);
   // Scouting
   w = updateScouting(w, date, todays.map((f) => ({ home: f.home, away: f.away, result: results[f.id] })));

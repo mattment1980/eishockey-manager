@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { teamStrength, overall, toDisplay, ageOn, regularTable, nextFixtureOf, GOAL_LABEL, formatDate } from '@ehm/core';
 import { useStore } from '../store.tsx';
+import { MoodKpis, EventLogCard } from './Events.tsx';
 import { PlayerName, ClubName } from '../ui.tsx';
 import { RatingBadge } from '../components/Badges.tsx';
 import { SaveCard } from '../components/SaveCard.tsx';
@@ -61,9 +62,12 @@ function ClubOverview({ go }: { go: (t: Tab) => void }) {
         <div className="kpi"><span>Ausländer</span><strong>{imports} / {world.countries[0].rules.importSlotsRoster}</strong></div>
         <div className="kpi"><span>Ø Alter</span><strong>{avgAge.toFixed(1).replace('.', ',')} Jahre</strong></div>
         <div className="kpi"><span>Vorstand</span><strong>{club.boardConfidence} % Vertrauen</strong></div>
+        <MoodKpis />
         <div className="kpi"><span>Saisonziel</span><strong>{club.seasonGoal ? GOAL_LABEL[club.seasonGoal] : '–'}</strong></div>
         <div className="kpi"><span>Datum</span><strong>{formatDate(world.date)}</strong></div>
       </section>
+
+      <EventLogCard />
 
       <section className="card">
         <h3>Schlüsselspieler</h3>

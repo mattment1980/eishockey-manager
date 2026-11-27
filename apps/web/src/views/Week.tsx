@@ -3,6 +3,7 @@ import { injuryStatus, injuryLabel, prognosisText, daysBetween, weekStatus, week
 import { useStore } from '../store.tsx';
 import { ClubName, PlayerName } from '../ui.tsx';
 import { FormStrip } from '../components/FormStrip.tsx';
+import { TerminPlanner, EventLogCard } from './Events.tsx';
 
 const d1 = (v: number) => v.toFixed(1).replace('.', ',');
 const signed = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : '±'}${d1(Math.abs(v))}`;
@@ -40,7 +41,7 @@ export function WeekPanel({ onTraining }: { onTraining: () => void }) {
   }
 
   if (!st.needsStart) return null;
-  const units = t.plan ?? coachPlan(world, club, st.start);
+  const units = (t.plan ?? coachPlan(world, club, st.start)).slice(0, 3 - Math.min(2, club.events.plan.length));
   const games = st.fixtures.length;
   const eff = players.map((p) => weekEffect(p, units, games, false));
   const avg = (k: 'fitness' | 'morale') => (eff.length ? eff.reduce((s, e) => s + e[k], 0) / eff.length : 0);
@@ -51,6 +52,7 @@ export function WeekPanel({ onTraining }: { onTraining: () => void }) {
   return (
     <>
       {last && <WeekReview start={last.start} before={last.before} now={now} />}
+      <EventLogCard max={3} />
       <InjuryCard />
       <section className="card week-card">
         <div className="muted small">Neue Woche</div>
@@ -71,6 +73,7 @@ export function WeekPanel({ onTraining }: { onTraining: () => void }) {
             {indiv.length > 0 && <> · Einzeltraining: {indiv.map((x, i) => { const p = byId.get(x.playerId); return <span key={x.playerId}>{i > 0 && ', '}{p ? <PlayerName p={p} /> : '–'}</span>; })}</>}
           </p>
         </div>
+        <TerminPlanner games={games} date={st.start} />
         <button className="btn primary big block" onClick={startWeek} disabled={simulating}>Woche starten</button>
         <p className="muted small hint">Das Training der Woche wird ausgewertet, danach spielst du die Spieltage der Woche einzeln.</p>
       </section>

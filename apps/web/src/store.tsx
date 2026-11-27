@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { World, Club, Player, Matchplan, Terms, Training } from '@ehm/schema';
 import { WorldSchema } from '@ehm/schema';
-import { beginSeason, initScouting, submitOffer, withdrawOffer, signYouth, releaseYouth, startWeek, hireStaff, releaseStaff, type OfferResponse } from '@ehm/core';
+import { beginSeason, initScouting, submitOffer, withdrawOffer, signYouth, releaseYouth, startWeek, hireStaff, releaseStaff, resolvePending, type OfferResponse } from '@ehm/core';
 import { generateWorld, migrateWorld, advanceOffseason, ensureChemistry, exportWorldJson, importWorldJson } from '@ehm/data';
 
 const KEY = 'ehm.save.v1';
@@ -54,6 +54,9 @@ interface Store {
   /** Staff-Markt */
   hireStaff: (staffId: string, seasons: number) => void;
   releaseStaff: (staffId: string) => void;
+  /** Events: Termine der nächsten Woche festlegen, Zufallsereignis entscheiden */
+  setTermine: (plan: { id: string; option?: string; subject?: string }[]) => void;
+  decideEvent: (optionId: string) => void;
   /** Wochenablauf: Training der anstehenden Woche ausführen */
   startWeek: () => void;
   /** Vor Spielbeginn: Welt komplett ersetzen (z. B. nach Import oder Neuaufbau) */
@@ -198,6 +201,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       markTestDaySeen: () => act((w) => (w.offseason?.testDay ? { ...w, offseason: { ...w.offseason, testDay: { ...w.offseason.testDay, seen: true } } } : w)),
       editWorld: (fn) => act((w) => fn(w)),
       startWeek: () => act((w) => startWeek(w)),
+      setTermine: (plan) => act((w, clubId) => ({ ...w, clubs: w.clubs.map((c) => (c.id === clubId ? { ...c, events: { ...c.events, plan } } : c)) })),
+      decideEvent: (optionId) => act((w, clubId) => (clubId ? resolvePending(w, clubId, optionId) : w)),
       setInjuryPlay: (playerId, play) => act((w) => ({ ...w, players: w.players.map((p) => (p.id === playerId && p.injury ? { ...p, injury: { ...p.injury, play } } : p)) })),
       hireStaff: (staffId, seasons) => act((w, clubId) => (clubId ? hireStaff(w, clubId, staffId, seasons).world : w)),
       releaseStaff: (staffId) => act((w) => releaseStaff(w, staffId)),

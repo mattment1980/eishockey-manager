@@ -25,3 +25,5 @@ export * from './training.ts';
 export * from './history.ts';
 export * from './staff.ts';
 export * from './injuries.ts';
+export * from './events.ts';
+export * from './eventCatalog.ts';

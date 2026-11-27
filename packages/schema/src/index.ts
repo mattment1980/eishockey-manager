@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Version des Spielstand-Formats. Bei Änderungen erhöhen und Migration ergänzen. */
-export const SCHEMA_VERSION = 13;
+export const SCHEMA_VERSION = 14;
 
 /** Interne Attributskala 1–200 (Anzeige 1–20). */
 export const Rating = z.number().int().min(1).max(200);
@@ -327,6 +327,41 @@ export const TrainingSchema = z.object({
 });
 export type Training = z.infer<typeof TrainingSchema>;
 
+// ---------- Events (Termine und Zufallsereignisse) ----------
+
+/** Stimmung im Umfeld des Vereins (0–100, 50 = normal) */
+export const ClubMoodSchema = z.object({
+  fans: z.number().default(50),
+  sponsors: z.number().default(50),
+});
+
+export const EventLogSchema = z.object({
+  date: z.string(),
+  defId: z.string(),
+  title: z.string(),
+  text: z.string(),
+  tone: z.enum(['good', 'mixed', 'bad', 'neutral']),
+});
+export type EventLog = z.infer<typeof EventLogSchema>;
+
+export const ClubEventsSchema = z.object({
+  /** geplante Termine für die nächste Woche (ersetzen je eine Trainingseinheit) */
+  plan: z.array(z.object({ id: z.string(), option: z.string().optional(), subject: z.string().optional() })).default([]),
+  /** Woche (Montag), deren Termine und Zufallsereignis bereits ausgewertet sind */
+  week: z.string().nullable().default(null),
+  /** durchgeführte Termine und Ereignisse (für Abnutzung und Pausen) */
+  done: z.array(z.object({ id: z.string(), date: z.string() })).default([]),
+  /** Zufallsereignis, das auf eine Entscheidung wartet */
+  pending: z.object({ defId: z.string(), date: z.string(), subjects: z.array(z.string()) }).nullable().default(null),
+  /** Ergebnisse (neueste zuerst) */
+  log: z.array(EventLogSchema).default([]),
+  /** Zuschauerbonus für die nächsten Heimspiele */
+  attendance: z.object({ pct: z.number(), games: z.number().int() }).nullable().default(null),
+  /** „Spiel der Saison“: dieses Spiel mit Zusatzantrieb, danach eine Delle */
+  gameOfSeason: z.string().nullable().default(null),
+});
+export type ClubEvents = z.infer<typeof ClubEventsSchema>;
+
 export const ClubProfileSchema = z.enum(['tradition', 'corporate', 'patron', 'development', 'promoted']);
 export type ClubProfile = z.infer<typeof ClubProfileSchema>;
 
@@ -481,6 +516,10 @@ export const ClubSchema = z.object({
   familiarity: z.record(z.number()).default({}),
   /** Training: Wochenplan, Einzeltraining, letzte Woche */
   training: TrainingSchema.default({}),
+  /** Fanstimmung und Sponsorenzufriedenheit */
+  mood: ClubMoodSchema.default({}),
+  /** Termine und Zufallsereignisse */
+  events: ClubEventsSchema.default({}),
 });
 export type Club = z.infer<typeof ClubSchema>;
 

@@ -326,3 +326,29 @@ h3.row-between { display: flex; justify-content: space-between; align-items: cen
 @media (max-width: 720px) { .injury-list li { grid-template-columns: minmax(0, 1fr) auto; } .injury-list li > span:nth-child(3) { grid-column: 1 / 2; } }
 .week-card .row-between { gap: 8px; }
 .week-card .row-between h3 { flex: 1 1 auto; min-width: 0; }
+
+/* Events: Termine, Zufallsereignisse, Vereinsleben */
+.week-termine { background: var(--panel-2); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+.termin-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
+.termin-picker { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.termin-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.termin-list li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.termin-list li:first-child { border-top: 0; }
+.termin-list li.blocked { opacity: 0.55; }
+.termin-list li > div:first-child { flex: 1 1 16rem; min-width: 0; }
+.pro { color: var(--good); }
+.con { color: #f4a3a3; }
+.tag.cat-team { background: color-mix(in srgb, var(--ice) 22%, transparent); }
+.tag.cat-economy { background: color-mix(in srgb, var(--warn) 22%, transparent); }
+.tag.cat-fans { background: color-mix(in srgb, var(--good) 22%, transparent); }
+.event-card { border-left: 4px solid var(--warn); }
+.event-card h3 { margin: 2px 0 6px; }
+.event-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 8px; margin: 10px 0 6px; }
+.event-option { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; padding: 10px 12px; height: auto; white-space: normal; }
+.event-log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.event-log li { display: grid; grid-template-columns: minmax(0, 8rem) minmax(0, 1fr); gap: 10px; padding: 6px 0 6px 8px; border-top: 1px solid var(--line); border-left: 3px solid transparent; }
+.event-log li:first-child { border-top: 0; }
+.event-log li.tone-good { border-left-color: var(--good); }
+.event-log li.tone-mixed { border-left-color: var(--warn); }
+.event-log li.tone-bad { border-left-color: var(--goal); }
+@media (max-width: 560px) { .termin-row { grid-template-columns: minmax(0, 1fr) auto; } .termin-row .tag, .termin-row .muted { display: none; } .event-log li { grid-template-columns: minmax(0, 1fr); gap: 2px; } }

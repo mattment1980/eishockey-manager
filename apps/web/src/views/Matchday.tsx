@@ -12,6 +12,7 @@ import { Offseason } from './Offseason.tsx';
 import { offseasonPhase } from '@ehm/data';
 import { ClubName } from '../ui.tsx';
 import { WeekPanel } from './Week.tsx';
+import { PendingEventCard } from './Events.tsx';
 
 const resultText = (f: Fixture) =>
   f.result ? `${f.result.score[0]}:${f.result.score[1]}${f.result.decidedIn === 'OT' ? ' n.V.' : f.result.decidedIn === 'SO' ? ' n.P.' : ''}` : '–';
@@ -73,7 +74,8 @@ export function Matchday({ onTraining }: { onTraining: () => void }) {
 
   // Wochenablauf: erst die Woche starten (Training), dann die Spieltage der Woche
   const week = weekStatus(world, club.id);
-  const needsStart = !!week?.needsStart;
+  // offenes Zufallsereignis: erst entscheiden (Schnell weiter entscheidet der Co-Trainer)
+  const needsStart = !!week?.needsStart || !!club.events.pending;
   const lastDay = comp.day;
   const lastResults = lastDay > 0 ? fixturesOfDay(comp, lastDay) : [];
   const regularRunning = !comp.finalStandings;
@@ -92,6 +94,7 @@ export function Matchday({ onTraining }: { onTraining: () => void }) {
       </div>
 
       {error && <div className="alert">Die Simulation wurde wegen eines Fehlers abgebrochen ({error}). Der Spielstand ist unverändert.</div>}
+      <PendingEventCard />
       <WeekPanel onTraining={onTraining} />
 
       {needsStart ? null : next ? (

@@ -108,6 +108,11 @@ function book(club: Club, month: string, cat: LedgerCategory, amount: number): C
   return { ...club, finances: { ...club.finances, ledger, balance: Math.round(club.finances.balance + amount) } };
 }
 
+/** Zuschlag auf die Hallenauslastung: Fanstimmung (±10 % der Halle) und Event-Bonus (z. B. Autogrammstunde) */
+export const fanFillBonus = (c: Club) => ((c.mood.fans - 50) / 50) * 0.1 + (c.events.attendance?.pct ?? 0);
+/** Faktor auf die Sponsoreneinnahmen aus der Sponsorenzufriedenheit (±8 %) */
+export const sponsorFactor = (c: Club) => 1 + ((c.mood.sponsors - 50) / 50) * 0.08;
+
 /** Zuschauerzahl eines Heimspiels (deterministisch je Spiel). */
 export function attendanceFor(world: World, fixture: Fixture, place: number | null): number {
   const home = world.clubs.find((c) => c.id === fixture.home)!;
@@ -116,6 +121,7 @@ export function attendanceFor(world: World, fixture: Fixture, place: number | nu
   let fill = baseFill(home);
   if (place) fill += ((n / 2 - place) / n) * 0.16;
   fill += (away.fanBase / 100) * 0.06 - 0.03;
+  fill += fanFillBonus(home);
   if (fixture.stage === 'playoffs') {
     const ser = world.competition!.series.find((s) => s.id === fixture.seriesId);
     fill += 0.12 + 0.04 * (ser?.roundNo ?? 1);
@@ -150,7 +156,7 @@ export function closeMonth(world: World, month: string, place: (clubId: string) 
     let x = book(c, month, 'salaries', -pay.players / 12);
     if (pay.perks) x = book(x, month, 'perks', -pay.perks / 12);
     x = book(x, month, 'staff', -pay.staff / 12);
-    x = book(x, month, 'sponsors', c.finances.sponsorIncome / 12);
+    x = book(x, month, 'sponsors', (c.finances.sponsorIncome / 12) * sponsorFactor(c));
     x = book(x, month, 'media', c.finances.mediaIncome / 12);
     x = book(x, month, 'admin', -adminPerMonth(world, c));
     // Vorstand

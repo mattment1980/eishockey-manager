@@ -3,6 +3,7 @@ import { overall, toDisplay, ageOn } from './ratings.ts';
 import { addDays, daysBetween, hash01 } from './calendar.ts';
 import { pairKey, CHEM_START } from './chemistry.ts';
 import { trainingInjuries, healInjuries, coverInjuries } from './injuries.ts';
+import { runWeekEvents } from './events.ts';
 import { familiarityKeys, familiarityValue, learningRate, trainFamiliarity, teamFamiliarity } from './familiarity.ts';
 
 /**
@@ -172,8 +173,10 @@ export function recoveryFactor(training: Training | undefined): number {
 
 /** Plan, der in einer Woche tatsächlich trainiert wird */
 export function weekPlan(world: World, club: Club, start: string): { units: TrainingUnit[]; byCoach: boolean } {
-  if (club.controller.type === 'human' && club.training.plan) return { units: club.training.plan, byCoach: false };
-  return { units: coachPlan(world, club, start), byCoach: true };
+  // Termine (Events) ersetzen je eine Trainingseinheit – die letzten fallen weg
+  const drop = club.controller.type === 'human' ? Math.min(2, club.events.plan.length) : 0;
+  if (club.controller.type === 'human' && club.training.plan) return { units: club.training.plan.slice(0, 3 - drop), byCoach: false };
+  return { units: coachPlan(world, club, start).slice(0, 3 - drop), byCoach: true };
 }
 
 /** Wirkung einer Woche auf einen Spieler (Frische, Moral) – auch für die Vorschau */
@@ -373,5 +376,5 @@ export function weekStatus(world: World, clubId: string): WeekStatus | null {
 /** Woche starten: Training aller Vereine bis zur Woche des nächsten Spieltags */
 export function startWeek(world: World): World {
   const date = nextMatchDate(world);
-  return date ? coverInjuries(healInjuries(runTraining(world, date), date), date) : world;
+  return date ? runWeekEvents(coverInjuries(healInjuries(runTraining(world, date), date), date), date) : world;
 }
