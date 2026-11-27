@@ -194,12 +194,14 @@ Offene Punkte: Tore ins leere Tor zu selten (0,15 statt 0,3–0,5 je Spiel), Üb
 
 ## Nächste Schritte
 
-1. **Meilenstein 12b – Stadionausbau** (Plätze je Bereich, Komfort, Logen, Bauzeit, Finanzierung; Nachfrage-Überhang aus 12a als Grundlage)
-2. Offen aus M12a: Dauerkarten (mit Sommerpause), Spieltagsaktionen für KI-Vereine, Rivalitäten in der Datenwerkstatt, Zuschauer/Stimmung im Live-Ticker
-3. Offen aus dem Training: Testspiele in der Vorbereitung, Trainingslager mit Ort/Kosten, Positionsumschulung
-4. Offen aus M9: Verletzung im Spiel mit Ticker, Staff-Vertragsgespräche
-5. Offen aus M10: Eiszeit-Versprechen nachverfolgen, Sperre automatisch, Events für KI-Vereine
-6. Offen aus M11: Sponsorenzeile in den Phasenberichten, Partner mit Bedingungen
-7. Später mit der grafischen Aufbereitung: Sponsoren als eigene Einträge mit Logos (erzeugt oder hochgeladen), Anzeige auf Trikot, Bande, Halle (Details `docs/sponsoring.md`)
-8. Nebenbei: Dominanz des stärksten Vereins, Kalibrierung (leeres Tor, Überzahl- und Fangquote), mehrere Spielstände, Vertragsgespräche und Transfermarkt in der Sommerpause
-9. Multiplayer später
+1. **Als Nächstes (Reihenfolge Matthias, 28.11.2026):** Spieltag-Reiter zum aufgeräumten „Wochencockpit“ umbauen → Sommerpause ausprogrammieren (Vertragsgespräche, Transfermarkt, Trainingslager, Vorbereitungsspiele, Dauerkarten) → 12b Stadionausbau
+2. **Meilenstein 12b – Stadionausbau** (Plätze je Bereich, Komfort, Logen, Bauzeit, Finanzierung; Nachfrage-Überhang aus 12a als Grundlage)
+3. Neu vorgemerkt (28.11.2026, später mit den offenen Punkten): **Jugendarbeit mit Investition** – mehr Geld in die Nachwuchsarbeit (Akademie, Jugendtrainer) = bessere Nachwuchsjahrgänge; **Spielfeld-Grafik im Live-Spiel** – Eisfläche parallel zum Ticker, auf der man sieht, wo sich das Spiel gerade abspielt, Schüsse und Tore als Punkte
+4. Offen aus M12a: Dauerkarten (mit Sommerpause), Spieltagsaktionen für KI-Vereine, Rivalitäten in der Datenwerkstatt, Zuschauer/Stimmung im Live-Ticker
+5. Offen aus dem Training: Testspiele in der Vorbereitung, Trainingslager mit Ort/Kosten, Positionsumschulung
+6. Offen aus M9: Verletzung im Spiel mit Ticker, Staff-Vertragsgespräche
+7. Offen aus M10: Eiszeit-Versprechen nachverfolgen, Sperre automatisch, Events für KI-Vereine
+8. Offen aus M11: Sponsorenzeile in den Phasenberichten, Partner mit Bedingungen
+9. Später mit der grafischen Aufbereitung: Sponsoren als eigene Einträge mit Logos (erzeugt oder hochgeladen), Anzeige auf Trikot, Bande, Halle (Details `docs/sponsoring.md`)
+10. Nebenbei: Dominanz des stärksten Vereins, Kalibrierung (leeres Tor, Überzahl- und Fangquote), mehrere Spielstände, Vertragsgespräche und Transfermarkt in der Sommerpause
+11. Multiplayer später
