@@ -17,3 +17,5 @@ export * from './familiarity.ts';
 export * from './offseason.ts';
 export * from './standings.ts';
 export * from './matchday.ts';
+export * from './development.ts';
+export * from './youth.ts';

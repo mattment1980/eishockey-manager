@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Version des Spielstand-Formats. Bei Änderungen erhöhen und Migration ergänzen. */
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 /** Interne Attributskala 1–200 (Anzeige 1–20). */
 export const Rating = z.number().int().min(1).max(200);
@@ -143,6 +143,15 @@ export function makeContract(base: Pick<Contract, 'clubId' | 'salary' | 'untilSe
   };
 }
 
+/** Entwicklungsverlauf eines Spielers */
+export const PlayerDevSchema = z.object({
+  /** Attributwerte zu Saisonbeginn (nach dem Sommerschritt) – Grundlage für die Entwicklungspfeile */
+  ref: z.record(z.number()).default({}),
+  /** Gesamtstärke (intern) je Monat, zuletzt die neuesten */
+  history: z.array(z.object({ month: z.string(), ovr: z.number() })).default([]),
+});
+export type PlayerDev = z.infer<typeof PlayerDevSchema>;
+
 export const PlayerSchema = z.object({
   id: z.string(),
   firstName: z.string(),
@@ -159,6 +168,9 @@ export const PlayerSchema = z.object({
   contract: ContractSchema.nullable(),
   /** Vorvertrag für die kommende Saison (bei anderem oder eigenem Verein) */
   nextContract: ContractSchema.nullable().default(null),
+  dev: PlayerDevSchema.default({}),
+  /** Nachwuchsspieler aus dem Jahrgang dieses Vereins, noch ohne Profivertrag */
+  youthClub: z.string().nullable().default(null),
 });
 export type Player = z.infer<typeof PlayerSchema>;
 

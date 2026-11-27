@@ -235,7 +235,7 @@ function news(m: Market, n: News): Market {
   return { ...m, news: [n, ...m.news].slice(0, 120) };
 }
 
-function rosterCount(world: World, clubId: string, forSeason: number, pred: (p: Player) => boolean = () => true): number {
+export function rosterCount(world: World, clubId: string, forSeason: number, pred: (p: Player) => boolean = () => true): number {
   return world.players.filter((p) => pred(p) && (
     forSeason === world.season
       ? p.contract?.clubId === clubId

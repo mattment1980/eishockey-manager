@@ -14,7 +14,7 @@ const isImport = (p: Player) => !p.nationalities.includes('DE');
  * Saisonwechsel für Verträge und Kader:
  * Vorverträge treten in Kraft, auslaufende Verträge enden, Klauseln greifen,
  * neue vereinslose Spieler kommen auf den Markt, KI-Vereine füllen ihre Kader auf.
- * (Altern und Spielerentwicklung folgen in Meilenstein 7.)
+ * Die Spielerentwicklung selbst passiert vorher im Sommerschritt (Sommerpause, Phase „Sommertraining“).
  */
 export function seasonTransition(world: World): World {
   const old = world.season;
@@ -61,9 +61,16 @@ export function seasonTransition(world: World): World {
       contract = nextContract;
       nextContract = null;
     }
-    // Ruhestand: ältere Vereinslose
+    // Karriereende: ältere Vereinslose, mit zunehmendem Alter auch Spieler mit Vertrag
     const age = ageOn(p.birthDate, `${next}-08-01`);
-    if (!contract && (age >= 35 || (age >= 32 && toDisplay(overall(p)) <= 8))) continue;
+    const retireChance = contract
+      ? (age >= 38 ? 1 : age >= 36 ? 0.25 : 0)
+      : (age >= 35 ? 1 : age >= 34 ? 0.6 : age >= 33 ? 0.35 : age >= 31 && toDisplay(overall(p)) <= 8 ? 0.7 : 0);
+    if (retireChance > 0 && rng.chance(retireChance)) {
+      const wasMine = human.has(p0.contract?.clubId ?? '') || (!!contract && human.has(contract.clubId));
+      if (wasMine) say(`${p.firstName} ${p.lastName} beendet mit ${age} Jahren seine Karriere.`, true);
+      continue;
+    }
     players.push({ ...p, contract, nextContract });
   }
 
@@ -78,7 +85,9 @@ export function seasonTransition(world: World): World {
   }
   players = [...players, ...fresh];
   // Markt nicht überlaufen lassen: schwächste Vereinslose wechseln in tiefere Ligen
-  const free = players.filter((p) => !p.contract).sort((a, b) => overall(b) - overall(a));
+  // Wert für den Markt: junge Spieler zählen mit ihrem Potenzial
+  const marketValue = (p: Player) => overall(p) + (ageOn(p.birthDate, `${next}-08-01`) <= 21 ? Math.max(0, p.hidden.potential - overall(p)) * 0.6 : 0);
+  const free = players.filter((p) => !p.contract && !p.nextContract).sort((a, b) => marketValue(b) - marketValue(a));
   if (free.length > 90) {
     const drop = new Set(free.slice(90).map((p) => p.id));
     players = players.filter((p) => !drop.has(p.id));
@@ -95,20 +104,19 @@ export function seasonTransition(world: World): World {
     for (const g of ['G', 'D', 'F'] as const) {
       let missing = target[g] - roster().filter((p) => group(p.position) === g).length;
       while (missing > 0) {
-        if (isHuman) {
-          // Nachwuchsspieler hochziehen, damit eine Aufstellung möglich bleibt
+        const imports = roster().filter(isImport).length;
+        const free = isHuman ? [] : w.players
+          .filter((p) => !p.contract && !p.nextContract && group(p.position) === g && (!isImport(p) || imports < rules.importSlotsRoster))
+          .sort((a, b) => overall(b) - overall(a));
+        if (isHuman || !free.length) {
+          // Nachwuchsspieler hochziehen, damit eine Aufstellung möglich bleibt (KI nur, wenn der Markt leer ist)
           const pos: Position = g === 'G' ? 'G' : g === 'D' ? (rng.chance(0.5) ? 'LD' : 'RD') : rng.pick(['C', 'LW', 'RW'] as Position[]);
           const p = gen.generatePlayer({ position: pos, quality: 78 + rng.normal(0, 5), age: rng.int(18, 20), nationality: 'DE', clubId: club.id, role: 'prospect' });
           p.contract = makeContract({ clubId: club.id, salary: 18_000, untilSeason: next + 1, role: 'prospect' });
           w = { ...w, players: [...w.players, p] };
-          w.market.news.unshift({ date, text: `${p.firstName} ${p.lastName} (${pos}) wird aus dem Nachwuchs hochgezogen, um den Kader aufzufüllen.`, kind: 'info', mine: true });
+          if (isHuman) w.market.news.unshift({ date, text: `${p.firstName} ${p.lastName} (${pos}) wird aus dem Nachwuchs hochgezogen, um den Kader aufzufüllen.`, kind: 'info', mine: true });
         } else {
-          const imports = roster().filter(isImport).length;
-          const free = w.players
-            .filter((p) => !p.contract && group(p.position) === g && (!isImport(p) || imports < rules.importSlotsRoster))
-            .sort((a, b) => overall(b) - overall(a));
           const pick = free[Math.min(free.length - 1, rng.int(0, 2))];
-          if (!pick) break;
           const terms = standardTerms(w, pick, club, 1);
           const contract = makeContract({ clubId: club.id, salary: terms.salary, untilSeason: next + terms.years - 1, role: terms.role, perks: terms.perks, clauses: terms.clauses, fromSeason: next });
           w = { ...w, players: w.players.map((p) => (p.id === pick.id ? { ...p, contract } : p)) };

@@ -3,7 +3,7 @@ import {
   type World, type Player, type Position, type Staff, type Club, type Trait, type TraitId,
   type SkaterAttribute, type GoalieAttribute, type StaffRole, type Manager,
 } from '@ehm/schema';
-import { Rng, clamp, autoMatchplan, beginSeason, seedChemistry, seedFamiliarity } from '@ehm/core';
+import { Rng, clamp, autoMatchplan, beginSeason, seedChemistry, seedFamiliarity, seedDevRef } from '@ehm/core';
 import { DEFAULT_TACTICS, EMPTY_MARKET, makeContract, type Tactics } from '@ehm/schema';
 import { NAMES, IMPORT_ORIGINS } from './names.ts';
 import { COUNTRY_DE, LEAGUE_DEL2_MODEL, CLUBS_DEL2_MODEL, BUDGET_BY_PROFILE } from './del2.ts';
@@ -148,7 +148,7 @@ export class WorldGenerator {
       chemistry: {},
       offseason: null,
     };
-    return beginSeason(seedFamiliarity(seedChemistry(base, () => this.rng.next())), this.opts.seed);
+    return beginSeason(seedDevRef(seedFamiliarity(seedChemistry(base, () => this.rng.next()))), this.opts.seed);
   }
 
   private generateRoster(clubId: string, base: number, imports: number): Player[] {
@@ -285,6 +285,8 @@ export class WorldGenerator {
         })
         : null,
       nextContract: null,
+      dev: { ref: {}, history: [] },
+      youthClub: null,
     };
   }
 

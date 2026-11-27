@@ -9,6 +9,7 @@ import { updateAfterGames, unitChemistry, teamClimate, captainOf } from './chemi
 import { toDisplay } from './ratings.ts';
 import { recoverFitness, updateCondition, restDays } from './condition.ts';
 import { updateFamiliarity } from './familiarity.ts';
+import { developMonths } from './development.ts';
 import { leagueOf, regularTable } from './standings.ts';
 import { prepareNextDay, needed } from './competition.ts';
 
@@ -117,6 +118,8 @@ export function playDay(world: World, preplayed: Record<string, MatchResult> = {
   // Monatsabschlüsse bis zum Spieltag
   const placeBefore = placeLookup(w);
   w = closeMonthsBetween(w, w.date, date, placeBefore);
+  // Entwicklung der Spieler für abgeschlossene Saisonmonate
+  w = developMonths(w, w.date, date);
   for (const f of todays) {
     const res = preplayed[f.id] ?? simulateMatch(matchInputFor(w, f));
     results[f.id] = res;
@@ -144,7 +147,9 @@ export function playDay(world: World, preplayed: Record<string, MatchResult> = {
   if (w.competition!.finished) {
     w = evaluateSeason(w);
     // restliche Monate der Saison bis Ende Juli abrechnen
-    w = closeMonthsBetween(w, w.date, `${w.competition!.year + 1}-08-01`, () => null);
+    const seasonEnd = `${w.competition!.year + 1}-08-01`;
+    w = developMonths(w, w.date, seasonEnd);
+    w = closeMonthsBetween(w, w.date, seasonEnd, () => null);
     w = { ...w, offseason: { phase: 0 } };
   }
   return { world: w, results };

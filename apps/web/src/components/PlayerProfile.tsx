@@ -22,7 +22,7 @@ export function PlayerProfile({ id, onClose }: { id: string; onClose: () => void
 
   if (own) {
     return (
-      <PlayerSheet player={p} date={world.date} onClose={onClose} clubName={club.name}>
+      <PlayerSheet player={p} date={world.date} onClose={onClose} clubName={club.name} world={world}>
         {av.ok && <button className="btn primary block" onClick={() => setNego(true)}>{info?.myOffer ? 'Verlängerungsangebot ansehen / ändern' : 'Vertrag verlängern'}</button>}
       </PlayerSheet>
     );

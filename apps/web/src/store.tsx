@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { World, Club, Player, Matchplan, Terms } from '@ehm/schema';
 import { WorldSchema } from '@ehm/schema';
-import { beginSeason, initScouting, submitOffer, withdrawOffer, type OfferResponse } from '@ehm/core';
+import { beginSeason, initScouting, submitOffer, withdrawOffer, signYouth, releaseYouth, type OfferResponse } from '@ehm/core';
 import { generateWorld, migrateWorld, advanceOffseason, ensureChemistry, exportWorldJson, importWorldJson } from '@ehm/data';
 
 const KEY = 'ehm.save.v1';
@@ -39,6 +39,9 @@ interface Store {
   makeOffer: (playerId: string, terms: Terms) => OfferResponse;
   withdraw: (playerId: string) => void;
   setScoutRegion: (scoutId: string, region: string) => void;
+  /** Nachwuchstalent: Fördervertrag geben (Fehlertext, wenn nicht möglich) oder freigeben */
+  signYouth: (playerId: string) => string | null;
+  releaseYouth: (playerId: string) => void;
   /** Spielstand als JSON-Text (zum Herunterladen) */
   exportSave: () => string;
   /** Spielstand aus JSON-Text laden; gibt Fehlermeldungen zurück (leer = geladen) */
@@ -160,6 +163,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }),
       setScoutRegion: (scoutId, region) =>
         act((w) => ({ ...w, staff: w.staff.map((x) => (x.id === scoutId ? { ...x, region } : x)) })),
+      signYouth: (playerId) => {
+        const r = signYouth(save.world, playerId);
+        if (r.error) return r.error;
+        act((w) => signYouth(w, playerId).world);
+        return null;
+      },
+      releaseYouth: (playerId) => act((w) => releaseYouth(w, playerId)),
       exportSave: () => exportWorldJson(save.world),
       importSave: (json) => {
         const res = importWorldJson(json);

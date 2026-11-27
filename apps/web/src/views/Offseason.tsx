@@ -3,6 +3,7 @@ import { offseasonPhase } from '@ehm/data';
 import { useStore } from '../store.tsx';
 import { Crest } from '../components/Crest.tsx';
 import { FamiliaritySummary } from './Tactics.tsx';
+import { YouthDecisions } from './Youth.tsx';
 
 /** Sommerpause in Phasen: Saisonbilanz, Verhandlungen, Saisonwechsel, Trainingslager, Vorbereitung */
 export function Offseason() {
@@ -39,6 +40,7 @@ export function Offseason() {
         <h3>{ph.name}</h3>
         <p className="small">{ph.text}</p>
         {!ph.newSeason && phase > 0 && <p className="muted small">Der Markt läuft: Verlängerungen und Vorverträge unter <b>Kader › Planer</b> und <b>Kader › Markt</b>. Neue Verträge gelten ab dem Saisonwechsel.</p>}
+        {ph.id === 'summer' && <p className="muted small">Im Sommertraining haben sich die Spieler weiterentwickelt (Junge legen zu, Ältere bauen ab) – siehe Nachrichten und Kader › Entwicklung. Der neue Nachwuchsjahrgang wartet auf deine Entscheidung.</p>}
         {ph.id === 'summer' && <p className="muted small">Mit der nächsten Phase greift der Saisonwechsel: Verträge enden, Vorverträge treten in Kraft, neue vereinslose Spieler kommen auf den Markt.</p>}
         {ph.newSeason && <p className="muted small">Stelle jetzt Reihen und Taktik für die Saison ein – im Trainingslager und in der Vorbereitung spielen sich genau diese Reihen und Systeme ein.</p>}
         {firstGame && <p className="muted small">Erster Spieltag: {formatDate(firstGame, true)}</p>}
@@ -46,6 +48,7 @@ export function Offseason() {
       </section>
 
       {phase === 0 && comp.finished && <SeasonSummary />}
+      <YouthDecisions compact />
       {ph.newSeason && <FamiliaritySummary />}
 
       {world.market.news.length > 0 && (

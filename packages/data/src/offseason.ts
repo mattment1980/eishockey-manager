@@ -1,6 +1,7 @@
 import type { World } from '@ehm/schema';
-import { OFFSEASON_PHASES, phaseDate, marketAdvance, daysBetween, trainingCamp, vacation } from '@ehm/core';
+import { OFFSEASON_PHASES, phaseDate, marketAdvance, daysBetween, trainingCamp, vacation, developSummer, summerNews, releaseRemainingYouth } from '@ehm/core';
 import { seasonTransition } from './transition.ts';
+import { youthIntake } from './youth.ts';
 
 /** Aktuelle Phase der Sommerpause (null = Saison läuft) */
 export function offseasonPhase(world: World): number | null {
@@ -22,9 +23,19 @@ export function advanceOffseason(world: World): World {
   if (!ph.newSeason) {
     w = marketAdvance(w, Math.max(0, daysBetween(w.date, target)));
     if (ph.id === 'review') w = vacation(w);
+    if (ph.id === 'summer') {
+      // Großer Entwicklungsschritt: Wachstum der Jungen, Abbau der Älteren
+      const { world: dev, report } = developSummer(w, oldSeason + 1);
+      w = dev;
+      const news = w.clubs.filter((c) => c.controller.type === 'human').flatMap((c) => summerNews(w, report, c.id, target));
+      if (news.length) w = { ...w, market: { ...w.market, news: [...news, ...w.market.news].slice(0, 120) } };
+      // Nachwuchsjahrgang für alle Vereine
+      w = youthIntake(w, oldSeason + 1);
+    }
     return { ...w, offseason: { phase: next } };
   }
   if (ph.id === 'kickoff') {
+    w = releaseRemainingYouth(w, target);
     w = seasonTransition(w);
     w = trainingCamp(w, 0.3, `${w.season}:auftakt`);
     return { ...w, offseason: { phase: next } };

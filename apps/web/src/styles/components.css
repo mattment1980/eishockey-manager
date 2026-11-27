@@ -92,3 +92,13 @@ table.teamstats td:first-child { white-space: nowrap; }
 .roster.compact { border-bottom: 1px solid var(--line); }
 
 tr.me td.good, tr.me td.bad { background: color-mix(in srgb, var(--ice) 12%, transparent); }
+
+/* Entwicklung */
+.devarrow { font-size: 0.68rem; font-weight: 800; margin-left: 4px; white-space: nowrap; }
+.devarrow.up { color: var(--good); }
+.devarrow.down { color: #fca5a5; }
+.devarrow.flat { color: var(--muted); }
+.dev-box { background: var(--panel-2); border-radius: 10px; padding: 8px 10px; margin: 10px 0 4px; display: flex; flex-direction: column; gap: 4px; }
+.sparkline { color: var(--ice); display: block; }
+.badge-dot { display: inline-grid; place-items: center; min-width: 16px; height: 16px; padding: 0 4px; margin-left: 5px; border-radius: 999px; background: var(--warn); color: #1a1200; font-size: 0.65rem; font-weight: 800; vertical-align: 1px; }
+.btn.small { padding: 5px 10px; font-size: 0.78rem; }

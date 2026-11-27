@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Player } from '@ehm/schema';
-import { overall, toDisplay, ageOn, offenseRating, defenseRating, perkCost, effectiveRating, talentStars, ROLE_LABEL } from '@ehm/core';
+import { overall, toDisplay, ageOn, offenseRating, defenseRating, perkCost, effectiveRating, talentStars, ovrChange, devFactors, youthOf, ROLE_LABEL } from '@ehm/core';
 import { useStore } from '../store.tsx';
 import { PlayerName, useUi } from '../ui.tsx';
 import { RatingBadge, EffectiveBadge, FitnessBar } from '../components/Badges.tsx';
@@ -9,6 +9,9 @@ import { Scouting } from './Scouting.tsx';
 import { Market } from './Market.tsx';
 import { Planner } from './Planner.tsx';
 import { Locker } from './Locker.tsx';
+import { Youth } from './Youth.tsx';
+import { DevArrow } from '../components/DevArrow.tsx';
+import { DevTempo } from '../components/DevTempo.tsx';
 import { TRAIT_LABEL, SKATER_LABEL, GOALIE_LABEL, euro, mmss } from '../labels.ts';
 
 const GROUPS: { title: string; pos: Player['position'][] }[] = [
@@ -17,10 +20,12 @@ const GROUPS: { title: string; pos: Player['position'][] }[] = [
   { title: 'Tor', pos: ['G'] },
 ];
 
-type Sort = 'overall' | 'current' | 'age' | 'salary' | 'off' | 'def' | 'points';
+type Sort = 'overall' | 'current' | 'age' | 'salary' | 'off' | 'def' | 'points' | 'dev';
 
 export function Roster() {
-  const [mode, setMode] = useState<'roster' | 'locker' | 'planner' | 'market' | 'scouting'>('roster');
+  const [mode, setMode] = useState<'roster' | 'locker' | 'planner' | 'market' | 'scouting' | 'youth'>('roster');
+  const { world, club } = useStore();
+  const openYouth = club ? youthOf(world, club.id).length : 0;
   return (
     <div className="stack">
       <div className="tabs">
@@ -29,17 +34,19 @@ export function Roster() {
         <button className={mode === 'planner' ? 'on' : ''} onClick={() => setMode('planner')}>Planer</button>
         <button className={mode === 'market' ? 'on' : ''} onClick={() => setMode('market')}>Markt</button>
         <button className={mode === 'scouting' ? 'on' : ''} onClick={() => setMode('scouting')}>Scouting</button>
+        <button className={mode === 'youth' ? 'on' : ''} onClick={() => setMode('youth')}>Nachwuchs{openYouth ? <span className="badge-dot" data-tip={`${openYouth} Talente warten auf eine Entscheidung`}>{openYouth}</span> : null}</button>
       </div>
       {mode === 'roster' && <RosterList />}
       {mode === 'locker' && <Locker />}
       {mode === 'planner' && <Planner />}
       {mode === 'market' && <Market />}
       {mode === 'scouting' && <Scouting />}
+      {mode === 'youth' && <Youth />}
     </div>
   );
 }
 
-type View = 'overview' | 'stats' | 'skills' | 'contract';
+type View = 'overview' | 'stats' | 'skills' | 'dev' | 'contract';
 
 function skillList(p: Player): { label: string; value: number }[] {
   if (p.position === 'G' && p.goalie) {
@@ -68,6 +75,7 @@ function RosterList() {
   };
   const key = (p: Player) => {
     if (sort === 'current') return effectiveRating(p);
+    if (sort === 'dev') return ovrChange(p) ?? 0;
     if (sort === 'age') return -ageOn(p.birthDate, world.date);
     if (sort === 'salary') return p.contract?.salary ?? 0;
     if (sort === 'off') return offenseRating(p);
@@ -94,12 +102,13 @@ function RosterList() {
           <option value="points">nach Punkten</option>
           <option value="off">nach Offensive</option>
           <option value="def">nach Defensive</option>
+          <option value="dev">nach Entwicklung</option>
           <option value="age">nach Alter</option>
           <option value="salary">nach Gehalt</option>
         </select>
       </div>
       <div className="segmented small-seg">
-        {([['overview', 'Übersicht'], ['stats', 'Leistung'], ['skills', 'Stärken'], ['contract', 'Vertrag']] as [View, string][]).map(([id, l]) => (
+        {([['overview', 'Übersicht'], ['stats', 'Leistung'], ['skills', 'Stärken'], ['dev', 'Entwicklung'], ['contract', 'Vertrag']] as [View, string][]).map(([id, l]) => (
           <button key={id} className={view === id ? 'on' : ''} onClick={() => setView(id)}>{l}</button>
         ))}
       </div>
@@ -180,6 +189,27 @@ function RosterList() {
                   );
                 })}
               </ul>
+            )}
+
+            {view === 'dev' && (
+              <table className="stats roster-table">
+                <thead><tr><th>Spieler</th><th data-tip="Alter">Alter</th><th data-tip="Talent: Obergrenze und Tempo der Entwicklung">Talent</th><th data-tip="Entwicklungstempo – Aufschlüsselung beim Überfahren">Tempo</th><th data-tip="Veränderung der Gesamtstärke seit Saisonbeginn">± Saison</th><th>Stärke</th></tr></thead>
+                <tbody>
+                  {list.map((p) => {
+                    const f = devFactors(world, p, world.date);
+                    return (
+                      <tr key={p.id} onClick={() => setSel(p)} className="clickable">
+                        <td>{name(p)}</td>
+                        <td>{f.age}</td>
+                        <td><Talent view={{ stars: talentStars(p.hidden.potential) }} compact /></td>
+                        <td><DevTempo f={f} /></td>
+                        <td><DevArrow delta={ovrChange(p)} always /></td>
+                        <td><RatingBadge p={p} /></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
 
             {view === 'contract' && (

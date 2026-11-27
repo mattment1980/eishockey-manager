@@ -1,10 +1,10 @@
 import { writeFileSync } from 'node:fs';
 import type { World, Club, Player } from '@ehm/schema';
 import {
-  simulateMatch, roundRobinSchedule, teamStrength, overall, toDisplay, Rng, playDays, regularTable, INCOME, EXPENSE, payrollOf,
+  simulateMatch, roundRobinSchedule, teamStrength, overall, toDisplay, Rng, playDays, regularTable, INCOME, EXPENSE, payrollOf, ageOn,
   type MatchResult, type TeamInput,
 } from '@ehm/core';
-import { generateWorld, exportWorldJson, seasonTransition } from '@ehm/data';
+import { generateWorld, exportWorldJson, advanceOffseason, offseasonPhase } from '@ehm/data';
 
 const [cmd = 'help', ...args] = process.argv.slice(2);
 const num = (i: number, d: number) => (args[i] !== undefined ? Number(args[i]) : d);
@@ -229,27 +229,33 @@ function cmdSeason() {
     .forEach(([id, t]) => console.log(`${pad(nm(id), 24)} ${pad(clubById.get(t.clubId)!.shortName, 4)} ${lpad(t.gs, 2)} Sp  Fangquote ${pct((t.sa - t.ga) / t.sa)}  GAA ${fmt((t.ga * 3600) / t.toi)}  Shutouts ${t.so}`));
 }
 
-// ---------------------------------------------------------------- seasons (Markt über mehrere Saisons)
+// ---------------------------------------------------------------- seasons (Markt und Entwicklung über mehrere Saisons)
 function cmdSeasons() {
   const n = num(0, 3);
   let world = generateWorld(num(1, 2026));
+  const snapshot = (w: typeof world, label: string) => {
+    const rostered = w.players.filter((p) => p.contract);
+    const club = w.clubs.map((c) => toDisplay(strengthOf(w, c)));
+    const ovr = rostered.map((p) => overall(p) / 10).sort((a, b) => b - a);
+    const avg = ovr.reduce((a, b) => a + b, 0) / ovr.length;
+    const ages = rostered.map((p) => ageOn(p.birthDate, w.date));
+    const band = (lo: number, hi: number) => {
+      const ps = rostered.filter((p) => { const a = ageOn(p.birthDate, w.date); return a >= lo && a <= hi; });
+      return ps.length ? `${fmt(ps.reduce((t, p) => t + overall(p), 0) / ps.length / 10, 1)} (${ps.length})` : '–';
+    };
+    console.log(`  ${pad(label, 22)} Ø Spieler ${fmt(avg, 2)} | Top 50 ${fmt(ovr.slice(0, 50).reduce((a, b) => a + b, 0) / 50, 2)} | Ø Alter ${fmt(ages.reduce((a, b) => a + b, 0) / ages.length, 1)} | Vereinsstärke ${Math.min(...club)}–${Math.max(...club)} | ≤21: ${band(16, 21)}  22–27: ${band(22, 27)}  28–31: ${band(28, 31)}  32+: ${band(32, 45)} | Spieler ${w.players.length}, vereinslos ${w.players.length - rostered.length}`);
+  };
+  snapshot(world, 'Start');
   for (let i = 0; i < n; i++) {
     const t0 = Date.now();
     world = playDays(world, 1000);
     const comp = world.competition!;
-    const signed = world.market.offers.filter((o) => o.status === 'accepted');
-    const ext = signed.filter((o) => world.players.find((p) => p.id === o.playerId)?.contract?.clubId === o.clubId).length;
-    const nextRoster = world.clubs.map((c) => world.players.filter((p) => (p.contract?.clubId === c.id && p.contract.untilSeason > world.season) || p.nextContract?.clubId === c.id).length);
-    const free = world.players.filter((p) => !p.contract).length;
     console.log(`\nSaison ${world.season}/${String(world.season + 1).slice(2)} (${((Date.now() - t0) / 1000).toFixed(1)} s): Meister ${world.clubs.find((c) => c.id === comp.champion)!.shortName}, Absteiger ${world.clubs.find((c) => c.id === comp.relegated)!.shortName}`);
-    console.log(`  Verträge für nächste Saison unterschrieben: ${signed.length} (davon Verlängerungen ${ext}), offen: ${world.market.offers.filter((o) => o.status === 'open').length}, Vereinslose: ${free}`);
-    console.log(`  Kader nächste Saison je Verein: ${nextRoster.join(' ')}`);
-    world = seasonTransition(world);
-    const rosters = world.clubs.map((c) => world.players.filter((p) => p.contract?.clubId === c.id).length);
+    snapshot(world, 'Saisonende');
+    while (offseasonPhase(world) !== null) world = advanceOffseason(world);
+    snapshot(world, 'nach Sommerpause');
     const payroll = world.clubs.map((c) => { const p = payrollOf(world, c.id); return Math.round(((p.players + p.perks + p.staff) / c.finances.budget) * 100); });
-    const strength = world.clubs.map((c) => toDisplay(strengthOf(world, c)));
-    console.log(`  → nach Saisonwechsel: Kader ${rosters.join(' ')} | Gehälter in % des Etats ${payroll.join(' ')} | Stärke ${strength.join(' ')}`);
-    console.log(`  Nachrichten (Auszug): ${world.market.news.slice(0, 3).map((x) => x.text).join(' | ')}`);
+    console.log(`  Gehälter in % des Etats ${payroll.join(' ')}`);
   }
 }
 
@@ -265,5 +271,6 @@ switch (cmd) {
   pnpm sim generate [seed] [datei]   Welt erzeugen und als JSON speichern
   pnpm sim match [seed] [weltSeed]    Ein Spiel mit Ticker und Statistik
   pnpm sim season [weltSeed]          Komplette Saison inkl. Playoffs und Playdowns
-  pnpm sim calibrate [saisons] [weltSeed]  Massensimulation mit Richtwerten`);
+  pnpm sim calibrate [saisons] [weltSeed]  Massensimulation mit Richtwerten
+  pnpm sim seasons [anzahl] [weltSeed]     Mehrere Saisons inkl. Sommerpause: Markt, Entwicklung, Ligastärke`);
 }

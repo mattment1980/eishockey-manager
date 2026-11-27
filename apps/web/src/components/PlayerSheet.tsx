@@ -2,8 +2,11 @@ import type { Player } from '@ehm/schema';
 import { GOALIE_ATTRIBUTES } from '@ehm/schema';
 import {
   overall, toDisplay, toDisplay1, effectiveRating, ageOn, talentStars, formLabel, fitnessLabel, PERK_LABEL, PROMISE_LABEL, ROLE_LABEL,
-  type PlayerView, type AttrView,
+  attrChange, ovrChange, devFactors, type PlayerView, type AttrView,
 } from '@ehm/core';
+import type { World } from '@ehm/schema';
+import { DevArrow, DevSparkline } from './DevArrow.tsx';
+import { DevTempo } from './DevTempo.tsx';
 import type { Perks } from '@ehm/schema';
 import type { ReactNode } from 'react';
 import { SKATER_GROUPS, SKATER_LABEL, GOALIE_LABEL, TRAIT_LABEL, POSITION_LABEL, NATION_LABEL, euro } from '../labels.ts';
@@ -15,7 +18,7 @@ import { fmt1 } from '../format.ts';
 const CAT_WIDTH: Record<string, number> = { 'sehr schwach': 25, schwach: 42, solide: 58, stark: 74, 'sehr stark': 90 };
 export const moodLabel = (m: number) => (m >= 75 ? 'euphorisch' : m >= 62 ? 'gut' : m >= 48 ? 'okay' : m >= 35 ? 'gereizt' : 'unzufrieden');
 
-function Bar({ label, view }: { label: string; view: AttrView }) {
+function Bar({ label, view, change }: { label: string; view: AttrView; change?: number }) {
   if ('exact' in view) {
     const d = view.exact;
     const tone = d >= 15 ? 'hi' : d >= 11 ? 'mid' : d >= 7 ? 'lo' : 'bad';
@@ -23,7 +26,7 @@ function Bar({ label, view }: { label: string; view: AttrView }) {
       <div className="attr">
         <span>{label}</span>
         <div className="attr-bar"><div className={tone} style={{ width: `${d * 5}%` }} /></div>
-        <b className={tone}>{d}</b>
+        <b className={tone}>{d}<DevArrow delta={change} /></b>
       </div>
     );
   }
@@ -58,6 +61,8 @@ function Bar({ label, view }: { label: string; view: AttrView }) {
 interface Props {
   player: Player;
   date: string;
+  /** Welt (für Entwicklungsfaktoren eigener Spieler) */
+  world?: World;
   onClose: () => void;
   /** Ansicht nach Scouting-Kenntnis (fehlt = alles exakt, eigener Spieler) */
   view?: PlayerView;
@@ -66,7 +71,7 @@ interface Props {
   children?: ReactNode;
 }
 
-export function PlayerSheet({ player, date, onClose, view, clubName, children }: Props) {
+export function PlayerSheet({ player, date, onClose, view, clubName, children, world }: Props) {
   const p = player;
   const age = ageOn(p.birthDate, date);
   const exact = (v: number): AttrView => ({ exact: toDisplay(v) });
@@ -125,6 +130,17 @@ export function PlayerSheet({ player, date, onClose, view, clubName, children }:
         </div>
       )}
 
+      {!view && world && (
+        <div className="dev-box">
+          <div className="row-between">
+            <span><b>Entwicklung</b> <span className="muted small">seit Saisonbeginn</span> <DevArrow delta={ovrChange(p)} always /></span>
+            <span className="small">Tempo <DevTempo f={devFactors(world, p, date)} /></span>
+          </div>
+          <DevSparkline values={p.dev.history.map((h) => h.ovr)} />
+          <p className="muted small">Monatlich kleine Schritte während der Saison, im Sommer der große Schritt. Pfeile an den Werten zeigen die Veränderung seit Saisonbeginn.</p>
+        </div>
+      )}
+
       {(traits.length > 0 || hiddenTraits > 0) && (
         <div className="traits">
           {traits.map((t) => (
@@ -142,13 +158,13 @@ export function PlayerSheet({ player, date, onClose, view, clubName, children }:
       {(!view || view.level >= 2) && (p.position === 'G' && p.goalie ? (
         <div className="attr-group">
           <h4>Torhüter</h4>
-          {GOALIE_ATTRIBUTES.map((k) => <Bar key={k} label={GOALIE_LABEL[k]} view={attrView(k, p.goalie![k])} />)}
+          {GOALIE_ATTRIBUTES.map((k) => <Bar key={k} label={GOALIE_LABEL[k]} view={attrView(k, p.goalie![k])} change={view ? undefined : attrChange(p, k, true)} />)}
         </div>
       ) : (
         SKATER_GROUPS.map((g) => (
           <div key={g.title} className="attr-group">
             <h4>{g.title}</h4>
-            {g.keys.map((k) => <Bar key={k} label={SKATER_LABEL[k]} view={attrView(k, p.skater[k])} />)}
+            {g.keys.map((k) => <Bar key={k} label={SKATER_LABEL[k]} view={attrView(k, p.skater[k])} change={view ? undefined : attrChange(p, k)} />)}
           </div>
         ))
       ))}

@@ -1,5 +1,5 @@
 import { WorldSchema, SCHEMA_VERSION, type World } from '@ehm/schema';
-import { defaultRules, seedChemistry, seedFamiliarity, Rng } from '@ehm/core';
+import { defaultRules, seedChemistry, seedFamiliarity, seedDevRef, Rng } from '@ehm/core';
 
 /** Ältere Spielstände auf das aktuelle Format heben. */
 export function migrateWorld(raw: unknown): unknown {
@@ -41,13 +41,17 @@ export function migrateWorld(raw: unknown): unknown {
     // Taktik-Eingespieltheit und Sommerpause über Standardwerte; Startwerte werden nach dem Parsen gesetzt
     w.schemaVersion = 7;
   }
+  if (w.schemaVersion === 7) {
+    // Entwicklungsverlauf und Nachwuchs-Kennzeichen über Standardwerte
+    w.schemaVersion = 8;
+  }
   void SCHEMA_VERSION;
   return w;
 }
 
 /** Alte Spielstände: Reihen bekommen eine Anfangschemie (vor v6), Vereine eine Taktik-Eingespieltheit (vor v7) */
 export function ensureChemistry(world: World): World {
-  let w = seedFamiliarity(world);
+  let w = seedDevRef(seedFamiliarity(world));
   if (Object.keys(w.chemistry).length > 0) return w;
   const rng = new Rng(w.seed + 606);
   w = seedChemistry(w, () => rng.next());
