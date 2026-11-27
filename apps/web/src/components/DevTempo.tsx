@@ -16,7 +16,7 @@ export function DevTempo({ f }: { f: DevFactors }) {
     ? 'Der Spieler hat sein Potenzial ausgeschöpft – er hält sein Niveau, wächst aber kaum noch.'
     : f.age >= 30
     ? `Ab etwa 30 Jahren baut die Physis ab (Eislaufen, Beweglichkeit, Kraft, Ausdauer), später auch Technik. Mentale Werte halten am längsten. Professionalität bremst den Abbau.`
-    : `Entwicklungstempo (Faktor ${f.total.toFixed(2).replace('.', ',')}): Talent ${pct(f.talent)}, Eiszeit ${pct(f.playtime)}, Trainer ${pct(f.coach)}, Mentor ${pct(f.mentor)}, Einstellung ${pct(f.personality)}. Wie schnell sich der Spieler seinem Potenzial nähert – junge Spieler entwickeln sich am stärksten.`;
+    : `Entwicklungstempo (Faktor ${f.total.toFixed(2).replace('.', ',')}): Talent ${pct(f.talent)}, Eiszeit ${pct(f.playtime)}, Trainer ${pct(f.coach)}, Mentor ${pct(f.mentor)}, Einstellung ${pct(f.personality)}, Training ${pct(f.training)}. Wie schnell sich der Spieler seinem Potenzial nähert – junge Spieler entwickeln sich am stärksten.`;
   const cls = label === 'sehr hoch' || label === 'hoch' ? 'pos' : label === 'gebremst' || label === 'niedrig' || label === 'Abbau' ? 'neg' : '';
   return <span className={`tag ${cls}`} data-tip={tip}>{label}</span>;
 }

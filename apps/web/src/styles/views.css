@@ -255,3 +255,33 @@ table.stats td.bad, table.stats td.good { background: none; }
 .row-gap { display: inline-flex; align-items: center; gap: 8px; }
 li.neg { color: #fecaca; }
 h3.row-between { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+
+/* Training */
+.tr-mode { flex: 0 1 auto; }
+.tr-mode button { flex: 0 1 auto; }
+.tr-units { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 10px 0; }
+.tr-unit { background: var(--panel-2); border: 1px solid var(--line); border-top: 4px solid var(--line); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.tr-unit.int-hard { border-top-color: var(--goal); }
+.tr-unit.int-medium { border-top-color: var(--warn); }
+.tr-unit.int-light { border-top-color: var(--good); }
+.tr-unit.int-recovery { border-top-color: var(--ice); }
+.tr-unit-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tr-unit-head .select { flex: 1; min-width: 0; }
+.tr-no { width: 22px; height: 22px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 0.72rem; font-weight: 800; background: #2b3a5c; }
+.tr-int button { padding: 6px 4px; font-size: 0.78rem; }
+.tr-int-tag { align-self: flex-start; }
+.tag.int-hard { background: color-mix(in srgb, var(--goal) 22%, transparent); color: #fecaca; }
+.tag.int-medium { background: color-mix(in srgb, var(--warn) 20%, transparent); color: #fde7a6; }
+.tag.int-light { background: color-mix(in srgb, var(--good) 22%, transparent); color: #b8f3dc; }
+.tag.int-recovery { background: color-mix(in srgb, var(--ice) 20%, transparent); color: #d4f1ff; }
+.tr-kpis { margin-top: 10px; }
+.kpi strong.up { color: var(--good); }
+.kpi strong.down { color: var(--goal); }
+.tr-indivs { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 12px; }
+.tr-indiv { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.tr-indiv:first-child { border-top: 0; }
+.tr-indiv-main { flex: 1 1 12rem; min-width: 0; }
+.tr-indiv .select { flex: 0 1 12rem; }
+.tr-indiv.auto .tr-indiv-main { opacity: 0.9; }
+.tr-help { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+@media (max-width: 720px) { .tr-units { grid-template-columns: minmax(0, 1fr); } }

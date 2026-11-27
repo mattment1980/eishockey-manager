@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Version des Spielstand-Formats. Bei Änderungen erhöhen und Migration ergänzen. */
-export const SCHEMA_VERSION = 10;
+export const SCHEMA_VERSION = 11;
 
 /** Interne Attributskala 1–200 (Anzeige 1–20). */
 export const Rating = z.number().int().min(1).max(200);
@@ -225,6 +225,47 @@ export const StaffSchema = z.object({
 });
 export type Staff = z.infer<typeof StaffSchema>;
 
+// ---------- Training ----------
+
+export const TRAINING_FOCI = ['athletics', 'offense', 'defense', 'mental', 'tactics', 'specialTeams', 'lines', 'goalies'] as const;
+export const TrainingFocusSchema = z.enum(TRAINING_FOCI);
+export type TrainingFocus = z.infer<typeof TrainingFocusSchema>;
+export const TrainingIntensitySchema = z.enum(['hard', 'medium', 'light', 'recovery']);
+export type TrainingIntensity = z.infer<typeof TrainingIntensitySchema>;
+export const INDIVIDUAL_FOCI = ['athletics', 'offense', 'defense', 'mental', 'goalies'] as const;
+export const IndividualFocusSchema = z.enum(INDIVIDUAL_FOCI);
+export type IndividualFocus = z.infer<typeof IndividualFocusSchema>;
+export const TrainingUnitSchema = z.object({ focus: TrainingFocusSchema, intensity: TrainingIntensitySchema });
+export type TrainingUnit = z.infer<typeof TrainingUnitSchema>;
+export const AutoPickSchema = z.enum(['rotate', 'formweak', 'talent', 'young']);
+export type AutoPick = z.infer<typeof AutoPickSchema>;
+
+export const TrainingSchema = z.object({
+  /** Wochenplan des Managers (3 Schwerpunkte); null = der Co-Trainer plant */
+  plan: z.array(TrainingUnitSchema).length(3).nullable().default(null),
+  /** Plan über die Woche hinaus beibehalten (sonst übernimmt danach wieder der Co-Trainer) */
+  keep: z.boolean().default(true),
+  /** Einzeltraining: bis zu 3 vom Manager festgelegte Spieler */
+  individual: z.array(z.object({ playerId: z.string(), focus: IndividualFocusSchema })).max(3).default([]),
+  /** Auswahlregel des Co-Trainers für freie Einzeltrainings-Plätze */
+  autoPick: AutoPickSchema.default('rotate'),
+  /** Zuletzt absolvierte Trainingswoche (Montag) */
+  week: z.object({
+    start: z.string(),
+    units: z.array(TrainingUnitSchema),
+    byCoach: z.boolean(),
+    individual: z.array(z.object({ playerId: z.string(), focus: IndividualFocusSchema, auto: z.boolean() })),
+    games: z.number().int(),
+    /** Belastung 0–9 (Summe der Intensitäten) */
+    load: z.number(),
+  }).nullable().default(null),
+  /** Trainingsumfang seit dem letzten Entwicklungsschritt („team:offense“, „<spielerId>:offense“) */
+  log: z.record(z.number()).default({}),
+  /** Anzahl Wochen im Log */
+  weeks: z.number().default(0),
+});
+export type Training = z.infer<typeof TrainingSchema>;
+
 export const ClubProfileSchema = z.enum(['tradition', 'corporate', 'patron', 'development', 'promoted']);
 export type ClubProfile = z.infer<typeof ClubProfileSchema>;
 
@@ -377,6 +418,8 @@ export const ClubSchema = z.object({
   matchplan: MatchplanSchema.nullable(),
   /** Eingespieltheit mit Taktik-Optionen (Schlüssel "taktik:wert", z. B. "forecheck:1-2-2" oder "pp:umbrella"), 0–100 */
   familiarity: z.record(z.number()).default({}),
+  /** Training: Wochenplan, Einzeltraining, letzte Woche */
+  training: TrainingSchema.default({}),
 });
 export type Club = z.infer<typeof ClubSchema>;
 

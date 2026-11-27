@@ -3,6 +3,7 @@ import { SKATER_ATTRIBUTES, GOALIE_ATTRIBUTES } from '@ehm/schema';
 import { overall, toDisplay, ageOn, talentStars } from './ratings.ts';
 import { hash01, monthsBetween, monthKey } from './calendar.ts';
 import { hasTrait } from './chemistry.ts';
+import { trainingDev, clearTrainingLog } from './training.ts';
 
 /**
  * Spielerentwicklung und Alterung (Konzept „spielerentwicklung“):
@@ -78,6 +79,8 @@ export interface DevFactors {
   coach: number;
   mentor: number;
   personality: number;
+  /** Training: Umfang der Einheiten und Einzeltraining (nur während der Saison) */
+  training: number;
   /** Produkt aller Faktoren */
   total: number;
   /** Abstand zum Potenzial (intern) */
@@ -98,7 +101,7 @@ function playtimeFactor(world: World, p: Player): number {
 }
 
 /** Faktoren des Entwicklungstempos eines Spielers */
-export function devFactors(world: World, p: Player, date: string): DevFactors {
+export function devFactors(world: World, p: Player, date: string, withTraining = true): DevFactors {
   const age = ageOn(p.birthDate, date);
   const clubId = p.contract?.clubId;
   const staff = clubId ? world.staff.filter((s) => s.contract?.clubId === clubId) : [];
@@ -112,7 +115,8 @@ export function devFactors(world: World, p: Player, date: string): DevFactors {
   const personality = (0.85 + (p.hidden.professionalism / 200) * 0.3) * (hasTrait(p, 'perfektionist') ? 1.1 : 1);
   const talent = talentSpeed(p.hidden.potential);
   const playtime = playtimeFactor(world, p);
-  return { age, talent, playtime, coach, mentor, personality, total: talent * playtime * coach * mentor * personality, gap: Math.max(0, p.hidden.potential - overall(p)) };
+  const training = withTraining && clubId ? trainingDev(world.clubs.find((c) => c.id === clubId), p).factor : 1;
+  return { age, talent, playtime, coach, mentor, personality, training, total: talent * playtime * coach * mentor * personality * training, gap: Math.max(0, p.hidden.potential - overall(p)) };
 }
 
 type AttrMap = Record<string, number>;
@@ -135,7 +139,9 @@ const roundBy = (v: number, key: string) => {
  * `declineShare` = Anteil des jährlichen Abbaus (nur im Sommer 1, sonst 0).
  */
 export function developPlayer(world: World, p: Player, date: string, share: number, declineShare: number, tag: string): Player {
-  const f = devFactors(world, p, date);
+  const f = devFactors(world, p, date, declineShare === 0);
+  // Trainingsschwerpunkte verschieben, welche Attribute wachsen (nur während der Saison)
+  const tw = declineShare === 0 && p.contract ? trainingDev(world.clubs.find((c) => c.id === p.contract!.clubId), p).weights : {};
   // Sommerform: im Mittel 1, einzelne Spieler nutzen den Sommer viel besser oder schlechter (nur im Sommerschritt)
   const summerForm = declineShare > 0 ? summerFormOf(`${tag}:${p.id}`) : 1;
   const ageG = p.position === 'G' ? f.age - DEV.GOALIE_AGE_SHIFT : f.age;
@@ -152,7 +158,7 @@ export function developPlayer(world: World, p: Player, date: string, share: numb
   for (const g of attrsOf(p)) {
     const vals = g.group === 'skater' ? next.skater : next.goalie!;
     // Wachstum auf die Attribute verteilen: nach Altersfaktor der Klasse, normiert, damit die Gesamtstärke ≈ growth steigt
-    const weights = g.keys.map((k) => growthByAge(ageG, g.cls[k]));
+    const weights = g.keys.map((k) => growthByAge(ageG, g.cls[k]) * (tw[k] ?? 1));
     const mean = weights.reduce((a, b) => a + b, 0) / Math.max(1, weights.filter((w) => w > 0).length || 1);
     g.keys.forEach((k, i) => {
       const cls = g.cls[k];
@@ -203,7 +209,7 @@ export function developMonths(world: World, from: string, to: string): World {
     const date = `${m}-28`;
     players = players.map((p) => logHistory(developPlayer({ ...world, players }, p, date, DEV.SEASON_SHARE / DEV.SEASON_MONTHS, 0, m), m));
   }
-  return { ...world, players };
+  return clearTrainingLog({ ...world, players });
 }
 
 export interface DevReportLine {

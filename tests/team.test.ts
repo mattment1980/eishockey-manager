@@ -163,3 +163,57 @@ describe('Scouting-Auftrag', () => {
     expect(withWatch.scouting[clubId].knowledge[target.id]).toBeGreaterThan(before);
   });
 });
+
+describe('Training', () => {
+  it('Co-Trainer plant nach Spielplan, harte Wochen kosten Frische und Moral', async () => {
+    const core = await import('@ehm/core');
+    const w = world;
+    const club = w.clubs[0];
+    const start = core.mondayOf(w.competition!.fixtures.find((f) => f.home === club.id || f.away === club.id)!.date);
+    const plan = core.coachPlan(w, club, start);
+    expect(plan).toHaveLength(3);
+    expect(new Set(plan.map((u) => u.focus)).size).toBe(3);
+    const p = w.players.find((x) => x.contract?.clubId === club.id && x.position !== 'G')!;
+    const hard = core.weekEffect(p, [{ focus: 'offense', intensity: 'hard' }, { focus: 'defense', intensity: 'hard' }, { focus: 'athletics', intensity: 'hard' }], 2, false);
+    const easy = core.weekEffect(p, [{ focus: 'offense', intensity: 'light' }, { focus: 'defense', intensity: 'recovery' }, { focus: 'athletics', intensity: 'light' }], 2, false);
+    expect(hard.fitness).toBeLessThan(easy.fitness);
+    expect(hard.morale).toBeLessThan(-2);
+    expect(easy.morale).toBeGreaterThan(0);
+    expect(core.recoveryFactor({ ...club.training, week: { start, units: [], byCoach: true, individual: [], games: 2, load: 9 } })).toBeLessThan(1);
+  });
+
+  it('Eigener Plan und Einzeltraining werden angewendet; Einmal-Plan fällt an den Co-Trainer zurück', async () => {
+    const core = await import('@ehm/core');
+    let w = generateWorld(83);
+    const me = w.clubs[0].id;
+    const roster = w.players.filter((p) => p.contract?.clubId === me && p.position !== 'G');
+    const myPlan = [{ focus: 'offense' as const, intensity: 'hard' as const }, { focus: 'offense' as const, intensity: 'medium' as const }, { focus: 'lines' as const, intensity: 'light' as const }];
+    w = { ...w, clubs: w.clubs.map((c) => (c.id === me ? { ...c, controller: { type: 'human' as const }, training: { ...c.training, plan: myPlan, keep: false, individual: [{ playerId: roster[0].id, focus: 'athletics' as const }] } } : c)) };
+    const date = w.competition!.fixtures[0].date;
+    w = core.runTraining(w, date);
+    const t = w.clubs.find((c) => c.id === me)!.training;
+    expect(t.week!.byCoach).toBe(false);
+    expect(t.week!.units).toEqual(myPlan);
+    expect(t.plan).toBeNull();
+    expect(t.week!.individual).toHaveLength(3);
+    expect(t.week!.individual[0]).toMatchObject({ playerId: roster[0].id, focus: 'athletics', auto: false });
+    expect(t.log['team:offense']).toBeCloseTo(1.7);
+    // Schwerpunkt Angriff lenkt das Wachstum auf die Angriffswerte
+    const p = roster.find((x) => x.hidden.potential - core.overall(x) > 15) ?? roster[0];
+    const dev = core.trainingDev(w.clubs.find((c) => c.id === me), p);
+    expect(dev.weights.shotAccuracy).toBeGreaterThan(dev.weights.stamina ?? 1);
+    expect(WorldSchema.safeParse(w).success).toBe(true);
+  });
+
+  it('Saison mit Training bleibt stabil, Log wird monatlich geleert', () => {
+    let w = generateWorld(84);
+    w = playDays(w, 40);
+    expect(w.clubs.every((c) => c.training.week !== null)).toBe(true);
+    expect(w.clubs.every((c) => c.training.weeks <= 6)).toBe(true);
+    const r = w.players.filter((p) => p.contract);
+    const fit = r.reduce((s, p) => s + p.condition.fitness, 0) / r.length;
+    const morale = r.reduce((s, p) => s + p.condition.morale, 0) / r.length;
+    expect(fit).toBeGreaterThan(85);
+    expect(morale).toBeGreaterThan(45);
+  });
+});

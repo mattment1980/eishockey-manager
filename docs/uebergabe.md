@@ -1,6 +1,6 @@
 # Übergabe – Stand der Entwicklung
 
-Stand: 27.11.2026 · letzter Commit „Übergabe: Ausbaustand der Sommerpause-Phasen festgehalten“
+Stand: 27.11.2026 · letzter Commit „Meilenstein 8: Training“
 
 Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst zusammen, was gebaut ist, wie der Code aufgebaut ist, was entschieden wurde und was als Nächstes kommt.
 
@@ -27,8 +27,8 @@ Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst z
 | Aufräumrunde | Engine und Wettbewerb in Module, Eingaben während Simulation sicher, Spielstand-Sicherung, Formel an einer Stelle, Oberfläche/CSS/Tests aufgeteilt, Fingerabdruck-Prüfung | ✅ |
 | Runde vor M7 | 14 Anpassungen (siehe unten): Spielerprofil überall, Mouseover, Fitness/Form/aktuelle Stärke, Talent, Markt mit Ligenbaum, Vereinskader, Form & Teamstatistik, Tooltips, Drag & Drop, Sommerpause, Taktik-Eingespieltheit | ✅ |
 | 7 | Saisonwechsel & Daten: Alterung/Entwicklung, Nachwuchs, CSV-Import/Export, Datenwerkstatt | ✅ |
-| **8** | **Training** (Trainingswoche, Schwerpunkte, Belastung; Trainingslager und Vorbereitung als echte Phasen) | **als Nächstes** |
-| 9 | Verletzungen & medizinische Abteilung (Konzept: „verletzungen-und-medizin“) | geplant |
+| 8 | Training: Wochenplan mit 3 Schwerpunkten und Intensität, Co-Trainer, Einzeltraining (siehe `docs/training.md`) | ✅ (Branch `training`) |
+| **9** | **Verletzungen & medizinische Abteilung** (Konzept: „verletzungen-und-medizin“) | **als Nächstes** |
 | 10 | Events: Zufallsereignisse und planbare Termine unter der Woche (Teamevent, Autogrammstunde …) mit Wirkung auf Moral, Frische, Zuschauer, Stimmung, Chemie | geplant |
 | 11 | Sponsoring | geplant |
 | 12a | Stadionbetrieb & Zuschauer: Catering, Eintrittspreise, Veranstaltungen (Sponsorenabend, Kindertag …) mit Einfluss auf die Zuschauer | geplant |
@@ -48,16 +48,16 @@ Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst z
 
 | Paket | Inhalt |
 |---|---|
-| `packages/schema` | Datenmodell (Welt, Land, Liga, Verein, Spieler, Staff, Vertrag, Wettbewerb, Scouting, Markt, Matchplan, Coaching-Regeln, Chemie), aktuell **SCHEMA_VERSION 10** (v7: `Club.familiarity`, `World.offseason`, `FixtureResult.team`; v8: `Player.dev`, `Player.youthClub`; v9: `offseason.testDay`; v10: `offseason.reports` = Phasenberichte) |
-| `packages/core` | Spiellogik: `engine/` (`match.ts` = Zustand und Ablauf; Bereiche als Methoden in `lines`, `rules`, `modifiers`, `phases`, `shots`, `penalties`, `shootout`; dazu `state`, `types`, `constants`), `competition.ts` (Spielplan, Serien), `standings.ts` (Tabelle, Form, Teamstatistik), `matchday.ts` (Ablauf eines Spieltags), `economy.ts`, `scouting.ts`, `market.ts`, `coaching.ts`, `chemistry.ts`, `condition.ts` (Fitness & Form), `familiarity.ts` (Taktik-Eingespieltheit), `offseason.ts` (Phasen, Trainingslager), `board.ts` (Saisonbilanz des Vorstands), `phaseReports.ts` (Kurzberichte der Sommerpause), `lineup.ts`, `ratings.ts` (u. a. `effectiveRating`, `talentStars`) |
-| `packages/data` | Weltgenerator, Namen, Import/Export + Migration v1→v10 (`io.ts`), CSV mit Spaltenzuordnung (`csv.ts`), Datensatz-Neuaufbau (`rebuild.ts`), Nachwuchsjahrgang (`youth.ts`), Saisonwechsel (`transition.ts`), Sommerpause-Ablauf (`offseason.ts`) |
-| `apps/web` | Oberfläche (7 Reiter: Verein, Kader, Reihen, Taktik, Staff, Spieltag, Liga); `store.tsx` = Spielstand mit Aktions-Warteschlange (Eingaben während einer Simulation werden danach erneut angewendet), Export/Import als Datei; `ui.tsx` = globale Fenster (`components/PlayerProfile`, `ClubSheet`, `HoverLayer`), `PlayerName`/`ClubName` für klickbare Namen, `data-tip` für Tooltips; CSS in `styles/` (base, views, components, features) |
+| `packages/schema` | Datenmodell (Welt, Land, Liga, Verein, Spieler, Staff, Vertrag, Wettbewerb, Scouting, Markt, Matchplan, Coaching-Regeln, Chemie), aktuell **SCHEMA_VERSION 11** (v7: `Club.familiarity`, `World.offseason`, `FixtureResult.team`; v8: `Player.dev`, `Player.youthClub`; v9: `offseason.testDay`; v10: `offseason.reports` = Phasenberichte; v11: `Club.training`) |
+| `packages/core` | Spiellogik: `engine/` (`match.ts` = Zustand und Ablauf; Bereiche als Methoden in `lines`, `rules`, `modifiers`, `phases`, `shots`, `penalties`, `shootout`; dazu `state`, `types`, `constants`), `competition.ts` (Spielplan, Serien), `standings.ts` (Tabelle, Form, Teamstatistik), `matchday.ts` (Ablauf eines Spieltags), `economy.ts`, `scouting.ts`, `market.ts`, `coaching.ts`, `chemistry.ts`, `condition.ts` (Fitness & Form), `familiarity.ts` (Taktik-Eingespieltheit), `offseason.ts` (Phasen, Trainingslager), `board.ts` (Saisonbilanz des Vorstands), `phaseReports.ts` (Kurzberichte der Sommerpause), `training.ts` (Wochenplan, Co-Trainer, Einzeltraining), `lineup.ts`, `ratings.ts` (u. a. `effectiveRating`, `talentStars`) |
+| `packages/data` | Weltgenerator, Namen, Import/Export + Migration v1→v11 (`io.ts`), CSV mit Spaltenzuordnung (`csv.ts`), Datensatz-Neuaufbau (`rebuild.ts`), Nachwuchsjahrgang (`youth.ts`), Saisonwechsel (`transition.ts`), Sommerpause-Ablauf (`offseason.ts`) |
+| `apps/web` | Oberfläche (8 Reiter: Verein, Kader, Reihen, Taktik, Training, Staff, Spieltag, Liga); `store.tsx` = Spielstand mit Aktions-Warteschlange (Eingaben während einer Simulation werden danach erneut angewendet), Export/Import als Datei; `ui.tsx` = globale Fenster (`components/PlayerProfile`, `ClubSheet`, `HoverLayer`), `PlayerName`/`ClubName` für klickbare Namen, `data-tip` für Tooltips; CSS in `styles/` (base, views, components, features) |
 | `apps/sim-cli` | `pnpm sim generate | match | season | calibrate | seasons` |
-| `tests/` | 46 Tests in 7 Dateien (world, engine, season, market, team, development, data) |
+| `tests/` | 49 Tests in 7 Dateien (world, engine, season, market, team, development, data) |
 
 ### Ablauf eines Spieltags (`playDay` in `matchday.ts`)
 
-Monate abschließen → Spiele simulieren → Einnahmen buchen → Moral & Chemie → **Fitness, Form, Taktik-Eingespieltheit** → Scouting → Markt-Tick → nächsten Spieltag vorbereiten → **Erholung bis zum nächsten Spieltermin** (Fitness zeigt immer den Stand zum Anpfiff) → am Saisonende Prämien, Monate bis 1. August abschließen, Sommerpause Phase 0.
+Monate abschließen → Entwicklung → **Training der Woche** → Spiele simulieren → Einnahmen buchen → Moral & Chemie → **Fitness, Form, Taktik-Eingespieltheit** → Scouting → Markt-Tick → nächsten Spieltag vorbereiten → **Erholung bis zum nächsten Spieltermin** (Fitness zeigt immer den Stand zum Anpfiff) → am Saisonende Prämien, Monate bis 1. August abschließen, Sommerpause Phase 0.
 
 ## Was im Spiel steckt
 
@@ -104,6 +104,13 @@ Monate abschließen → Spiele simulieren → Einnahmen buchen → Moral & Chemi
 - **Kurzberichte** (`core/phaseReports.ts`) für den eigenen Verein: Vertragsgespräche (verlängert / offen / gehen / Neuzugänge), Transfermarkt (Zu- und Abgänge, ohne Anschlussvertrag, Bilanz, größte Wechsel der Liga), Sommertraining (Kaderstärke vorher/nachher, Gewinner/Verlierer, Nachwuchsjahrgang), Saisonwechsel (Kadergröße, Ausländerlizenzen, Gehaltsrahmen, Rang Kaderstärke, neues Ziel, Karriereenden), Trainingslager und Vorbereitung (Reihen-Chemie und Taktik-Eingespieltheit vorher/nachher, Experten-Tipp mit Favoriten).
 - Ablage in `world.offseason.reports` (Spieler als IDs, Anzeige über `PlayerName`); Anzeige als Karte unter der Phase, frühere Berichte per Klick auf die Zeitleiste.
 
+**Meilenstein 8 – Training (27.11.2026, Details `docs/training.md`):**
+- Reiter **Training**: Wochenplan mit 3 Schwerpunkten (Athletik, Angriff, Defensive, Video, Taktik, Über-/Unterzahl, Reihen, Torhüter), je Schwerpunkt eigene Intensität (hart, mittel, locker, Regeneration); „Co-Trainer plant“ oder „Selbst planen“ (Plan beibehalten oder nur eine Woche); Vorschau Belastung, Fitness, Moral mit Warnungen; Rückblick auf die letzte Woche.
+- Wirkung: Entwicklungstempo 0,82–1,15 und Richtung (Schwerpunkte verschieben das Wachstum auf passende Attribute), Eingespieltheit und Reihenchemie, Fitness und Erholungstempo, Moral (zwei/drei harte Einheiten drücken die Stimmung).
+- Einzeltraining für bis zu 3 Spieler (bis +22 % Tempo im Schwerpunkt, +Moral); freie Plätze besetzt der Co-Trainer nach Regel (reihum, Formschwache, Talente, junge Spieler).
+- KI-Vereine trainieren nach dem Co-Trainer-Plan. Sommerpause: Trainingsauftakt eine Woche, Trainingslager-Wochen zählen anderthalbfach.
+- Langzeit-Balance unverändert (`pnpm sim seasons 10`: Ø Spieler 10,2–10,4, Top 50 ≈ 12,0, Ø Alter 26,7–27,9); Kalibrierung unverändert.
+
 **Saisonwechsel (bisher):** Verträge, Klauseln, Karriereende, neue freie Spieler, KI-Kaderauffüllung, Nachwuchs für den menschlichen Verein, neue Aufstellungen, Chemie-Saat, Moral pendelt sich ein. Alterung/Entwicklung siehe Meilenstein 7.
 
 ### Sommerpause – Ausbaustand der Phasen
@@ -118,7 +125,7 @@ Festgehalten am 27.11.2026 (Matthias): Die Phasen, die bisher nur Platzhalter si
 | Transfermarkt | nur Markt-Zeitraum bis 20.06. + Bericht | **Platzhalter** – keine eigene Marktdynamik (z. B. Transferphase der KI, Ausland, letzte freie Spieler, Deadline) |
 | Sommertraining | Entwicklungsschritt, Tag der Leistungstests, Nachwuchsjahrgang | fertig (Trainingsschwerpunkte noch nicht wählbar) |
 | Saisonwechsel & Trainingsauftakt | Verträge, Karriereende, Kaderauffüllung, neues Ziel | fertig |
-| Trainingslager | pauschaler Zuwachs bei Chemie und Eingespieltheit | **Platzhalter** – keine Entscheidungen (Ort/Kosten, Schwerpunkt, Intensität, Verletzungsrisiko) |
+| Trainingslager | Wochenplan aus dem Training wirkt anderthalbfach, dazu pauschaler Zuwachs bei Chemie | teilweise – noch ohne Ort/Kosten/Dauer und Verletzungsrisiko |
 | Vorbereitungsspiele | pauschaler Zuwachs bei Chemie und Eingespieltheit | **Platzhalter** – keine echten Testspiele (Gegner wählen, Spiele simulieren, Reihen testen) |
 
 ## Kalibrierung (10 Saisons, siehe `docs/kalibrierung.md`)
@@ -145,8 +152,8 @@ Offene Punkte: Tore ins leere Tor zu selten (0,15 statt 0,3–0,5 je Spiel), Üb
 
 ## Nächste Schritte
 
-1. **Meilenstein 8 – Training:** Konzept mit Matthias klären, dann umsetzen. Trainingslager und Vorbereitungsspiele der Sommerpause gehören dazu (bisher Platzhalter).
-2. Meilenstein 9 – Verletzungen & medizinische Abteilung (baut auf der Belastung aus dem Training auf)
+1. **Meilenstein 9 – Verletzungen & medizinische Abteilung** (baut auf der Belastung aus dem Training auf; `training.week.load` liegt bereit)
+2. Offen aus dem Training: Testspiele in der Vorbereitung, Trainingslager mit Ort/Kosten, Positionsumschulung
 3. Meilenstein 10 – Events
 4. Meilenstein 11 – Sponsoring
 5. Meilenstein 12a/b – Stadionbetrieb & Zuschauer, danach Stadionausbau

@@ -26,7 +26,7 @@ export const OFFSEASON_PHASES: OffseasonPhase[] = [
   { id: 'transfer', name: 'Transfermarkt', date: '06-20', newSeason: false, text: 'Die Kader nehmen Form an. Die Konkurrenz schlägt bei den letzten freien Spielern zu.' },
   { id: 'summer', name: 'Sommertraining', date: '07-15', newSeason: false, text: 'Individuelles Training. Letzte Chance, den Kader vor dem Saisonwechsel zu ergänzen.' },
   { id: 'kickoff', name: 'Saisonwechsel & Trainingsauftakt', date: '08-01', newSeason: true, text: 'Neue Verträge treten in Kraft, Neuzugänge stoßen dazu. Die Mannschaft trifft sich zum ersten Eistraining.' },
-  { id: 'camp', name: 'Trainingslager', date: '08-12', newSeason: true, text: 'Intensive Einheiten: Reihen spielen sich ein, das Team lernt das taktische System.' },
+  { id: 'camp', name: 'Trainingslager', date: '08-12', newSeason: true, text: 'Intensive Einheiten nach deinem Wochenplan (Reiter Training) – im Trainingslager wirkt jede Woche anderthalbfach. Reihen spielen sich ein, das Team lernt das System.' },
   { id: 'preseason', name: 'Vorbereitungsspiele', date: '08-26', newSeason: true, text: 'Testspiele und Feinschliff. Reihen und Systeme sitzen besser – bald geht es los.' },
 ];
 

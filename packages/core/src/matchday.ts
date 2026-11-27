@@ -10,6 +10,7 @@ import { toDisplay } from './ratings.ts';
 import { recoverFitness, updateCondition, restDays } from './condition.ts';
 import { updateFamiliarity } from './familiarity.ts';
 import { developMonths } from './development.ts';
+import { runTraining } from './training.ts';
 import { leagueOf, regularTable } from './standings.ts';
 import { prepareNextDay, needed } from './competition.ts';
 
@@ -120,6 +121,8 @@ export function playDay(world: World, preplayed: Record<string, MatchResult> = {
   w = closeMonthsBetween(w, w.date, date, placeBefore);
   // Entwicklung der Spieler für abgeschlossene Saisonmonate
   w = developMonths(w, w.date, date);
+  // Training der laufenden Woche(n) vor dem Spiel
+  if (todays.length) w = runTraining(w, date);
   for (const f of todays) {
     const res = preplayed[f.id] ?? simulateMatch(matchInputFor(w, f));
     results[f.id] = res;

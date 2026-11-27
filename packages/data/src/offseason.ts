@@ -2,7 +2,7 @@ import type { World } from '@ehm/schema';
 import type { PhaseReport } from '@ehm/schema';
 import {
   OFFSEASON_PHASES, phaseDate, marketAdvance, daysBetween, trainingCamp, vacation, developSummer, buildTestDay, releaseRemainingYouth, resetDevRef,
-  applySeasonReviews, talksReport, transferReport, summerReport, kickoffReport, trainingReport,
+  applySeasonReviews, runTraining, clearTrainingLog, recoverFitness, talksReport, transferReport, summerReport, kickoffReport, trainingReport,
 } from '@ehm/core';
 import { seasonTransition } from './transition.ts';
 import { youthIntake } from './youth.ts';
@@ -62,14 +62,18 @@ export function advanceOffseason(world: World): World {
   if (ph.id === 'kickoff') {
     const prev = w;
     w = releaseRemainingYouth(w, target);
-    w = resetDevRef(seasonTransition(w));
+    w = clearTrainingLog(resetDevRef(seasonTransition(w)));
     w = trainingCamp(w, 0.3, `${w.season}:auftakt`);
+    // Trainingsauftakt: erste Trainingswoche nach dem Wochenplan
+    w = recoverFitness(runTraining(w, target), 2);
     const out = w;
     return done(out, undefined, (hid) => kickoffReport(prev, out, hid));
   }
   const prev = w;
   w = marketAdvance(w, Math.max(0, daysBetween(w.date, target)));
   w = trainingCamp(w, ph.id === 'camp' ? 1 : 0.6, `${w.season}:${ph.id}`);
+  // Trainingswochen der abgelaufenen Phase; die Wochen im Trainingslager zählen anderthalbfach
+  w = recoverFitness(runTraining(w, target, ph.id === 'preseason' ? 1.5 : 1), 2);
   const out = w;
   return done(out, undefined, (hid) => trainingReport(prev, out, hid, ph.id === 'preseason'));
 }

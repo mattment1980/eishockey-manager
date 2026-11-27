@@ -2,6 +2,7 @@ import type { World, Player, Fixture } from '@ehm/schema';
 import type { MatchResult } from './engine/types.ts';
 import { hash01, daysBetween } from './calendar.ts';
 import { toDisplay } from './ratings.ts';
+import { recoveryFactor } from './training.ts';
 
 /**
  * Zustand der Spieler zwischen den Spielen:
@@ -35,11 +36,13 @@ export function recoverFitness(world: World, days: number): World {
     if (!s.contract || s.role !== 'assistantCoach') continue;
     bonus.set(s.contract.clubId, Math.max(bonus.get(s.contract.clubId) ?? 0, (toDisplay(s.ratings.development) - 10) * 0.004));
   }
+  // Trainingsbelastung der Woche: harte Wochen bremsen die Erholung, Regeneration beschleunigt sie
+  const load = new Map(world.clubs.map((c) => [c.id, recoveryFactor(c.training)]));
   return {
     ...world,
     players: world.players.map((p) => {
       if (p.condition.fitness >= 100) return p;
-      const r = COND.RECOVER_BASE + toDisplay(p.skater.stamina) * COND.RECOVER_STAMINA + (bonus.get(p.contract?.clubId ?? '') ?? 0);
+      const r = (COND.RECOVER_BASE + toDisplay(p.skater.stamina) * COND.RECOVER_STAMINA + (bonus.get(p.contract?.clubId ?? '') ?? 0)) * (load.get(p.contract?.clubId ?? '') ?? 1);
       const deficit = (100 - p.condition.fitness) * Math.pow(1 - Math.min(0.6, r), days);
       return { ...p, condition: { ...p.condition, fitness: Math.min(100, Math.round((100 - deficit) * 10) / 10) } };
     }),

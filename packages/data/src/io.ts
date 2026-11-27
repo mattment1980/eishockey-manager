@@ -53,6 +53,10 @@ export function migrateWorld(raw: unknown): unknown {
     // Phasenberichte der Sommerpause über Standardwert
     w.schemaVersion = 10;
   }
+  if (w.schemaVersion === 10) {
+    // Training je Verein über Standardwert (Co-Trainer plant)
+    w.schemaVersion = 11;
+  }
   void SCHEMA_VERSION;
   return w;
 }

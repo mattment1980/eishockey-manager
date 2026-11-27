@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { World, Club, Player, Matchplan, Terms } from '@ehm/schema';
+import type { World, Club, Player, Matchplan, Terms, Training } from '@ehm/schema';
 import { WorldSchema } from '@ehm/schema';
 import { beginSeason, initScouting, submitOffer, withdrawOffer, signYouth, releaseYouth, type OfferResponse } from '@ehm/core';
 import { generateWorld, migrateWorld, advanceOffseason, ensureChemistry, exportWorldJson, importWorldJson } from '@ehm/data';
@@ -47,6 +47,8 @@ interface Store {
   markTestDaySeen: () => void;
   /** Datenwerkstatt: Welt ändern (als Aktion, auch während einer Simulation sicher) */
   editWorld: (fn: (w: World) => World) => void;
+  /** Training des eigenen Vereins ändern (Wochenplan, Einzeltraining, Co-Trainer-Regel) */
+  setTraining: (patch: Partial<Training>) => void;
   /** Vor Spielbeginn: Welt komplett ersetzen (z. B. nach Import oder Neuaufbau) */
   replaceWorld: (w: World) => void;
   /** Eigene Vorlage (Datensatz) im Browser */
@@ -184,6 +186,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       releaseYouth: (playerId) => act((w) => releaseYouth(w, playerId)),
       markTestDaySeen: () => act((w) => (w.offseason?.testDay ? { ...w, offseason: { ...w.offseason, testDay: { ...w.offseason.testDay, seen: true } } } : w)),
       editWorld: (fn) => act((w) => fn(w)),
+      setTraining: (patch) => act((w, clubId) => ({ ...w, clubs: w.clubs.map((c) => (c.id === clubId ? { ...c, training: { ...c.training, ...patch } } : c)) })),
       replaceWorld: (w) => setSave((s) => ({ ...s, world: w })),
       hasTemplate,
       saveTemplate: () => {
