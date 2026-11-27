@@ -101,3 +101,4 @@ KI-Vereine entscheiden sofort mit der ausgewogenen Strategie und 25 % Spielraum.
 - Sponsorenevent im Stadion (12a) als weiterer Pflichttermin
 - Partner, die Bedingungen stellen (z. B. Nachwuchsspieler einsetzen)
 - Sponsorenlinie in den Phasenberichten
+- **Später, mit der grafischen Aufbereitung (Matthias, 27.11.2026): Sponsoren-Logos.** Sponsoren als eigene Einträge in der Welt (ID, Name, Typ, Farben, Logo); Verträge und Angebote verweisen nur noch auf die ID, damit ein Partner über Verlängerungen derselbe bleibt. Logos automatisch erzeugt (Initialen, Farben, Grundform je Typ) und/oder in der Datenwerkstatt hochladbar, dort auch Namen bearbeitbar. Anzeige im Sponsoren-Reiter, auf Trikot und Bande, beim Hallennamen und im Spielbericht. Braucht neue Schema-Version mit Migration (bestehende Namen werden übernommen). Heute: Name als Text direkt im Vertrag (`name`), erzeugt aus Wortlisten in `core/sponsors.ts`.

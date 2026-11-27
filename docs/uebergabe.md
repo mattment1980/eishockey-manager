@@ -189,5 +189,6 @@ Offene Punkte: Tore ins leere Tor zu selten (0,15 statt 0,3–0,5 je Spiel), Üb
 3. Offen aus M9: Verletzung im Spiel mit Ticker, Staff-Vertragsgespräche
 4. Offen aus M10: Eiszeit-Versprechen nachverfolgen, Sperre automatisch, Events für KI-Vereine
 5. Offen aus M11: Sponsorenzeile in den Phasenberichten, Partner mit Bedingungen
-6. Nebenbei: Dominanz des stärksten Vereins, Kalibrierung (leeres Tor, Überzahl- und Fangquote), mehrere Spielstände, Vertragsgespräche und Transfermarkt in der Sommerpause
-7. Multiplayer später
+6. Später mit der grafischen Aufbereitung: Sponsoren als eigene Einträge mit Logos (erzeugt oder hochgeladen), Anzeige auf Trikot, Bande, Halle (Details `docs/sponsoring.md`)
+7. Nebenbei: Dominanz des stärksten Vereins, Kalibrierung (leeres Tor, Überzahl- und Fangquote), mehrere Spielstände, Vertragsgespräche und Transfermarkt in der Sommerpause
+8. Multiplayer später
