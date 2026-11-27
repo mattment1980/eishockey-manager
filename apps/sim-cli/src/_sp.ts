@@ -1,0 +1,12 @@
+import { generateWorld, advanceOffseason, offseasonPhase } from '@ehm/data';
+import { playDays, sponsorAnnual, activeDeals } from '@ehm/core';
+let w = generateWorld(94);
+const pr = (tag: string) => console.log(tag, w.clubs.slice(0, 6).map((c) => `${c.shortName} plan ${Math.round(c.finances.sponsorIncome / 1000)} deals ${Math.round(sponsorAnnual(c, w.season) / 1000)} n=${activeDeals(c, w.season).length} bal ${Math.round(c.finances.balance / 1000)}`).join(' | '));
+pr('start');
+w = playDays(w, 400);
+pr('ende');
+console.log('bonus', w.clubs.map((c) => `${c.shortName}:${Math.round(c.sponsors.paidBonus / 1000)}`).join(' '));
+while (offseasonPhase(w) !== null) w = advanceOffseason(w);
+pr('neu');
+const c = w.clubs[0];
+console.log(activeDeals(c, w.season).map((d) => `${d.slot}:${d.name}(${d.type}) ${d.base / 1000}T bis ${d.untilSeason} sat ${d.satisfaction}`).join('\n'));

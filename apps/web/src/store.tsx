@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { World, Club, Player, Matchplan, Terms, Training } from '@ehm/schema';
 import { WorldSchema } from '@ehm/schema';
-import { beginSeason, initScouting, submitOffer, withdrawOffer, signYouth, releaseYouth, startWeek, hireStaff, releaseStaff, resolvePending, type OfferResponse } from '@ehm/core';
+import { beginSeason, initScouting, submitOffer, withdrawOffer, signYouth, releaseYouth, startWeek, hireStaff, releaseStaff, resolvePending, acceptOffer, rejectOffer, negotiateOffer, autoDecide, businessManager, type OfferResponse } from '@ehm/core';
 import { generateWorld, migrateWorld, advanceOffseason, ensureChemistry, exportWorldJson, importWorldJson } from '@ehm/data';
 
 const KEY = 'ehm.save.v1';
@@ -57,6 +57,11 @@ interface Store {
   /** Events: Termine der nächsten Woche festlegen, Zufallsereignis entscheiden */
   setTermine: (plan: { id: string; option?: string; subject?: string }[]) => void;
   decideEvent: (optionId: string) => void;
+  /** Sponsoring */
+  acceptSponsor: (offerId: string) => void;
+  rejectSponsor: (offerId: string) => void;
+  negotiateSponsor: (offerId: string, ask: { base: number; termine: number }) => void;
+  setSponsorPolicy: (patch: { delegate?: boolean; strategy?: 'safe' | 'balanced' | 'bonus' }) => void;
   /** Wochenablauf: Training der anstehenden Woche ausführen */
   startWeek: () => void;
   /** Vor Spielbeginn: Welt komplett ersetzen (z. B. nach Import oder Neuaufbau) */
@@ -201,6 +206,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       markTestDaySeen: () => act((w) => (w.offseason?.testDay ? { ...w, offseason: { ...w.offseason, testDay: { ...w.offseason.testDay, seen: true } } } : w)),
       editWorld: (fn) => act((w) => fn(w)),
       startWeek: () => act((w) => startWeek(w)),
+      acceptSponsor: (offerId) => act((w, clubId) => (clubId ? acceptOffer(w, clubId, offerId) : w)),
+      rejectSponsor: (offerId) => act((w, clubId) => (clubId ? rejectOffer(w, clubId, offerId) : w)),
+      negotiateSponsor: (offerId, ask) => act((w, clubId) => (clubId ? negotiateOffer(w, clubId, offerId, ask).world : w)),
+      setSponsorPolicy: (patch) => act((w, clubId) => {
+        let x = { ...w, clubs: w.clubs.map((c) => (c.id === clubId ? { ...c, sponsors: { ...c.sponsors, ...patch } } : c)) };
+        // Geschäftsführer übernimmt: offene Angebote sofort entscheiden
+        if (clubId && patch.delegate && businessManager(x, clubId)) x = autoDecide(x, clubId, 'gm');
+        return x;
+      }),
       setTermine: (plan) => act((w, clubId) => ({ ...w, clubs: w.clubs.map((c) => (c.id === clubId ? { ...c, events: { ...c.events, plan } } : c)) })),
       decideEvent: (optionId) => act((w, clubId) => (clubId ? resolvePending(w, clubId, optionId) : w)),
       setInjuryPlay: (playerId, play) => act((w) => ({ ...w, players: w.players.map((p) => (p.id === playerId && p.injury ? { ...p, injury: { ...p.injury, play } } : p)) })),

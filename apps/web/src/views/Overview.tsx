@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { teamStrength, overall, toDisplay, ageOn, regularTable, nextFixtureOf, GOAL_LABEL, formatDate } from '@ehm/core';
 import { useStore } from '../store.tsx';
 import { MoodKpis, EventLogCard } from './Events.tsx';
+import { SponsorsView } from './Sponsors.tsx';
 import { PlayerName, ClubName } from '../ui.tsx';
 import { RatingBadge } from '../components/Badges.tsx';
 import { SaveCard } from '../components/SaveCard.tsx';
@@ -12,14 +13,16 @@ import { Finances } from './Finances.tsx';
 import { useState } from 'react';
 
 export function Overview({ go }: { go: (t: Tab) => void }) {
-  const [mode, setMode] = useState<'club' | 'finances'>('club');
+  const [mode, setMode] = useState<'club' | 'finances' | 'sponsors'>('club');
+  const { club } = useStore();
   return (
     <div className="stack">
       <div className="tabs">
         <button className={mode === 'club' ? 'on' : ''} onClick={() => setMode('club')}>Übersicht</button>
         <button className={mode === 'finances' ? 'on' : ''} onClick={() => setMode('finances')}>Finanzen</button>
+        <button className={mode === 'sponsors' ? 'on' : ''} onClick={() => setMode('sponsors')}>Sponsoren{club && club.sponsors.offers.length ? ` (${club.sponsors.offers.length})` : ''}</button>
       </div>
-      {mode === 'club' ? <ClubOverview go={go} /> : <Finances />}
+      {mode === 'club' ? <ClubOverview go={go} /> : mode === 'finances' ? <Finances /> : <SponsorsView />}
     </div>
   );
 }

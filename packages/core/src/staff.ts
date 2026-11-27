@@ -22,7 +22,7 @@ export const ROLE_LIMIT: Record<StaffRole, number> = {
 /** Wichtigster Wert einer Rolle (für Markt und Gehalt) */
 export const ROLE_MAIN: Record<StaffRole, keyof Staff['ratings']> = {
   headCoach: 'tactics', assistantCoach: 'tactics', goalieCoach: 'development', youthCoach: 'development', scout: 'scouting',
-  manager: 'motivation', doctor: 'medical', physio: 'medical', athleticsCoach: 'medical',
+  manager: 'business', doctor: 'medical', physio: 'medical', athleticsCoach: 'medical',
 };
 
 const BASE_SALARY: Record<StaffRole, number> = {

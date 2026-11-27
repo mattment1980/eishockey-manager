@@ -56,3 +56,49 @@ describe('Markt und Verträge', () => {
     expect(w.players.every((p) => !p.contract || p.contract.untilSeason >= 2027)).toBe(true);
   });
 });
+
+describe('Sponsoring', () => {
+  it('jeder Verein startet mit 9 Partnern, Summe nahe am Sponsorenwert', async () => {
+    const core = await import('@ehm/core');
+    const { generateWorld } = await import('@ehm/data');
+    const w = generateWorld(95);
+    for (const c of w.clubs) {
+      expect(core.activeDeals(c, w.season)).toHaveLength(9);
+      const r = core.sponsorAnnual(c, w.season) / c.finances.sponsorIncome;
+      expect(r).toBeGreaterThan(0.75);
+      expect(r).toBeLessThan(1.1);
+      expect(new Set(c.sponsors.deals.map((d) => d.name)).size).toBe(9);
+    }
+  });
+
+  it('Verhandeln: Forderung im Rahmen wird angenommen, zu hohe Forderung führt zu Gegenangebot oder Abbruch, nach 3 Runden ist Schluss', async () => {
+    const core = await import('@ehm/core');
+    const { generateWorld } = await import('@ehm/data');
+    let w = generateWorld(96);
+    const club = w.clubs[0];
+    const offer = core.makeOffer(w, club, 'sleeve', 'test-1');
+    w = { ...w, clubs: w.clubs.map((c) => (c.id === club.id ? { ...c, sponsors: { ...c.sponsors, offers: [offer], deals: c.sponsors.deals.filter((d) => d.slot !== 'sleeve') } } : c)) };
+    const ok = core.negotiateOffer(w, club.id, offer.id, { base: offer.limit - 1000, termine: offer.termine });
+    expect(ok.result).toBe('accepted');
+    expect(core.dealOf(ok.world.clubs[0], 'sleeve', w.season)!.base).toBe(offer.limit - 1000);
+    let x = w, res = '';
+    for (let i = 0; i < 4 && res !== 'walked' && res !== 'final'; i++) { const r = core.negotiateOffer(x, club.id, offer.id, { base: offer.limit * 2, termine: 0 }); x = r.world; res = r.result; }
+    expect(['walked', 'final']).toContain(res);
+  });
+
+  it('Pflichttermine, Boni und Sommer: freie Flächen werden zum Saisonwechsel besetzt', async () => {
+    const core = await import('@ehm/core');
+    const data = await import('@ehm/data');
+    let w = data.generateWorld(97);
+    const me = w.clubs[0].id;
+    w = { ...w, clubs: w.clubs.map((c) => (c.id === me ? { ...c, controller: { type: 'human' as const } } : c)) };
+    const before = core.openSponsorTermine(w.clubs[0], w.season);
+    w = core.creditSponsorTermin(w, me);
+    expect(core.openSponsorTermine(w.clubs[0], w.season)).toBe(Math.max(0, before - 1));
+    w = core.playDays(w, 400);
+    expect(w.clubs.some((c) => c.sponsors.paidBonus > 0)).toBe(true);
+    while (data.offseasonPhase(w) !== null) w = data.advanceOffseason(w);
+    for (const c of w.clubs) expect(core.activeDeals(c, w.season).length).toBe(9);
+    expect(w.clubs.find((c) => c.id === me)!.sponsors.offers).toHaveLength(0);
+  });
+});

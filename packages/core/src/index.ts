@@ -27,3 +27,4 @@ export * from './staff.ts';
 export * from './injuries.ts';
 export * from './events.ts';
 export * from './eventCatalog.ts';
+export * from './sponsors.ts';
