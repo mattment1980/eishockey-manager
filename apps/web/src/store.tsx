@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { World, Club, Player, Matchplan, Terms, Training } from '@ehm/schema';
+import type { World, Club, Player, Matchplan, Terms, Training, ClubStadium, StandValues } from '@ehm/schema';
 import { WorldSchema } from '@ehm/schema';
-import { beginSeason, initScouting, submitOffer, withdrawOffer, signYouth, releaseYouth, startWeek, hireStaff, releaseStaff, resolvePending, acceptOffer, rejectOffer, negotiateOffer, autoDecide, businessManager, type OfferResponse } from '@ehm/core';
+import { beginSeason, initScouting, submitOffer, withdrawOffer, signYouth, releaseYouth, startWeek, hireStaff, releaseStaff, resolvePending, acceptOffer, rejectOffer, negotiateOffer, autoDecide, businessManager, changePrices, setCateringMode, stadiumMonth, type OfferResponse } from '@ehm/core';
 import { generateWorld, migrateWorld, advanceOffseason, ensureChemistry, exportWorldJson, importWorldJson } from '@ehm/data';
 
 const KEY = 'ehm.save.v1';
@@ -62,6 +62,12 @@ interface Store {
   rejectSponsor: (offerId: string) => void;
   negotiateSponsor: (offerId: string, ask: { base: number; termine: number }) => void;
   setSponsorPolicy: (patch: { delegate?: boolean; strategy?: 'safe' | 'balanced' | 'bonus' }) => void;
+  /** Stadion: Preise, Catering, Fanshop, Geschäftsführer, Spieltagsaktionen */
+  setTicketPrices: (prices: StandValues) => void;
+  setStadium: (patch: Partial<Pick<ClubStadium, 'playoffSurcharge' | 'topSurcharge' | 'shop' | 'delegate' | 'strategy' | 'autoActions'>> & { catering?: Partial<Pick<ClubStadium['catering'], 'level' | 'pricing'>> }) => void;
+  setCateringMode: (mode: 'own' | 'lease') => void;
+  /** Spieltagsaktion für ein Heimspiel (null = keine) */
+  setMatchdayAction: (fixtureId: string, actionId: string | null) => void;
   /** Wochenablauf: Training der anstehenden Woche ausführen */
   startWeek: () => void;
   /** Vor Spielbeginn: Welt komplett ersetzen (z. B. nach Import oder Neuaufbau) */
@@ -215,6 +221,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (clubId && patch.delegate && businessManager(x, clubId)) x = autoDecide(x, clubId, 'gm');
         return x;
       }),
+      setTicketPrices: (prices) => act((w, clubId) => ({ ...w, clubs: w.clubs.map((c) => (c.id === clubId ? changePrices(c, prices) : c)) })),
+      setStadium: (patch) => act((w, clubId) => {
+        const x = {
+          ...w,
+          clubs: w.clubs.map((c) => (c.id === clubId ? { ...c, stadium: { ...c.stadium, ...patch, catering: { ...c.stadium.catering, ...(patch.catering ?? {}) } } } : c)),
+        };
+        // Geschäftsführer übernimmt die Preise: sofort nach Leitlinie setzen (nur der eigene Verein)
+        return clubId && (patch.delegate || patch.strategy) && businessManager(x, clubId)
+          ? stadiumMonth(x, clubId)
+          : x;
+      }),
+      setCateringMode: (mode) => act((w, clubId) => (clubId ? setCateringMode(w, clubId, mode) : w)),
+      setMatchdayAction: (fixtureId, actionId) => act((w, clubId) => ({
+        ...w,
+        clubs: w.clubs.map((c) => {
+          if (c.id !== clubId) return c;
+          const actions = { ...c.stadium.actions };
+          if (actionId) actions[fixtureId] = actionId; else delete actions[fixtureId];
+          return { ...c, stadium: { ...c.stadium, actions } };
+        }),
+      })),
       setTermine: (plan) => act((w, clubId) => ({ ...w, clubs: w.clubs.map((c) => (c.id === clubId ? { ...c, events: { ...c.events, plan } } : c)) })),
       decideEvent: (optionId) => act((w, clubId) => (clubId ? resolvePending(w, clubId, optionId) : w)),
       setInjuryPlay: (playerId, play) => act((w) => ({ ...w, players: w.players.map((p) => (p.id === playerId && p.injury ? { ...p, injury: { ...p.injury, play } } : p)) })),

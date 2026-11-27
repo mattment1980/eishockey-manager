@@ -84,7 +84,7 @@ Beide Werte laufen von 0 bis 100, normal ist 50.
 | Bereich | Termine |
 |---|---|
 | Mannschaft | Teamabend, Mannschaftsbesprechung (aufbauend/fordernd), Wellness-Kurztrip, Einzelgespräch, „Spiel der Saison“ |
-| Wirtschaft | Sponsorenabend, Werbedreh, Sondertrikot |
+| Wirtschaft | Werbedreh, Sondertrikot (Sponsorenabend, Kindertag und Ticketaktion sind seit M12a Spieltagsaktionen, siehe `docs/stadion.md`) |
 | Fans | Autogrammstunde, Fanclub-Besuch, Kindertag, Ticketaktion, Öffentliches Training |
 
 **15 Zufallsereignisse**

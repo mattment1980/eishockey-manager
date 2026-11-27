@@ -119,7 +119,7 @@ export function shot(this: MatchSim, a: Side, q: Quality | 'reboundQ'): Next {
   const gp = tmB.byId.get(goalie)!;
   const gr = weightedGoalie(gp, W.goalie) * fitnessFactor(gp.condition.fitness) * goalieFormFactor(gp.condition.form);
   const shootR = weightedSkater(sp, W.shooting) * this.mult(a, shooter);
-  const homeAdj = a === 0 ? C.HOME : -C.HOME;
+  const homeAdj = a === 0 ? this.home : -this.home;
   const pGoal = sigmoid(logit(qs) + C.K_SHOT * ((shootR - gr) / 20) + homeAdj + this.dayForm[a] - this.goalieForm[b]);
   st.shotsOnGoal++;
   this.ts[a].shotsOnGoal++;

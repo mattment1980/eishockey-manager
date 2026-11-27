@@ -9,7 +9,7 @@ import { toDisplay } from './ratings.ts';
  * - Angebote kommen in der Sommerpause (Vertragsgespräche) und für freie Flächen auch während der Saison.
  *   Der Manager nimmt an, lehnt ab oder verhandelt (bis zu 3 Runden: Grundbetrag und Pflichttermine).
  * - Der Geschäftsführer kann die Verhandlungen nach einer Leitlinie übernehmen (sicheres Geld / ausgewogen / hohe Boni).
- * - Pflichttermine erfüllen die Termine „Sponsorenabend“ und „Werbedreh“ (Events). Fehlende Termine kosten Zufriedenheit.
+ * - Pflichttermine erfüllen die Spieltagsaktion „Business-Spieltag“ (stadiumActions.ts) und der Termin „Werbedreh“ (Events). Fehlende Termine kosten Zufriedenheit.
  * Die Summe aller Flächen entspricht im Schnitt dem bisherigen Sponsorenwert der Saisonplanung (`finances.sponsorIncome`).
  */
 
@@ -269,7 +269,7 @@ export function ensureSponsors(world: World): World {
   };
 }
 
-/** Pflichttermin erledigt (Sponsorenabend, Werbedreh): dem Partner mit dem größten Rückstand gutschreiben */
+/** Pflichttermin erledigt (Business-Spieltag, Werbedreh): dem Partner mit dem größten Rückstand gutschreiben */
 export function creditSponsorTermin(world: World, clubId: string): World {
   return setClub(world, clubId, (c) => {
     const open = activeDeals(c, world.season).filter((d) => d.termine > d.termineDone).sort((a, b) => b.termine - b.termineDone - (a.termine - a.termineDone) || b.base - a.base)[0];

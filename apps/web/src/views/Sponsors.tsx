@@ -39,7 +39,7 @@ export function SponsorsView() {
       <section className="kpis">
         <div className="kpi" data-tip="Summe der Grundbeträge pro Saison (Business-Club schwankt mit der Sponsorenstimmung)"><span>Sponsoring fix</span><strong>{euro(Math.round(fix))}</strong></div>
         <div className="kpi" data-tip="Alle Boni zusammen, wenn jedes Ziel erreicht wird"><span>Boni möglich</span><strong>{euro(bonusMax)}</strong></div>
-        <div className="kpi" data-tip="Pflichttermine der Partner in dieser Saison. Erfüllt werden sie mit den Terminen „Sponsorenabend“ und „Werbedreh“ beim Wochenstart. Fehlende Termine kosten am Saisonende Zufriedenheit."><span>Pflichttermine offen</span><strong className={termineOpen > 0 ? '' : 'up'}>{termineOpen} von {termineAll}</strong></div>
+        <div className="kpi" data-tip="Pflichttermine der Partner in dieser Saison. Erfüllt werden sie mit der Spieltagsaktion „Business-Spieltag“ (Verein › Stadion) und dem Termin „Werbedreh“ beim Wochenstart. Fehlende Termine kosten am Saisonende Zufriedenheit."><span>Pflichttermine offen</span><strong className={termineOpen > 0 ? '' : 'up'}>{termineOpen} von {termineAll}</strong></div>
         <div className="kpi"><span>Sponsoren-Stimmung</span><strong>{SPONSOR_LABEL(club.mood.sponsors)} ({Math.round(club.mood.sponsors)})</strong></div>
       </section>
 
@@ -88,7 +88,7 @@ export function SponsorsView() {
           </section>
         );
       })}
-      <p className="muted small">Pflichttermine erledigst du mit den Terminen „Sponsorenabend“ oder „Werbedreh“ beim Wochenstart (Reiter Spieltag). Boni werden nach der Saison ausgezahlt.</p>
+      <p className="muted small">Pflichttermine erledigst du mit der Spieltagsaktion „Business-Spieltag“ (Verein › Stadion) oder dem Termin „Werbedreh“ beim Wochenstart (Reiter Spieltag). Boni werden nach der Saison ausgezahlt.</p>
     </div>
   );
 }

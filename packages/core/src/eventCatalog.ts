@@ -91,18 +91,6 @@ const TERMIN_LIST: TerminDef[] = [
     resolve: () => out('Die Mannschaft ist heiß – im nächsten Spiel wird alles reingeworfen.', 'neutral', [{ kind: 'gameOfSeason' }]),
   },
   {
-    id: 'sponsorenabend', category: 'economy', label: 'Sponsorenabend / Business-Spieltag', sponsorTermin: true,
-    pros: 'Geld und Sponsorenzufriedenheit; zählt als Pflichttermin für einen Partner', cons: 'Pflichttermin für die Spieler: Frische und etwas Moral',
-    blocked: (ctx) => (ctx.homeGames === 0 ? 'braucht ein Heimspiel in dieser Woche' : null),
-    resolve: (ctx) => {
-      const k = wear(ctx, 'sponsorenabend');
-      return out('Logen voll, Hände geschüttelt, Visitenkarten getauscht. Die Partner sind angetan.', 'good', [
-        { kind: 'money', amount: Math.round(25000 * k), cat: 'sponsors' }, { kind: 'sponsors', amount: 6 * k },
-        { kind: 'fitness', target: 'team', amount: -2 }, { kind: 'morale', target: 'team', amount: -1, traits: { diva: -1, egoist: 1.5, stillerArbeiter: 2 } },
-      ]);
-    },
-  },
-  {
     id: 'werbedreh', category: 'economy', label: 'Werbedreh mit einem Star', sponsorTermin: true,
     pros: 'Geld vom Hauptsponsor; zählt als Pflichttermin', cons: 'der Star verliert Frische; Arbeiter nervt es, Diven lieben es',
     resolve: (ctx) => {
@@ -121,8 +109,8 @@ const TERMIN_LIST: TerminDef[] = [
       const mood = ctx.club.mood.fans;
       const sale = Math.round((20000 + mood * 900 + ctx.club.fanBase * 300) * (0.75 + ctx.roll('verkauf') * 0.5));
       const flop = mood < 35 || ctx.losingStreak >= 4;
-      if (flop) return out('Das Trikot ist schick, aber bei der Stimmung kauft es kaum jemand.', 'bad', [{ kind: 'money', amount: -20000 + Math.round(sale * 0.4), cat: 'catering' }, { kind: 'fans', amount: 1 }]);
-      return out(`Das Sondertrikot ist ein Renner – rund ${Math.round((sale - 20000) / 1000)} T€ Gewinn.`, 'good', [{ kind: 'money', amount: sale - 20000, cat: 'catering' }, { kind: 'fans', amount: 4 }]);
+      if (flop) return out('Das Trikot ist schick, aber bei der Stimmung kauft es kaum jemand.', 'bad', [{ kind: 'money', amount: -20000 + Math.round(sale * 0.4), cat: 'merch' }, { kind: 'fans', amount: 1 }]);
+      return out(`Das Sondertrikot ist ein Renner – rund ${Math.round((sale - 20000) / 1000)} T€ Gewinn.`, 'good', [{ kind: 'money', amount: sale - 20000, cat: 'merch' }, { kind: 'fans', amount: 4 }]);
     },
   },
   {
@@ -142,27 +130,6 @@ const TERMIN_LIST: TerminDef[] = [
     resolve: () => out('Die Mannschaft tourt durch die Fanclubs – Stimmung wie bei einer Meisterfeier.', 'good', [
       { kind: 'fans', amount: 9 }, { kind: 'fitness', target: 'team', amount: -4 }, { kind: 'morale', target: 'team', amount: 1, traits: { teamplayer: 4, leader: 3, diva: -3 } },
     ]),
-  },
-  {
-    id: 'kindertag', category: 'fans', label: 'Kindertag / Schultour', cost: 8000,
-    pros: 'Fanbasis wächst langfristig, Nachwuchs wird aufmerksam', cons: 'kostet; kurzfristig wenig Wirkung',
-    resolve: (ctx) => {
-      const k = wear(ctx, 'kindertag');
-      return out('Hunderte Kinder auf dem Eis – manche davon stehen in zehn Jahren in der Halle.', 'good', [
-        { kind: 'money', amount: -8000, cat: 'admin' }, { kind: 'fans', amount: 2 * k }, { kind: 'board', amount: 1 * k }, { kind: 'morale', target: 'team', amount: 1 },
-      ]);
-    },
-  },
-  {
-    id: 'ticketaktion', category: 'fans', label: 'Ticketaktion (Familientag)',
-    pros: 'volle Halle, gute Stimmung', cons: 'geringere Ticketeinnahmen',
-    blocked: (ctx) => (ctx.homeGames === 0 ? 'braucht ein Heimspiel in dieser Woche' : null),
-    resolve: (ctx) => {
-      const loss = Math.round(ctx.club.arena.capacity * ctx.club.finances.ticketPrice * 0.12);
-      return out('Familienpreise locken neue Gesichter in die Halle.', 'good', [
-        { kind: 'attendance', pct: 0.12, games: 1 }, { kind: 'fans', amount: 3 }, { kind: 'money', amount: -loss, cat: 'tickets' },
-      ]);
-    },
   },
   {
     id: 'offenesTraining', category: 'fans', label: 'Öffentliches Training',

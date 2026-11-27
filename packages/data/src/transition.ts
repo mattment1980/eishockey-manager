@@ -2,7 +2,7 @@ import type { World, Player, News, Position } from '@ehm/schema';
 import { makeContract, EMPTY_MARKET } from '@ehm/schema';
 import {
   Rng, overall, toDisplay, ageOn, beginSeason, seedChemistry, refreshLineup, standardTerms, contractCost, TARGET,
-  regionOf, archiveSeason, extendStaffContracts,
+  regionOf, archiveSeason, extendStaffContracts, fanBaseChange,
 } from '@ehm/core';
 import { WorldGenerator, ensureStaff } from './generator.ts';
 import { IMPORT_ORIGINS } from './names.ts';
@@ -95,6 +95,12 @@ export function seasonTransition(input: World): World {
     players = players.filter((p) => !drop.has(p.id));
   }
 
+  // Fanbasis: volle Hallen, Erfolg, Stimmung und Familienaktionen lassen sie wachsen (Stand vor dem Wechsel)
+  const fanBase = new Map(world.clubs.map((c) => [c.id, fanBaseChange(world, c)]));
+  for (const c of world.clubs) {
+    const fb = fanBase.get(c.id)!;
+    if (human.has(c.id) && Math.abs(fb.delta) >= 0.5) say(`Fanbasis ${fb.delta > 0 ? 'wächst' : 'schrumpft'} um ${Math.abs(fb.delta).toFixed(1).replace('.', ',')} Punkte auf ${Math.round(c.fanBase + fb.delta)}${fb.reasons.length ? ` (${fb.reasons.join(', ')})` : ''}.`, true);
+  }
   let w: World = { ...world, season: next, date: `${next}-08-01`, players, market: { ...structuredClone(EMPTY_MARKET), news: [...news, ...world.market.news].slice(0, 120), credibility: world.market.credibility } };
 
   // Kader auffüllen
@@ -157,7 +163,7 @@ export function seasonTransition(input: World): World {
   // Staff: Verträge laufen weiter, Staff-Markt wird aufgefüllt
   w = ensureStaff(extendStaffContracts(w, next));
   // Stimmung im Umfeld pendelt über den Sommer Richtung Mitte; Event-Boni verfallen
-  w = { ...w, clubs: w.clubs.map((c) => ({ ...c, mood: { fans: Math.round(50 + (c.mood.fans - 50) * 0.6), sponsors: Math.round(50 + (c.mood.sponsors - 50) * 0.6) }, events: { ...c.events, attendance: null, gameOfSeason: null, pending: null, plan: [] } })) };
+  w = { ...w, clubs: w.clubs.map((c) => ({ ...c, fanBase: Math.round(Math.max(1, Math.min(100, c.fanBase + (fanBase.get(c.id)?.delta ?? 0))) * 10) / 10, mood: { fans: Math.round(50 + (c.mood.fans - 50) * 0.6), sponsors: Math.round(50 + (c.mood.sponsors - 50) * 0.6) }, events: { ...c.events, attendance: null, gameOfSeason: null, pending: null, plan: [] } })) };
   return { ...beginSeason(w, w.seed + next), offseason: null };
 }
 

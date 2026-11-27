@@ -76,7 +76,7 @@ export function all(this: MatchSim, o: OnIce): string[] {
 
 /** Duell-Logit: Vorteil von `att` gegenüber `def` inkl. Heimvorteil */
 export function duel(this: MatchSim, attSide: Side, att: number, def: number, base: number, mod = 0): number {
-  const home = attSide === 0 ? C.HOME : -C.HOME;
+  const home = attSide === 0 ? this.home : -this.home;
   const form = C.DAY_FORM_POSSESSION * (this.dayForm[attSide] - this.dayForm[1 - attSide]);
   return sigmoid(C.K * ((att - def) / 20) + base + mod + home + form);
 }

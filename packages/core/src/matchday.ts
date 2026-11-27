@@ -2,6 +2,7 @@ import type { World, Club, Player, Competition, Fixture, StatLine, Matchplan } f
 import { simulateMatch } from './engine/match.ts';
 import type { MatchInput, MatchResult, TeamInput } from './engine/types.ts';
 import { bookFixture, closeMonthsBetween, evaluateSeason } from './economy.ts';
+import { homeGameForecast, type GameForecast } from './stadium.ts';
 import { updateScouting } from './scouting.ts';
 import { marketTick } from './market.ts';
 import { coachingCapacity, defaultRules } from './coaching.ts';
@@ -77,6 +78,8 @@ export function matchInputFor(world: World, fixture: Fixture): MatchInput {
     phase: fixture.stage === 'regular' ? 'regular' : 'playoff',
     format: fmt,
     keepEvents: false,
+    // Heimvorteil aus Menge und Stimmung der Zuschauer
+    homeEdge: homeGameForecast(world, fixture).homeEdge,
   };
 }
 
@@ -141,16 +144,17 @@ export function playDay(world: World, preplayed: Record<string, MatchResult> = {
   // Events: Termine der Woche, Zufallsereignis (offene Entscheidung übernimmt der Co-Trainer)
   if (todays.length) w = runWeekEvents(w, date);
   if (todays.length) w = resolveOpenEvents(w);
+  // Zuschauer vor dem Anpfiff (Nachfrage, Stimmung, Heimvorteil); Abrechnung nach dem Spiel
+  const forecasts = new Map<string, GameForecast>(todays.map((f) => [f.id, homeGameForecast(w, f)]));
   for (const f of todays) {
-    const res = preplayed[f.id] ?? simulateMatch(matchInputFor(w, f));
+    const res = preplayed[f.id] ?? simulateMatch({ ...matchInputFor(w, f), homeEdge: forecasts.get(f.id)!.homeEdge });
     results[f.id] = res;
     record(comp, f, res, byId);
   }
   comp.day = day;
   w = { ...w, competition: comp, date };
-  // Einnahmen/Ausgaben der Spiele
-  const placeNow = placeLookup(w);
-  for (const f of todays) w = bookFixture(w, f, f.stage === 'regular' ? placeNow(f.home) : null);
+  // Einnahmen/Ausgaben der Spiele, Spieltagsaktionen
+  for (const f of todays) w = bookFixture(w, f, forecasts.get(f.id)!);
   // Moral und Chemie
   const games = todays.map((f) => ({ fixture: f, result: results[f.id] }));
   w = updateAfterGames(w, games);

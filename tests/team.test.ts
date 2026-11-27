@@ -311,7 +311,7 @@ describe('Verletzungen & medizinische Abteilung', () => {
 describe('Events', () => {
   it('Katalog: eindeutige IDs, jede Standardantwort existiert', async () => {
     const core = await import('@ehm/core');
-    expect(core.TERMINE.length).toBeGreaterThanOrEqual(12);
+    expect(core.TERMINE.length).toBeGreaterThanOrEqual(9);
     expect(core.RANDOM_EVENTS.length).toBeGreaterThanOrEqual(15);
     const ids = [...core.TERMINE, ...core.RANDOM_EVENTS].map((d) => d.id);
     expect(new Set(ids).size).toBe(ids.length);

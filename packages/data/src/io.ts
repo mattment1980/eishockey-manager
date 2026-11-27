@@ -1,6 +1,6 @@
 import { ensureStaff } from './generator.ts';
 import { WorldSchema, SCHEMA_VERSION, type World } from '@ehm/schema';
-import { defaultRules, seedChemistry, seedFamiliarity, seedDevRef, Rng, ensureSponsors } from '@ehm/core';
+import { defaultRules, seedChemistry, seedFamiliarity, seedDevRef, Rng, ensureSponsors, ensureStadium } from '@ehm/core';
 
 /** Ältere Spielstände auf das aktuelle Format heben. */
 export function migrateWorld(raw: unknown): unknown {
@@ -74,6 +74,10 @@ export function migrateWorld(raw: unknown): unknown {
     // Sponsoring: Verträge werden beim Laden angelegt (ensureChemistry → ensureSponsors)
     w.schemaVersion = 15;
   }
+  if (w.schemaVersion === 15) {
+    // Stadionbetrieb: Standardwerte; Platzaufteilung und Rivalen beim Laden (ensureChemistry → ensureStadium)
+    w.schemaVersion = 16;
+  }
   void SCHEMA_VERSION;
   return w;
 }
@@ -81,7 +85,7 @@ export function migrateWorld(raw: unknown): unknown {
 /** Alte Spielstände: Reihen bekommen eine Anfangschemie (vor v6), Vereine eine Taktik-Eingespieltheit (vor v7) */
 export function ensureChemistry(world: World): World {
   // medizinische Abteilung und Staff-Markt (ab v13)
-  let w = ensureSponsors(ensureStaff(seedDevRef(seedFamiliarity(world))));
+  let w = ensureStadium(ensureSponsors(ensureStaff(seedDevRef(seedFamiliarity(world)))));
   if (Object.keys(w.chemistry).length > 0) return w;
   const rng = new Rng(w.seed + 606);
   w = seedChemistry(w, () => rng.next());

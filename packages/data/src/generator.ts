@@ -3,8 +3,8 @@ import {
   type World, type Player, type Position, type Staff, type Club, type Trait, type TraitId,
   type SkaterAttribute, type GoalieAttribute, type StaffRole, type Manager,
 } from '@ehm/schema';
-import { Rng, clamp, autoMatchplan, beginSeason, seedChemistry, seedFamiliarity, seedDevRef, staffSalary, ensureSponsors } from '@ehm/core';
-import { DEFAULT_TACTICS, EMPTY_MARKET, makeContract, TrainingSchema, ClubEventsSchema, ClubSponsorsSchema, type Tactics } from '@ehm/schema';
+import { Rng, clamp, autoMatchplan, beginSeason, seedChemistry, seedFamiliarity, seedDevRef, staffSalary, ensureSponsors, ensureStadium } from '@ehm/core';
+import { DEFAULT_TACTICS, EMPTY_MARKET, makeContract, TrainingSchema, ClubEventsSchema, ClubSponsorsSchema, ClubStadiumSchema, type Tactics } from '@ehm/schema';
 import { NAMES, IMPORT_ORIGINS } from './names.ts';
 import { COUNTRY_DE, LEAGUE_DEL2_MODEL, CLUBS_DEL2_MODEL, BUDGET_BY_PROFILE } from './del2.ts';
 
@@ -118,6 +118,8 @@ export class WorldGenerator {
         mood: { fans: 50, sponsors: 50 },
         events: ClubEventsSchema.parse({}),
         sponsors: ClubSponsorsSchema.parse({}),
+        stadium: ClubStadiumSchema.parse({}),
+        rivals: [],
       };
       club.matchplan = autoMatchplan(roster, { countryCode: COUNTRY_DE.code, importSlotsGame: COUNTRY_DE.rules.importSlotsGame, tactics: this.rng.pick(TACTIC_STYLES)() });
       clubs.push(club);
@@ -153,7 +155,7 @@ export class WorldGenerator {
       chemistry: {},
       offseason: null,
     };
-    return beginSeason(seedDevRef(seedFamiliarity(seedChemistry(base, () => this.rng.next()))), this.opts.seed);
+    return beginSeason(ensureStadium(seedDevRef(seedFamiliarity(seedChemistry(base, () => this.rng.next())))), this.opts.seed);
   }
 
   private generateRoster(clubId: string, base: number, imports: number): Player[] {
