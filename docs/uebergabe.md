@@ -1,6 +1,6 @@
 # Übergabe – Stand der Entwicklung
 
-Stand: 27.11.2026 · letzter Commit „Sommerpause: Bericht je Phase, Saisonbilanz des Vorstands“
+Stand: 27.11.2026 · letzter Commit „Übergabe: Ausbaustand der Sommerpause-Phasen festgehalten“
 
 Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst zusammen, was gebaut ist, wie der Code aufgebaut ist, was entschieden wurde und was als Nächstes kommt.
 
@@ -98,7 +98,7 @@ Monate abschließen → Spiele simulieren → Einnahmen buchen → Moral & Chemi
 - **Kurzberichte** (`core/phaseReports.ts`) für den eigenen Verein: Vertragsgespräche (verlängert / offen / gehen / Neuzugänge), Transfermarkt (Zu- und Abgänge, ohne Anschlussvertrag, Bilanz, größte Wechsel der Liga), Sommertraining (Kaderstärke vorher/nachher, Gewinner/Verlierer, Nachwuchsjahrgang), Saisonwechsel (Kadergröße, Ausländerlizenzen, Gehaltsrahmen, Rang Kaderstärke, neues Ziel, Karriereenden), Trainingslager und Vorbereitung (Reihen-Chemie und Taktik-Eingespieltheit vorher/nachher, Experten-Tipp mit Favoriten).
 - Ablage in `world.offseason.reports` (Spieler als IDs, Anzeige über `PlayerName`); Anzeige als Karte unter der Phase, frühere Berichte per Klick auf die Zeitleiste.
 
-**Saisonwechsel (bisher):** Verträge, Klauseln, Karriereende, neue freie Spieler, KI-Kaderauffüllung, Nachwuchs für den menschlichen Verein, neue Aufstellungen, Chemie-Saat, Moral pendelt sich ein. **Noch nicht:** Alterung/Entwicklung der Spielerwerte.
+**Saisonwechsel (bisher):** Verträge, Klauseln, Karriereende, neue freie Spieler, KI-Kaderauffüllung, Nachwuchs für den menschlichen Verein, neue Aufstellungen, Chemie-Saat, Moral pendelt sich ein. Alterung/Entwicklung siehe Meilenstein 7.
 
 ### Sommerpause – Ausbaustand der Phasen
 
@@ -143,5 +143,5 @@ Offene Punkte: Tore ins leere Tor zu selten (0,15 statt 0,3–0,5 je Spiel), Üb
 2. Dominanz des stärksten Vereins prüfen (Etat, Markt, Gehaltsgrenzen)
 3. Kalibrierung: Tore ins leere Tor (KI zieht den Torhüter zu selten), Überzahl- und Fangquote
 4. Mehrere Spielstände (Speicherplätze) – laut V1-Umfang vorgesehen
-4a. Sommerpause ausbauen: Vertragsgespräche, Transfermarkt, Trainingslager und Vorbereitungsspiele als echte Phasen statt Platzhalter (siehe „Sommerpause – Ausbaustand“)
-5. Danach V1.5 Multiplayer oder V2-Themen (Verletzungen, Training) nach Priorität
+5. Sommerpause ausbauen: Vertragsgespräche, Transfermarkt, Trainingslager und Vorbereitungsspiele als echte Phasen statt Platzhalter (siehe „Sommerpause – Ausbaustand“)
+6. Danach V1.5 Multiplayer oder V2-Themen (Verletzungen, Training) nach Priorität
