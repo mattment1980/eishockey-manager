@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Version des Spielstand-Formats. Bei Änderungen erhöhen und Migration ergänzen. */
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 /** Interne Attributskala 1–200 (Anzeige 1–20). */
 export const Rating = z.number().int().min(1).max(200);
@@ -142,6 +142,23 @@ export function makeContract(base: Pick<Contract, 'clubId' | 'salary' | 'untilSe
     ...base,
   };
 }
+
+/** Tag der Leistungstests: Ergebnis des Sommerschritts für den Verein des Managers */
+export const TestDaySchema = z.object({
+  clubId: z.string(),
+  /** schon angesehen? */
+  seen: z.boolean(),
+  lines: z.array(z.object({
+    playerId: z.string(),
+    /** Gesamtstärke vorher/nachher (intern) */
+    before: z.number(),
+    after: z.number(),
+    jump: z.boolean(),
+    /** Veränderung je Attribut (intern), Torhüterwerte mit Präfix „g.“ */
+    attrs: z.record(z.number()),
+  })),
+});
+export type TestDay = z.infer<typeof TestDaySchema>;
 
 /** Entwicklungsverlauf eines Spielers */
 export const PlayerDevSchema = z.object({
@@ -593,6 +610,6 @@ export const WorldSchema = z.object({
   /** Chemie zwischen zwei Spielern (Schlüssel "idA|idB", sortiert), 0–100 */
   chemistry: z.record(z.number()).default({}),
   /** Sommerpause in Phasen (null = keine Sommerpause, Saison läuft) */
-  offseason: z.object({ phase: z.number().int().min(0) }).nullable().default(null),
+  offseason: z.object({ phase: z.number().int().min(0), testDay: TestDaySchema.optional() }).nullable().default(null),
 });
 export type World = z.infer<typeof WorldSchema>;

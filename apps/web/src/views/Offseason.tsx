@@ -4,11 +4,17 @@ import { useStore } from '../store.tsx';
 import { Crest } from '../components/Crest.tsx';
 import { FamiliaritySummary } from './Tactics.tsx';
 import { YouthDecisions } from './Youth.tsx';
+import { TestDayShow } from '../components/testday/TestDayShow.tsx';
+import { useEffect, useState } from 'react';
 
 /** Sommerpause in Phasen: Saisonbilanz, Verhandlungen, Saisonwechsel, Trainingslager, Vorbereitung */
 export function Offseason() {
   const { world, club, clubById, advanceOffseason } = useStore();
   const phase = offseasonPhase(world) ?? 0;
+  const testDay = world.offseason?.testDay;
+  const [showTests, setShowTests] = useState(false);
+  // Beim Erreichen des Sommertrainings öffnet sich der Tag der Leistungstests von selbst
+  useEffect(() => { if (testDay && !testDay.seen) setShowTests(true); }, [testDay?.seen, testDay?.lines.length]);
   if (!club) return null;
   const comp = world.competition!;
   const ph = OFFSEASON_PHASES[phase];
@@ -40,13 +46,25 @@ export function Offseason() {
         <h3>{ph.name}</h3>
         <p className="small">{ph.text}</p>
         {!ph.newSeason && phase > 0 && <p className="muted small">Der Markt läuft: Verlängerungen und Vorverträge unter <b>Kader › Planer</b> und <b>Kader › Markt</b>. Neue Verträge gelten ab dem Saisonwechsel.</p>}
-        {ph.id === 'summer' && <p className="muted small">Im Sommertraining haben sich die Spieler weiterentwickelt (Junge legen zu, Ältere bauen ab) – siehe Nachrichten und Kader › Entwicklung. Der neue Nachwuchsjahrgang wartet auf deine Entscheidung.</p>}
+        {ph.id === 'summer' && <p className="muted small">Im Sommertraining haben sich die Spieler weiterentwickelt – Junge legen zu, Ältere bauen ab. Die Ergebnisse gibt es beim Tag der Leistungstests, danach wartet der neue Nachwuchsjahrgang auf deine Entscheidung.</p>}
         {ph.id === 'summer' && <p className="muted small">Mit der nächsten Phase greift der Saisonwechsel: Verträge enden, Vorverträge treten in Kraft, neue vereinslose Spieler kommen auf den Markt.</p>}
         {ph.newSeason && <p className="muted small">Stelle jetzt Reihen und Taktik für die Saison ein – im Trainingslager und in der Vorbereitung spielen sich genau diese Reihen und Systeme ein.</p>}
         {firstGame && <p className="muted small">Erster Spieltag: {formatDate(firstGame, true)}</p>}
         <button className="btn primary big block" onClick={advanceOffseason}>{nextLabel}</button>
       </section>
 
+      {testDay && (
+        <section className={`card td-teaser ${testDay.seen ? '' : 'fresh'}`}>
+          <div className="row-between">
+            <div>
+              <h3>Tag der Leistungstests {!testDay.seen && <span className="badge-dot">neu</span>}</h3>
+              <p className="muted small">Wie haben sich deine Spieler im Sommer entwickelt? Der Trainer stellt die Ergebnisse Spieler für Spieler vor – danach der neue Nachwuchsjahrgang.</p>
+            </div>
+            <button className={`btn ${testDay.seen ? '' : 'primary'}`} onClick={() => setShowTests(true)}>{testDay.seen ? 'Noch einmal ansehen' : 'Ergebnisse ansehen'}</button>
+          </div>
+        </section>
+      )}
+      {showTests && <TestDayShow onClose={() => setShowTests(false)} />}
       {phase === 0 && comp.finished && <SeasonSummary />}
       <YouthDecisions compact />
       {ph.newSeason && <FamiliaritySummary />}

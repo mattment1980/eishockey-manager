@@ -43,6 +43,8 @@ interface Store {
   /** Nachwuchstalent: Fördervertrag geben (Fehlertext, wenn nicht möglich) oder freigeben */
   signYouth: (playerId: string) => string | null;
   releaseYouth: (playerId: string) => void;
+  /** Tag der Leistungstests als gesehen markieren */
+  markTestDaySeen: () => void;
   /** Datenwerkstatt: Welt ändern (als Aktion, auch während einer Simulation sicher) */
   editWorld: (fn: (w: World) => World) => void;
   /** Vor Spielbeginn: Welt komplett ersetzen (z. B. nach Import oder Neuaufbau) */
@@ -180,6 +182,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return null;
       },
       releaseYouth: (playerId) => act((w) => releaseYouth(w, playerId)),
+      markTestDaySeen: () => act((w) => (w.offseason?.testDay ? { ...w, offseason: { ...w.offseason, testDay: { ...w.offseason.testDay, seen: true } } } : w)),
       editWorld: (fn) => act((w) => fn(w)),
       replaceWorld: (w) => setSave((s) => ({ ...s, world: w })),
       hasTemplate,

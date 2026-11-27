@@ -63,6 +63,13 @@ describe('Nachwuchsjahrgang', () => {
     w = playDays(w, 400);
     while (offseasonPhase(w) !== null && w.offseason?.phase !== 4) w = advanceOffseason(w);
     expect(youthOf(w, me).length).toBeGreaterThan(0);
+    // Tag der Leistungstests: Ergebnisse für den eigenen Kader, ohne Einzelmeldungen vorab
+    const td = w.offseason!.testDay!;
+    expect(td.clubId).toBe(me);
+    expect(td.seen).toBe(false);
+    expect(td.lines.length).toBeGreaterThan(15);
+    expect(td.lines.some((l) => Object.keys(l.attrs).length > 0)).toBe(true);
+    expect(w.market.news.some((n) => n.text.startsWith('Sommertraining:') || n.text.startsWith('Entwicklungssprung:'))).toBe(false);
     w = advanceOffseason(w); // Saisonwechsel
     expect(youthOf(w, me).length).toBe(0);
     expect(WorldSchema.safeParse(w).success).toBe(true);

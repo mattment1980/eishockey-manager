@@ -1,4 +1,4 @@
-import type { World, Player, SkaterAttribute, GoalieAttribute, News } from '@ehm/schema';
+import type { World, Player, SkaterAttribute, GoalieAttribute, News, TestDay } from '@ehm/schema';
 import { SKATER_ATTRIBUTES, GOALIE_ATTRIBUTES } from '@ehm/schema';
 import { overall, toDisplay, ageOn, talentStars } from './ratings.ts';
 import { hash01, monthsBetween, monthKey } from './calendar.ts';
@@ -17,7 +17,9 @@ export const DEV = {
   /** Anteil der Lücke zum Potenzial, der pro Jahr geschlossen wird (vor allen Faktoren) */
   YEAR_RATE: 0.19,
   /** Anteil des Jahres, der auf die 8 Saisonmonate entfällt (Rest im Sommer) */
-  SEASON_SHARE: 0.4,
+  SEASON_SHARE: 0.3,
+  /** Streuung der „Sommerform“ (log-normal, Mittelwert 1): wie gut ein Spieler den Sommer genutzt hat */
+  SUMMER_FORM_SD: 0.55,
   SEASON_MONTHS: 8,
   /** Tempo nach Talent: 0,5 Sterne → 0,6 … 3 Sterne → 1,0 … 5 Sterne → 1,32 */
   TALENT_MIN: 0.6,
@@ -134,11 +136,13 @@ const roundBy = (v: number, key: string) => {
  */
 export function developPlayer(world: World, p: Player, date: string, share: number, declineShare: number, tag: string): Player {
   const f = devFactors(world, p, date);
+  // Sommerform: im Mittel 1, einzelne Spieler nutzen den Sommer viel besser oder schlechter (nur im Sommerschritt)
+  const summerForm = declineShare > 0 ? summerFormOf(`${tag}:${p.id}`) : 1;
   const ageG = p.position === 'G' ? f.age - DEV.GOALIE_AGE_SHIFT : f.age;
   const ovr = overall(p);
   const gap = Math.max(0, p.hidden.potential - ovr);
   // gewünschter Zuwachs der Gesamtstärke in diesem Schritt
-  let growth = gap * DEV.YEAR_RATE * share * f.total;
+  let growth = gap * DEV.YEAR_RATE * share * f.total * summerForm;
   // Entwicklungssprung im Sommer
   const jump = declineShare > 0 && gap > 12 && ageG <= 23 && hash01(`${tag}:${p.id}:sprung`) < DEV.JUMP_CHANCE * f.talent;
   if (jump) growth += gap * 0.25;
@@ -153,7 +157,7 @@ export function developPlayer(world: World, p: Player, date: string, share: numb
     g.keys.forEach((k, i) => {
       const cls = g.cls[k];
       let delta = mean > 0 ? growth * (weights[i] / mean) * noise(k) : 0;
-      delta -= declineByAge(ageG, cls) * declineShare * (1.15 - p.hidden.professionalism / 400) * noise(`${k}:abbau`);
+      delta -= declineByAge(ageG, cls) * declineShare * (1.15 - p.hidden.professionalism / 400) * noise(`${k}:abbau`) * (2 - Math.min(1.6, summerForm));
       if (k === 'leadership') delta += (f.age >= 22 ? 1.5 : 0.5) * share;
       if (k === 'discipline') delta += (hash01(`${tag}:${p.id}:disz`) - 0.5) * 4 * share;
       const v = vals[k] + roundBy(delta, `${tag}:${p.id}:${k}:r`);
@@ -169,6 +173,14 @@ export function developPlayer(world: World, p: Player, date: string, share: numb
   const after = overall(np);
   if (after > Math.max(ovr, p.hidden.potential)) np = { ...np, skater: p.skater, goalie: p.goalie };
   return np;
+}
+
+/** Log-normaler Faktor mit Mittelwert 1 (deterministisch aus dem Schlüssel) */
+export function summerFormOf(key: string): number {
+  const u1 = Math.max(1e-6, hash01(`${key}:u1`)), u2 = hash01(`${key}:u2`);
+  const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+  const sd = DEV.SUMMER_FORM_SD;
+  return Math.exp(z * sd - (sd * sd) / 2);
 }
 
 const monthIn = (month: string) => {
@@ -272,4 +284,21 @@ export function seedDevRef(world: World): World {
       dev: { ...p.dev, ref: refOf(p) },
     })),
   };
+}
+
+/** Tag der Leistungstests: Vorher/Nachher je Spieler des Vereins (für die Inszenierung in der Sommerpause) */
+export function buildTestDay(before: World, after: World, report: Map<string, DevReportLine>, clubId: string): TestDay {
+  const prev = new Map(before.players.map((p) => [p.id, p]));
+  const lines: TestDay['lines'] = [];
+  for (const p of after.players) {
+    if (p.contract?.clubId !== clubId && p.nextContract?.clubId !== clubId) continue;
+    const r = report.get(p.id);
+    const o = prev.get(p.id);
+    if (!r || !o) continue;
+    const attrs: Record<string, number> = {};
+    for (const k of SKATER_ATTRIBUTES) if (p.skater[k] !== o.skater[k]) attrs[k] = p.skater[k] - o.skater[k];
+    if (p.goalie && o.goalie) for (const k of GOALIE_ATTRIBUTES) if (p.goalie[k] !== o.goalie[k]) attrs[`g.${k}`] = p.goalie[k] - o.goalie[k];
+    lines.push({ playerId: p.id, before: Math.round(r.before * 10) / 10, after: Math.round(r.after * 10) / 10, jump: r.jump, attrs });
+  }
+  return { clubId, seen: false, lines };
 }

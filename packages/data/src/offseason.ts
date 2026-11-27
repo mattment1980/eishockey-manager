@@ -1,5 +1,5 @@
 import type { World } from '@ehm/schema';
-import { OFFSEASON_PHASES, phaseDate, marketAdvance, daysBetween, trainingCamp, vacation, developSummer, summerNews, releaseRemainingYouth, resetDevRef } from '@ehm/core';
+import { OFFSEASON_PHASES, phaseDate, marketAdvance, daysBetween, trainingCamp, vacation, developSummer, buildTestDay, releaseRemainingYouth, resetDevRef } from '@ehm/core';
 import { seasonTransition } from './transition.ts';
 import { youthIntake } from './youth.ts';
 
@@ -23,24 +23,30 @@ export function advanceOffseason(world: World): World {
   if (!ph.newSeason) {
     w = marketAdvance(w, Math.max(0, daysBetween(w.date, target)));
     if (ph.id === 'review') w = vacation(w);
+    let testDay = world.offseason?.testDay;
     if (ph.id === 'summer') {
-      // Großer Entwicklungsschritt: Wachstum der Jungen, Abbau der Älteren
+      // Großer Entwicklungsschritt: Wachstum der Jungen, Abbau der Älteren.
+      // Für den Manager als „Tag der Leistungstests“ aufbereitet (keine Einzelmeldungen vorab – nichts verraten).
+      const prev = w;
       const { world: dev, report } = developSummer(w, oldSeason + 1);
       w = dev;
-      const news = w.clubs.filter((c) => c.controller.type === 'human').flatMap((c) => summerNews(w, report, c.id, target));
-      if (news.length) w = { ...w, market: { ...w.market, news: [...news, ...w.market.news].slice(0, 120) } };
+      const human = w.clubs.find((c) => c.controller.type === 'human');
+      if (human) {
+        testDay = buildTestDay(prev, w, report, human.id);
+        w = { ...w, market: { ...w.market, news: [{ date: target, kind: 'info' as const, mine: true, text: 'Tag der Leistungstests: Die Ergebnisse des Sommertrainings liegen vor (Spieltag › Sommerpause).' }, ...w.market.news].slice(0, 120) } };
+      }
       // Nachwuchsjahrgang für alle Vereine
       w = youthIntake(w, oldSeason + 1);
     }
-    return { ...w, offseason: { phase: next } };
+    return { ...w, offseason: { phase: next, ...(testDay ? { testDay } : {}) } };
   }
   if (ph.id === 'kickoff') {
     w = releaseRemainingYouth(w, target);
     w = resetDevRef(seasonTransition(w));
     w = trainingCamp(w, 0.3, `${w.season}:auftakt`);
-    return { ...w, offseason: { phase: next } };
+    return { ...w, offseason: { phase: next, ...(world.offseason?.testDay ? { testDay: world.offseason.testDay } : {}) } };
   }
   w = marketAdvance(w, Math.max(0, daysBetween(w.date, target)));
   w = trainingCamp(w, ph.id === 'camp' ? 1 : 0.6, `${w.season}:${ph.id}`);
-  return { ...w, offseason: { phase: next } };
+  return { ...w, offseason: { phase: next, ...(world.offseason?.testDay ? { testDay: world.offseason.testDay } : {}) } };
 }

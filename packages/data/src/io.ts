@@ -45,6 +45,10 @@ export function migrateWorld(raw: unknown): unknown {
     // Entwicklungsverlauf und Nachwuchs-Kennzeichen über Standardwerte
     w.schemaVersion = 8;
   }
+  if (w.schemaVersion === 8) {
+    // Tag der Leistungstests: optionales Feld in der Sommerpause
+    w.schemaVersion = 9;
+  }
   void SCHEMA_VERSION;
   return w;
 }
