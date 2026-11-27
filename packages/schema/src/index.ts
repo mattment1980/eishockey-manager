@@ -258,6 +258,8 @@ export const TrainingSchema = z.object({
     games: z.number().int(),
     /** Belastung 0–9 (Summe der Intensitäten) */
     load: z.number(),
+    /** Kaderschnitt zu Wochenbeginn (für den Wochenrückblick) */
+    before: z.object({ fitness: z.number(), morale: z.number(), form: z.number() }).optional(),
   }).nullable().default(null),
   /** Trainingsumfang seit dem letzten Entwicklungsschritt („team:offense“, „<spielerId>:offense“) */
   log: z.record(z.number()).default({}),

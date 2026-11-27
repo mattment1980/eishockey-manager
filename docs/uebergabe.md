@@ -1,6 +1,6 @@
 # Übergabe – Stand der Entwicklung
 
-Stand: 27.11.2026 · letzter Commit „Meilenstein 8: Training“
+Stand: 27.11.2026 · letzter Commit „Wochenablauf: Woche starten, dann Spieltage“
 
 Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst zusammen, was gebaut ist, wie der Code aufgebaut ist, was entschieden wurde und was als Nächstes kommt.
 
@@ -27,7 +27,8 @@ Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst z
 | Aufräumrunde | Engine und Wettbewerb in Module, Eingaben während Simulation sicher, Spielstand-Sicherung, Formel an einer Stelle, Oberfläche/CSS/Tests aufgeteilt, Fingerabdruck-Prüfung | ✅ |
 | Runde vor M7 | 14 Anpassungen (siehe unten): Spielerprofil überall, Mouseover, Fitness/Form/aktuelle Stärke, Talent, Markt mit Ligenbaum, Vereinskader, Form & Teamstatistik, Tooltips, Drag & Drop, Sommerpause, Taktik-Eingespieltheit | ✅ |
 | 7 | Saisonwechsel & Daten: Alterung/Entwicklung, Nachwuchs, CSV-Import/Export, Datenwerkstatt | ✅ |
-| 8 | Training: Wochenplan mit 3 Schwerpunkten und Intensität, Co-Trainer, Einzeltraining (siehe `docs/training.md`) | ✅ (Branch `training`) |
+| 8 | Training: Wochenplan mit 3 Schwerpunkten und Intensität, Co-Trainer, Einzeltraining (siehe `docs/training.md`) | ✅ |
+| 8b | Wochenablauf im Reiter Spieltag: Rückblick → „Woche starten“ (Training) → Spieltage der Woche | ✅ |
 | **9** | **Verletzungen & medizinische Abteilung** (Konzept: „verletzungen-und-medizin“) | **als Nächstes** |
 | 10 | Events: Zufallsereignisse und planbare Termine unter der Woche (Teamevent, Autogrammstunde …) mit Wirkung auf Moral, Frische, Zuschauer, Stimmung, Chemie | geplant |
 | 11 | Sponsoring | geplant |
@@ -53,7 +54,7 @@ Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst z
 | `packages/data` | Weltgenerator, Namen, Import/Export + Migration v1→v11 (`io.ts`), CSV mit Spaltenzuordnung (`csv.ts`), Datensatz-Neuaufbau (`rebuild.ts`), Nachwuchsjahrgang (`youth.ts`), Saisonwechsel (`transition.ts`), Sommerpause-Ablauf (`offseason.ts`) |
 | `apps/web` | Oberfläche (8 Reiter: Verein, Kader, Reihen, Taktik, Training, Staff, Spieltag, Liga); `store.tsx` = Spielstand mit Aktions-Warteschlange (Eingaben während einer Simulation werden danach erneut angewendet), Export/Import als Datei; `ui.tsx` = globale Fenster (`components/PlayerProfile`, `ClubSheet`, `HoverLayer`), `PlayerName`/`ClubName` für klickbare Namen, `data-tip` für Tooltips; CSS in `styles/` (base, views, components, features) |
 | `apps/sim-cli` | `pnpm sim generate | match | season | calibrate | seasons` |
-| `tests/` | 49 Tests in 7 Dateien (world, engine, season, market, team, development, data) |
+| `tests/` | 50 Tests in 7 Dateien (world, engine, season, market, team, development, data) |
 
 ### Ablauf eines Spieltags (`playDay` in `matchday.ts`)
 
@@ -110,6 +111,7 @@ Monate abschließen → Entwicklung → **Training der Woche** → Spiele simuli
 - Einzeltraining für bis zu 3 Spieler (bis +22 % Tempo im Schwerpunkt, +Moral); freie Plätze besetzt der Co-Trainer nach Regel (reihum, Formschwache, Talente, junge Spieler).
 - KI-Vereine trainieren nach dem Co-Trainer-Plan. Sommerpause: Trainingsauftakt eine Woche, Trainingslager-Wochen zählen anderthalbfach.
 - Langzeit-Balance unverändert (`pnpm sim seasons 10`: Ø Spieler 10,2–10,4, Top 50 ≈ 12,0, Ø Alter 26,7–27,9); Kalibrierung unverändert.
+- **Wochenablauf** (Wunsch Matthias): Der Reiter Spieltag hat zwei Phasen. Zu Wochenbeginn zeigt er den Rückblick auf die letzte Woche (Ergebnisse, Fitness/Moral/Form Ø vorher → jetzt), die Spiele der neuen Woche und den Trainingsplan (Link „Training anpassen“). „Woche starten“ wertet das Training aller Vereine aus (`startWeek`), danach werden die Spieltage der Woche einzeln gespielt (Live oder sofort). Die Spielknöpfe erscheinen erst nach dem Start, wenn der eigene Verein in der Woche spielt (`weekStatus().needsStart`). „Schnell weiter“ läuft ohne Halt, das Training läuft dabei automatisch mit. Kaderschnitt zu Wochenbeginn steht in `training.week.before`. Der Wochenstart ist der Ort für Verletzungs-Entscheidungen (M9) und Termine unter der Woche (M10).
 
 **Saisonwechsel (bisher):** Verträge, Klauseln, Karriereende, neue freie Spieler, KI-Kaderauffüllung, Nachwuchs für den menschlichen Verein, neue Aufstellungen, Chemie-Saat, Moral pendelt sich ein. Alterung/Entwicklung siehe Meilenstein 7.
 

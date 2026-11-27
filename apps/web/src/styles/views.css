@@ -285,3 +285,22 @@ h3.row-between { display: flex; justify-content: space-between; align-items: cen
 .tr-indiv.auto .tr-indiv-main { opacity: 0.9; }
 .tr-help { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
 @media (max-width: 720px) { .tr-units { grid-template-columns: minmax(0, 1fr); } }
+
+/* Wochenablauf (Spieltag) */
+.week-card { border-left: 4px solid var(--ice); display: flex; flex-direction: column; gap: 8px; }
+.week-card.running { border-left-color: var(--good); }
+.week-card h3 { margin: 0; }
+.week-games { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.week-games li { display: grid; grid-template-columns: minmax(0, 9rem) minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); }
+.week-games li:first-child { border-top: 0; }
+.week-games li.w b { color: var(--good); }
+.week-games li.l b { color: var(--goal); }
+.week-training { background: var(--panel-2); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+.week-units { display: flex; flex-wrap: wrap; gap: 6px; }
+.week-review { border-left: 4px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.week-review.tone-good { border-left-color: var(--good); }
+.week-review.tone-mixed { border-left-color: var(--warn); }
+.week-review.tone-bad { border-left-color: var(--goal); }
+.week-review h3 { margin: 0; }
+@media (max-width: 560px) { .week-games li { grid-template-columns: minmax(0, 1fr) auto; } .week-games li > span:first-child { grid-column: 1 / -1; } }
+.week-card .row-between .tag { white-space: nowrap; flex: none; }

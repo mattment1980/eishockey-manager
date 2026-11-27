@@ -1,4 +1,4 @@
-import type { World, Club, Player, Training, TrainingUnit, TrainingFocus, TrainingIntensity, IndividualFocus, AutoPick } from '@ehm/schema';
+import type { World, Club, Player, Fixture, Training, TrainingUnit, TrainingFocus, TrainingIntensity, IndividualFocus, AutoPick } from '@ehm/schema';
 import { overall, toDisplay, ageOn } from './ratings.ts';
 import { addDays, daysBetween, hash01 } from './calendar.ts';
 import { pairKey, CHEM_START } from './chemistry.ts';
@@ -202,6 +202,7 @@ function trainClubWeek(world: World, club: Club, start: string, boost: number): 
   const individual = individualFor(world, club, start);
   const indiv = new Map(individual.map((x) => [x.playerId, x.focus]));
   const load = units.reduce((s, u) => s + INTENSITY[u.intensity].load, 0);
+  const before = rosterAverages(rosterOf(world, club.id));
   // Spieler: Frische und Moral
   const players = new Map<string, Player>();
   for (const p of rosterOf(world, club.id)) {
@@ -242,7 +243,7 @@ function trainClubWeek(world: World, club: Club, start: string, boost: number): 
     ...club.training,
     // Einmal-Plan: nach der Woche übernimmt wieder der Co-Trainer
     plan: club.training.plan && !club.training.keep ? null : club.training.plan,
-    week: { start, units, byCoach, individual, games, load },
+    week: { start, units, byCoach, individual, games, load, before },
     log,
     weeks: club.training.weeks + boost,
   };
@@ -325,4 +326,47 @@ export function nextTrainingWeek(world: World, club: Club): string {
   const done = club.training.week?.start;
   if (done && done >= start) start = addDays(done, 7);
   return start;
+}
+
+/** Kaderschnitt von Fitness, Moral und Form */
+export function rosterAverages(ps: Player[]): { fitness: number; morale: number; form: number } {
+  const n = Math.max(1, ps.length);
+  const avg = (f: (p: Player) => number) => r1(ps.reduce((s, p) => s + f(p), 0) / n);
+  return { fitness: avg((p) => p.condition.fitness), morale: avg((p) => p.condition.morale), form: avg((p) => p.condition.form) };
+}
+
+/** Datum des nächsten Spieltags (irgendein Spiel der Liga) */
+export function nextMatchDate(world: World): string | null {
+  const comp = world.competition;
+  if (!comp || comp.finished) return null;
+  return comp.fixtures.find((f) => f.day === comp.day + 1)?.date ?? null;
+}
+
+export interface WeekStatus {
+  /** Montag der anstehenden Woche */
+  start: string;
+  /** eigene Spiele dieser Woche (gespielt und offen) */
+  fixtures: Fixture[];
+  /** Training der Woche ist gelaufen */
+  started: boolean;
+  /** Die Woche muss gestartet werden, bevor der nächste Spieltag gespielt wird (eigenes Spiel in dieser Woche) */
+  needsStart: boolean;
+}
+
+/** Stand des Wochenablaufs für einen Verein: Woche starten → Spieltage der Woche → nächste Woche */
+export function weekStatus(world: World, clubId: string): WeekStatus | null {
+  const date = nextMatchDate(world);
+  const club = world.clubs.find((c) => c.id === clubId);
+  if (!date || !club) return null;
+  const start = mondayOf(date);
+  const end = addDays(start, 7);
+  const fixtures = world.competition!.fixtures.filter((f) => f.date >= start && f.date < end && (f.home === clubId || f.away === clubId));
+  const started = (club.training.week?.start ?? '') >= start;
+  return { start, fixtures, started, needsStart: !started && fixtures.some((f) => !f.result) };
+}
+
+/** Woche starten: Training aller Vereine bis zur Woche des nächsten Spieltags */
+export function startWeek(world: World): World {
+  const date = nextMatchDate(world);
+  return date ? runTraining(world, date) : world;
 }

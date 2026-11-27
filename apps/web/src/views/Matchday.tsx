@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Club, Fixture } from '@ehm/schema';
 import {
-  nextFixtureOf, matchInputFor, stageLabel, fixturesOfDay, regularTable, teamStrength, isImport, toDisplay, formatDate,
+  nextFixtureOf, matchInputFor, weekStatus, stageLabel, fixturesOfDay, regularTable, teamStrength, isImport, toDisplay, formatDate,
   type MatchResult, type Side,
 } from '@ehm/core';
 import { useStore } from '../store.tsx';
@@ -11,11 +11,12 @@ import { simMatch, simDay, simDays } from '../worker.ts';
 import { Offseason } from './Offseason.tsx';
 import { offseasonPhase } from '@ehm/data';
 import { ClubName } from '../ui.tsx';
+import { WeekPanel } from './Week.tsx';
 
 const resultText = (f: Fixture) =>
   f.result ? `${f.result.score[0]}:${f.result.score[1]}${f.result.decidedIn === 'OT' ? ' n.V.' : f.result.decidedIn === 'SO' ? ' n.P.' : ''}` : '–';
 
-export function Matchday() {
+export function Matchday({ onTraining }: { onTraining: () => void }) {
   const { world, club, byId, clubById, simulate, simulating } = useStore();
   const [live, setLive] = useState<{ result: MatchResult; fixture: Fixture; sides: [Club, Club] } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -68,6 +69,9 @@ export function Matchday() {
   // --- Sommerpause (Saisonende bis Saisonstart)
   if (offseasonPhase(world) !== null) return <Offseason />;
 
+  // Wochenablauf: erst die Woche starten (Training), dann die Spieltage der Woche
+  const week = weekStatus(world, club.id);
+  const needsStart = !!week?.needsStart;
   const lastDay = comp.day;
   const lastResults = lastDay > 0 ? fixturesOfDay(comp, lastDay) : [];
   const regularRunning = !comp.finalStandings;
@@ -85,7 +89,9 @@ export function Matchday() {
         <span className="muted small right">{stageLabel(comp)}<br />{formatDate(comp.fixtures.find((f) => f.day === comp.day + 1)?.date ?? world.date, true)}</span>
       </div>
 
-      {next ? (
+      <WeekPanel onTraining={onTraining} />
+
+      {needsStart ? null : next ? (
         <NextGame fixture={next} club={club} seriesInfo={seriesOf(next)} />
       ) : (
         <section className="card">
@@ -100,7 +106,7 @@ export function Matchday() {
 
       {next && !lineupOk && <div className="alert">Zu viele Ausländer aufgestellt ({importsDressed}/{rules.importSlotsGame}). Bitte unter „Reihen“ korrigieren.</div>}
 
-      {next ? (
+      {needsStart ? null : next ? (
         <div className="btn-row">
           <button className="btn primary big" onClick={playLive} disabled={!!busy || simulating || !lineupOk}>{busy === 'live' ? 'Lade …' : 'Live spielen'}</button>
           <button className="btn big" onClick={() => run('day', () => simulate((w) => simDay(w)))} disabled={!!busy || simulating || !lineupOk}>
@@ -122,7 +128,7 @@ export function Matchday() {
           {!regularRunning && <button onClick={() => run('all', () => simulate((w) => simDays(w, 200)))} disabled={!!busy || simulating || !lineupOk}>Bis Saisonende</button>}
         </div>
         {busy && busy !== 'live' && <p className="muted small hint">Simuliere …</p>}
-        <p className="muted small hint">Eigene Spiele werden dabei mit deiner aktuellen Aufstellung und Taktik simuliert.</p>
+        <p className="muted small hint">Eigene Spiele werden dabei mit deiner aktuellen Aufstellung und Taktik simuliert. Das Training läuft automatisch mit – nach deinem gespeicherten Plan oder dem des Co-Trainers.</p>
       </section>
 
       {world.market.news.length > 0 && (

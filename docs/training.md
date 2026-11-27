@@ -48,7 +48,7 @@ Stand: 27.11.2026 – Entscheidungen von Matthias, umgesetzt im Branch `training
 
 **Ablauf**
 
-- Eine Trainingswoche beginnt am Montag. Ausgewertet wird sie vor dem ersten Spiel der Woche (`runTraining` in `playDay`).
+- Eine Trainingswoche beginnt am Montag. Der Manager startet sie im Reiter Spieltag mit „Woche starten“ (`startWeek`). Danach spielt er die Spieltage der Woche. Beim schnellen Simulieren läuft das Training automatisch vor dem ersten Spiel der Woche (`runTraining` in `playDay`).
 - Das Log der Einheiten fließt in den monatlichen Entwicklungsschritt ein und wird danach geleert.
 
 **Co-Trainer**

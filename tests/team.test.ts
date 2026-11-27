@@ -217,3 +217,28 @@ describe('Training', () => {
     expect(morale).toBeGreaterThan(45);
   });
 });
+
+describe('Wochenablauf', () => {
+  it('Woche starten trainiert die Woche, danach laufen die Spieltage ohne erneutes Training', async () => {
+    const core = await import('@ehm/core');
+    let w = generateWorld(85);
+    const me = w.clubs[0].id;
+    w = { ...w, clubs: w.clubs.map((c) => (c.id === me ? { ...c, controller: { type: 'human' as const } } : c)) };
+    let st = core.weekStatus(w, me)!;
+    expect(st.needsStart).toBe(st.fixtures.length > 0);
+    w = core.startWeek(w);
+    st = core.weekStatus(w, me)!;
+    expect(st.started).toBe(true);
+    expect(st.needsStart).toBe(false);
+    const wk = w.clubs.find((c) => c.id === me)!.training.week!;
+    expect(wk.before).toBeDefined();
+    // Spieltage der Woche: kein zweites Training
+    const weekStart = st.start;
+    while (core.weekStatus(w, me) && core.weekStatus(w, me)!.start === weekStart) w = core.playDay(w).world;
+    expect(w.clubs.find((c) => c.id === me)!.training.week!.start).toBe(weekStart);
+    expect(w.clubs.find((c) => c.id === me)!.training.weeks).toBeLessThanOrEqual(1);
+    // nächste Woche wartet wieder auf den Start
+    st = core.weekStatus(w, me)!;
+    expect(st.started).toBe(false);
+  });
+});
