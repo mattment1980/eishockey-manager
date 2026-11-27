@@ -3,6 +3,7 @@ import { teamStrength, overall, toDisplay, ageOn, regularTable, nextFixtureOf, G
 import { useStore } from '../store.tsx';
 import { PlayerName, ClubName } from '../ui.tsx';
 import { RatingBadge } from '../components/Badges.tsx';
+import { SaveCard } from '../components/SaveCard.tsx';
 import { Crest } from '../components/Crest.tsx';
 import { PROFILE_LABEL, euro } from '../labels.ts';
 import type { Tab } from '../App.tsx';
@@ -23,7 +24,7 @@ export function Overview({ go }: { go: (t: Tab) => void }) {
 }
 
 function ClubOverview({ go }: { go: (t: Tab) => void }) {
-  const { world, club, players, byId, clubById, newGame } = useStore();
+  const { world, club, players, byId, clubById } = useStore();
   const ranking = useMemo(
     () => world.clubs.map((c) => ({ c, s: teamStrength(c.matchplan!, byId) })).sort((a, b) => b.s - a.s),
     [world, byId],
@@ -107,19 +108,7 @@ function ClubOverview({ go }: { go: (t: Tab) => void }) {
         </ul>
       </section>
 
-      <section className="card">
-        <h3>Spielstand</h3>
-        <p className="muted">Wird automatisch in diesem Browser gespeichert.</p>
-        <button className="btn ghost" onClick={() => { if (confirmReset()) newGame(); }}>Neues Spiel beginnen</button>
-      </section>
+      <SaveCard />
     </div>
   );
-}
-
-function confirmReset(): boolean {
-  try {
-    return window.confirm('Neues Spiel beginnen? Der aktuelle Spielstand wird gelöscht.');
-  } catch {
-    return true;
-  }
 }

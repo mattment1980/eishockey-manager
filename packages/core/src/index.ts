@@ -15,3 +15,5 @@ export * from './chemistry.ts';
 export * from './condition.ts';
 export * from './familiarity.ts';
 export * from './offseason.ts';
+export * from './standings.ts';
+export * from './matchday.ts';

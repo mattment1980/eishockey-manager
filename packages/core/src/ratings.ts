@@ -85,17 +85,27 @@ export const toDisplay1 = (v: number): number => Math.max(1, Math.min(20, Math.r
 /** Leistungsfaktor aus der Fitness (100 % = 1,0) */
 export const fitnessFactor = (fitness: number): number => 1 - Math.max(0, 100 - fitness) * C.FITNESS_EFFECT;
 
-/** Anteil aus Form und Moral (wie in der Match-Engine, ohne Situations-Traits und Chemie) */
-export const conditionMod = (p: Player): number =>
-  Math.max(-C.CHARACTER_CAP, Math.min(C.CHARACTER_CAP, (p.condition.form - 50) / 1000 + (p.condition.morale - 50) / 1500));
+/**
+ * Leistungsanteil aus Form und Moral eines Feldspielers (ungedeckelt).
+ * Einzige Quelle für Engine und Anzeige – in der Engine kommen Charakter, Chemie und
+ * Eingespieltheit dazu, danach wird gemeinsam auf ±CHARACTER_CAP gedeckelt (`capMod`).
+ */
+export const formMoraleMod = (c: { form: number; morale: number }): number => (c.form - 50) / 1000 + (c.morale - 50) / 1500;
+
+/** Deckel für alle Charakter-, Form- und Teameffekte zusammen */
+export const capMod = (m: number): number => Math.max(-C.CHARACTER_CAP, Math.min(C.CHARACTER_CAP, m));
+
+/** Leistungsfaktor eines Torhüters aus seiner Form */
+export const goalieFormFactor = (form: number): number => 1 + (form - 50) / 800;
 
 /**
- * Aktuelle Stärke: Grundwert × Fitness × (1 + Form/Moral).
- * Entspricht dem, was der Spieler zu Spielbeginn tatsächlich auf das Eis bringt.
+ * Aktuelle Stärke: Grundwert × Fitness × Form/Moral – genau so bewertet die Match-Engine den Spieler
+ * zu Spielbeginn (ohne Situations-Traits, Chemie und Eingespieltheit, die vom Spiel abhängen).
  */
 export function effectiveRating(p: Player, base: number = overall(p)): number {
-  if (p.position === 'G') return base * fitnessFactor(p.condition.fitness) * (1 + (p.condition.form - 50) / 800 + (p.condition.morale - 50) / 3000);
-  return base * fitnessFactor(p.condition.fitness) * (1 + conditionMod(p));
+  const fit = fitnessFactor(p.condition.fitness);
+  if (p.position === 'G') return base * fit * goalieFormFactor(p.condition.form);
+  return base * fit * (1 + capMod(formMoraleMod(p.condition)));
 }
 
 /** Talent (Obergrenze der Entwicklung) in Sternen 0,5–5 */

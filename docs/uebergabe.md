@@ -1,6 +1,6 @@
 # Übergabe – Stand der Entwicklung
 
-Stand: 27.11.2026 · letzter Commit „Anpassungen vor M7: Profile, Mouseover, Markt-Baum, Teamstatistik, Drag & Drop, Fitness/Form, Eingespieltheit, Sommerpause“
+Stand: 27.11.2026 · letzter Commit „Aufräumrunde: Module, Aktions-Warteschlange, Spielstand-Sicherung“
 
 Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst zusammen, was gebaut ist, wie der Code aufgebaut ist, was entschieden wurde und was als Nächstes kommt.
 
@@ -24,6 +24,7 @@ Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst z
 | UI-Runde | Staff-Reiter, umschaltbare Kaderansichten, Markt-Filter | ✅ |
 | 6a | Taktik je Situation: Special Teams, Torhüter raus, Matchups, Coaching-Regeln | ✅ |
 | 6b | Chemie & Moral | ✅ |
+| Aufräumrunde | Engine und Wettbewerb in Module, Eingaben während Simulation sicher, Spielstand-Sicherung, Formel an einer Stelle, Oberfläche/CSS/Tests aufgeteilt, Fingerabdruck-Prüfung | ✅ |
 | Runde vor M7 | 14 Anpassungen (siehe unten): Spielerprofil überall, Mouseover, Fitness/Form/aktuelle Stärke, Talent, Markt mit Ligenbaum, Vereinskader, Form & Teamstatistik, Tooltips, Drag & Drop, Sommerpause, Taktik-Eingespieltheit | ✅ |
 | **7** | **Saisonwechsel & Daten: Alterung/Entwicklung, Nachwuchs, CSV-Import/Export, Editor** | **als Nächstes** |
 | V1.5 | Multiplayer (Server, Accounts, private Ligen) | später |
@@ -33,20 +34,21 @@ Dieses Dokument ist der Einstiegspunkt für jede neue Arbeitssitzung. Es fasst z
 
 - TypeScript, pnpm-Monorepo; Zod-Schemas mit Standardwerten und Migrationen; React + Vite; Spiel-Simulation im Web Worker; Speicherstand in `localStorage`; Tests mit Vitest; CLI mit tsx (`pnpm sim …`)
 - Deterministischer Zufall (`Rng`, sfc32, mit Startwert) – jedes Spiel ist reproduzierbar
-- Arbeitsregeln stehen in `CLAUDE.md` (Spiellogik nur in `packages/core`, Datenformat nur über `packages/schema` mit `SCHEMA_VERSION`, Engine-Parameter nur in `constants.ts` + Kalibrierung, vor jedem Commit `pnpm typecheck && pnpm test`, nur Fantasienamen)
+- Reine Umbauten werden mit `pnpm fingerprint` geprüft (Hash einer kompletten Saison mit festem Startwert muss gleich bleiben)
+- Arbeitsregeln und Kurzbeschreibung des Aufbaus stehen in `CLAUDE.md` (Spiellogik nur in `packages/core`, Datenformat nur über `packages/schema` mit `SCHEMA_VERSION`, Engine-Parameter nur in `constants.ts` + Kalibrierung, vor jedem Commit `pnpm typecheck && pnpm test`, nur Fantasienamen)
 
 ### Pakete
 
 | Paket | Inhalt |
 |---|---|
 | `packages/schema` | Datenmodell (Welt, Land, Liga, Verein, Spieler, Staff, Vertrag, Wettbewerb, Scouting, Markt, Matchplan, Coaching-Regeln, Chemie), aktuell **SCHEMA_VERSION 7** (neu: `Club.familiarity`, `World.offseason`, `FixtureResult.team`) |
-| `packages/core` | Spiellogik: `engine/` (match.ts, types.ts, constants.ts), `competition.ts` (Spielplan, Spieltag, Playoffs), `economy.ts`, `scouting.ts`, `market.ts`, `coaching.ts`, `chemistry.ts`, `condition.ts` (Fitness & Form), `familiarity.ts` (Taktik-Eingespieltheit), `offseason.ts` (Phasen, Trainingslager), `lineup.ts`, `ratings.ts` (u. a. `effectiveRating`, `talentStars`) |
+| `packages/core` | Spiellogik: `engine/` (`match.ts` = Zustand und Ablauf; Bereiche als Methoden in `lines`, `rules`, `modifiers`, `phases`, `shots`, `penalties`, `shootout`; dazu `state`, `types`, `constants`), `competition.ts` (Spielplan, Serien), `standings.ts` (Tabelle, Form, Teamstatistik), `matchday.ts` (Ablauf eines Spieltags), `economy.ts`, `scouting.ts`, `market.ts`, `coaching.ts`, `chemistry.ts`, `condition.ts` (Fitness & Form), `familiarity.ts` (Taktik-Eingespieltheit), `offseason.ts` (Phasen, Trainingslager), `lineup.ts`, `ratings.ts` (u. a. `effectiveRating`, `talentStars`) |
 | `packages/data` | Weltgenerator, Namen, Import/Export + Migration v1→v7 (`io.ts`), Saisonwechsel (`transition.ts`), Sommerpause-Ablauf (`offseason.ts`) |
-| `apps/web` | Oberfläche (7 Reiter: Verein, Kader, Reihen, Taktik, Staff, Spieltag, Liga); `ui.tsx` = globale Fenster (Spielerprofil, Vereinskader) und Mouseover-Ebene, `PlayerName`/`ClubName` für klickbare Namen, `data-tip` für Tooltips |
+| `apps/web` | Oberfläche (7 Reiter: Verein, Kader, Reihen, Taktik, Staff, Spieltag, Liga); `store.tsx` = Spielstand mit Aktions-Warteschlange (Eingaben während einer Simulation werden danach erneut angewendet), Export/Import als Datei; `ui.tsx` = globale Fenster (`components/PlayerProfile`, `ClubSheet`, `HoverLayer`), `PlayerName`/`ClubName` für klickbare Namen, `data-tip` für Tooltips; CSS in `styles/` (base, views, components, features) |
 | `apps/sim-cli` | `pnpm sim generate | match | season | calibrate | seasons` |
-| `tests/core.test.ts` | 32 Tests |
+| `tests/` | 33 Tests in 5 Dateien (world, engine, season, market, team) |
 
-### Ablauf eines Spieltags (`playDay`)
+### Ablauf eines Spieltags (`playDay` in `matchday.ts`)
 
 Monate abschließen → Spiele simulieren → Einnahmen buchen → Moral & Chemie → **Fitness, Form, Taktik-Eingespieltheit** → Scouting → Markt-Tick → nächsten Spieltag vorbereiten → **Erholung bis zum nächsten Spieltermin** (Fitness zeigt immer den Stand zum Anpfiff) → am Saisonende Saisonbewertung, Monate bis 1. August abschließen, Sommerpause Phase 0.
 

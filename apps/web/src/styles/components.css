@@ -1,0 +1,94 @@
+/* Gemeinsame Bausteine: Fenster, Namen, Mouseover, Talent, Stärke/Fitness, Form, Teamstatistik, Vereinsfenster */
+/* Fenster mit X */
+.sheet { position: relative; }
+.sheet.wide { max-width: 760px; }
+.sheet-x {
+  position: sticky; top: 0; float: right; margin: -6px -4px 0 8px; z-index: 2;
+  width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel-2);
+  color: var(--text); font-size: 1rem; line-height: 1; display: grid; place-items: center;
+}
+.sheet-x:hover { border-color: var(--ice); color: var(--ice); }
+.sheet-actions { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 4px; }
+.sheet-actions .btn.block { margin-top: 6px; }
+.sheet-actions p { margin: 2px 0; }
+.sheet-talent { margin-top: 4px; display: flex; gap: 6px; align-items: center; }
+
+/* Namen */
+.pname { cursor: pointer; font-weight: 600; border-radius: 4px; display: inline-flex; align-items: center; gap: 6px; }
+.pname:hover { color: var(--ice); text-decoration: underline; text-underline-offset: 2px; }
+.pname:focus-visible, .cname:focus-visible { outline: 2px solid var(--ice); }
+.pname .pos { display: inline-block; }
+.cname { cursor: pointer; }
+.cname:hover { color: var(--ice); }
+tr.clickable { cursor: pointer; }
+tr.clickable:hover td { background: color-mix(in srgb, var(--ice) 6%, transparent); }
+
+/* Mouseover */
+.hover-card {
+  position: fixed; z-index: 60; pointer-events: none; background: #0f182c; border: 1px solid #33456b; border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); padding: 8px 10px; font-size: 0.82rem; line-height: 1.35;
+}
+.hover-card.player { padding: 10px 12px; }
+.pcard { display: flex; flex-direction: column; gap: 5px; }
+.pcard-name { display: inline-flex; gap: 6px; align-items: center; font-weight: 800; font-size: 0.95rem; }
+.pcard-row { display: flex; justify-content: space-between; align-items: center; }
+.pcard-row > span:first-child { color: var(--muted); }
+.pcard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--panel-2); border-radius: 8px; padding: 6px; }
+.pcard-grid span { display: flex; flex-direction: column; font-size: 0.72rem; color: var(--muted); }
+.pcard-grid b { color: var(--text); font-size: 0.9rem; }
+.pcard-grid small { font-size: 0.68rem; }
+.pcard-traits { display: flex; flex-wrap: wrap; gap: 4px; }
+.pcard-traits .trait { font-size: 0.7rem; padding: 1px 7px; }
+
+/* Talent */
+.talent { display: inline-flex; align-items: center; gap: 4px; }
+.talent small { font-size: 0.72rem; color: var(--muted); }
+.stars { display: inline-flex; gap: 1px; }
+.stars i { width: 11px; height: 11px; display: inline-block; background: #34415f;
+  clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+.stars i.full { background: #fbbf24; }
+.stars i.half { background: linear-gradient(90deg, #fbbf24 50%, #34415f 50%); }
+.talent.fuzzy .stars i.full, .talent.fuzzy .stars i.half { opacity: 0.6; }
+.roster-main strong .talent { margin-left: 6px; vertical-align: -1px; }
+.roster-main strong .stars i { width: 9px; height: 9px; }
+
+/* Stärke & Zustand */
+.rating.eff { min-width: 44px; }
+.rating.eff.up { color: var(--good); border-color: color-mix(in srgb, var(--good) 45%, var(--line)); }
+.rating.eff.down { color: #fca5a5; border-color: color-mix(in srgb, var(--goal) 45%, var(--line)); }
+.fitbar { width: 34px; height: 5px; border-radius: 3px; background: var(--panel-2); overflow: hidden; display: inline-block; flex: none; }
+.fitbar i { display: block; height: 100%; background: var(--good); }
+.fitbar.warn i { background: var(--warn); }
+.fitbar.bad i { background: var(--goal); }
+.cond-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0 4px; }
+.cond-grid > div { background: var(--panel-2); border-radius: 10px; padding: 8px; display: flex; flex-direction: column; }
+.cond-grid span { font-size: 0.72rem; color: var(--muted); }
+.cond-grid b { font-size: 1.05rem; }
+.cond-grid small { font-size: 0.72rem; color: var(--muted); }
+
+/* Form */
+.formpills { display: inline-flex; gap: 3px; vertical-align: middle; }
+.fp { width: 18px; height: 18px; border-radius: 4px; display: inline-grid; place-items: center; font-size: 0.62rem; font-weight: 800; font-style: normal; position: relative; }
+.fp sup { position: absolute; right: 1px; top: -1px; font-size: 0.5rem; }
+.fp-S { background: color-mix(in srgb, var(--good) 55%, transparent); }
+.fp-SnV { background: color-mix(in srgb, var(--good) 28%, transparent); border: 1px solid color-mix(in srgb, var(--good) 60%, transparent); }
+.fp-NnV { background: color-mix(in srgb, var(--goal) 22%, transparent); border: 1px solid color-mix(in srgb, var(--goal) 55%, transparent); }
+.fp-N { background: color-mix(in srgb, var(--goal) 50%, transparent); }
+.form-col { white-space: nowrap; }
+@media (max-width: 560px) { .hide-sm { display: none; } table.league .fp { width: 14px; height: 16px; } }
+
+/* Teamstatistik */
+.scroll-x { overflow-x: auto; }
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { color: var(--text); }
+th.sorted { color: var(--ice); }
+th.sorted::after { content: ' ▾'; }
+table.teamstats td:first-child { white-space: nowrap; }
+
+/* Vereinsfenster */
+.club-head { display: flex; gap: 14px; align-items: center; margin-bottom: 8px; padding-right: 36px; }
+.club-head .formpills { margin-top: 6px; }
+.roster.compact li { padding: 6px 4px; }
+.roster.compact { border-bottom: 1px solid var(--line); }
+
+tr.me td.good, tr.me td.bad { background: color-mix(in srgb, var(--ice) 12%, transparent); }

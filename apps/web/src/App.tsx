@@ -25,7 +25,7 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 ];
 
 export function App() {
-  const { club, world } = useStore();
+  const { club, world, simulating, saveError } = useStore();
   const [tab, setTab] = useState<Tab>('overview');
   if (!club) return <ClubSelect />;
 
@@ -38,7 +38,9 @@ export function App() {
           <strong>{club.name}</strong>
           <span>Saison {world.competition!.year}/{String(world.competition!.year + 1).slice(2)} · {world.offseason || world.competition!.finished ? `Sommerpause · ${OFFSEASON_PHASES[world.offseason?.phase ?? 0].name}` : stageLabel(world.competition!)}</span>
         </div>
+        {simulating && <span className="sim-badge" data-tip="Spieltage werden im Hintergrund berechnet. Du kannst weiter Aufstellung, Markt und Scouting bedienen – deine Eingaben bleiben erhalten.">Simuliere …</span>}
       </header>
+      {saveError && <div className="alert save-alert">{saveError}</div>}
       <main className="content">
         {tab === 'overview' && <Overview go={setTab} />}
         {tab === 'roster' && <Roster />}

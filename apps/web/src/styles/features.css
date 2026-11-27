@@ -1,0 +1,54 @@
+/* Markt-Baum, Sommerpause, Taktik-Eingespieltheit, Reihen per Drag & Drop */
+/* Markt */
+.market-layout { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+.market-layout > * { min-width: 0; }
+.mtree-wrap .mtree { display: none; }
+.mtree-wrap.open .mtree { display: flex; }
+.mtree { flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 6px; margin-top: 6px; max-height: 70vh; overflow: auto; }
+.mtree-group { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); padding: 10px 8px 4px; }
+.mtree-item { display: flex; justify-content: space-between; align-items: center; gap: 6px; background: none; border: 0; text-align: left; padding: 6px 8px; border-radius: 8px; font-size: 0.86rem; }
+.mtree-item span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mtree-item small { color: var(--muted); font-variant-numeric: tabular-nums; }
+.mtree-item.d1 { padding-left: 22px; font-size: 0.82rem; }
+.mtree-item:hover { background: var(--panel-2); }
+.mtree-item.on { background: color-mix(in srgb, var(--ice) 18%, var(--panel-2)); color: #fff; }
+.market-title { margin: 0; }
+.roster li.locked { opacity: 0.85; }
+@media (min-width: 760px) {
+  .market-layout { grid-template-columns: 230px minmax(0, 1fr); align-items: start; }
+  .mtree-toggle { display: none; }
+  .mtree-wrap .mtree { display: flex; margin-top: 0; position: sticky; top: 70px; max-height: calc(100vh - 170px); }
+}
+
+/* Sommerpause */
+.phases { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; counter-reset: ph; }
+.phases li { display: flex; align-items: center; gap: 6px; padding: 5px 9px 5px 5px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); font-size: 0.8rem; color: var(--muted); }
+.phases li i { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 0.7rem; font-weight: 800; background: #2b3a5c; color: var(--text); }
+.phases li.done { color: var(--text); }
+.phases li.done i { background: color-mix(in srgb, var(--good) 55%, transparent); }
+.phases li.now { border-color: var(--ice); color: #fff; background: color-mix(in srgb, var(--ice) 16%, var(--panel-2)); }
+.phases li.now i { background: var(--ice); color: #06223a; }
+
+/* Taktik-Eingespieltheit */
+.fam-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.fam { display: block; width: 70%; max-width: 80px; height: 3px; border-radius: 2px; background: #2b3a5c; overflow: hidden; }
+.fam i { display: block; height: 100%; background: var(--ice); opacity: 0.85; }
+
+/* Reihen: Drag & Drop */
+.lineup-grid { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+.lineup-grid > * { min-width: 0; }
+@media (min-width: 900px) { .lineup-grid { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: start; } }
+.slot.dnd { grid-template-columns: 38px 1fr 28px; border-radius: 10px; padding: 4px 4px; border: 1px dashed transparent; position: relative; }
+.slot.dnd.over { border-color: var(--ice); background: color-mix(in srgb, var(--ice) 12%, transparent); }
+.slot.dnd.dragging { opacity: 0.45; }
+.slot-player { display: flex; align-items: center; gap: 8px; min-width: 0; cursor: grab; user-select: none; }
+.slot-name { flex: 1; min-width: 0; display: inline-flex; align-items: center; gap: 6px; overflow: hidden; white-space: nowrap; }
+.slot-swap { width: 28px; height: 28px; opacity: 0.9; background: var(--panel-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238ea0bf'/%3E%3C/svg%3E") center no-repeat; color: transparent; border: 1px solid var(--line); border-radius: 8px; appearance: none; -webkit-appearance: none; cursor: pointer; padding: 0; }
+.slot-swap option { color: var(--text); background: var(--panel); }
+.grip { color: var(--muted); cursor: grab; touch-action: none; padding: 2px 4px; font-size: 1rem; line-height: 1; }
+.imp { color: var(--warn); font-size: 0.8rem; }
+.offpos { font-size: 0.65rem; font-weight: 800; color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 50%, transparent); border-radius: 4px; padding: 0 4px; }
+.bench-item { cursor: grab; user-select: none; }
+.bench-item .pos { display: inline-block; margin-right: 2px; }
+.bench-item.dragging { opacity: 0.45; }
+.drag-ghost { position: fixed; z-index: 70; pointer-events: none; background: var(--ice); color: #06223a; font-weight: 800; padding: 6px 10px; border-radius: 10px; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4); font-size: 0.85rem; }

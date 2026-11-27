@@ -16,7 +16,7 @@ const resultText = (f: Fixture) =>
   f.result ? `${f.result.score[0]}:${f.result.score[1]}${f.result.decidedIn === 'OT' ? ' n.V.' : f.result.decidedIn === 'SO' ? ' n.P.' : ''}` : '–';
 
 export function Matchday() {
-  const { world, club, byId, clubById, applyWorld } = useStore();
+  const { world, club, byId, clubById, simulate, simulating } = useStore();
   const [live, setLive] = useState<{ result: MatchResult; fixture: Fixture; sides: [Club, Club] } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const comp = world.competition!;
@@ -43,7 +43,7 @@ export function Matchday() {
 
   const finishLive = () => run('finish', async () => {
     if (!live) return;
-    applyWorld(await simDay(world, { [live.fixture.id]: live.result }));
+    await simulate((w) => simDay(w, { [live.fixture.id]: live.result }));
     setLive(null);
   });
 
@@ -102,13 +102,13 @@ export function Matchday() {
 
       {next ? (
         <div className="btn-row">
-          <button className="btn primary big" onClick={playLive} disabled={!!busy || !lineupOk}>{busy === 'live' ? 'Lade …' : 'Live spielen'}</button>
-          <button className="btn big" onClick={() => run('day', async () => applyWorld(await simDay(world)))} disabled={!!busy || !lineupOk}>
+          <button className="btn primary big" onClick={playLive} disabled={!!busy || simulating || !lineupOk}>{busy === 'live' ? 'Lade …' : 'Live spielen'}</button>
+          <button className="btn big" onClick={() => run('day', () => simulate((w) => simDay(w)))} disabled={!!busy || simulating || !lineupOk}>
             {busy === 'day' ? 'Simuliere …' : 'Sofort simulieren'}
           </button>
         </div>
       ) : (
-        <button className="btn primary big block" onClick={() => run('day', async () => applyWorld(await simDay(world)))} disabled={!!busy}>
+        <button className="btn primary big block" onClick={() => run('day', () => simulate((w) => simDay(w)))} disabled={!!busy || simulating}>
           {busy === 'day' ? 'Simuliere …' : 'Spieltag simulieren'}
         </button>
       )}
@@ -116,10 +116,10 @@ export function Matchday() {
       <section className="card">
         <h3>Schnell weiter</h3>
         <div className="segmented">
-          {!next && !eliminated && <button onClick={() => run('own', async () => applyWorld(await simDays(world, 100, { untilOwnGameOf: club.id })))} disabled={!!busy}>Bis zum nächsten Spiel</button>}
-          <button onClick={() => run('5', async () => applyWorld(await simDays(world, 5)))} disabled={!!busy || !lineupOk}>5 Spieltage</button>
-          {regularRunning && <button onClick={() => run('reg', async () => applyWorld(await simDays(world, 200, { untilRegularEnd: true })))} disabled={!!busy || !lineupOk}>Bis Hauptrundenende</button>}
-          {!regularRunning && <button onClick={() => run('all', async () => applyWorld(await simDays(world, 200)))} disabled={!!busy || !lineupOk}>Bis Saisonende</button>}
+          {!next && !eliminated && <button onClick={() => run('own', () => simulate((w) => simDays(w, 100, { untilOwnGameOf: club.id })))} disabled={!!busy || simulating}>Bis zum nächsten Spiel</button>}
+          <button onClick={() => run('5', () => simulate((w) => simDays(w, 5)))} disabled={!!busy || simulating || !lineupOk}>5 Spieltage</button>
+          {regularRunning && <button onClick={() => run('reg', () => simulate((w) => simDays(w, 200, { untilRegularEnd: true })))} disabled={!!busy || simulating || !lineupOk}>Bis Hauptrundenende</button>}
+          {!regularRunning && <button onClick={() => run('all', () => simulate((w) => simDays(w, 200)))} disabled={!!busy || simulating || !lineupOk}>Bis Saisonende</button>}
         </div>
         {busy && busy !== 'live' && <p className="muted small hint">Simuliere …</p>}
         <p className="muted small hint">Eigene Spiele werden dabei mit deiner aktuellen Aufstellung und Taktik simuliert.</p>

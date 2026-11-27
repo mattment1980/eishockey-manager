@@ -1,8 +1,8 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { World, Club, Player, Matchplan, Terms } from '@ehm/schema';
 import { WorldSchema } from '@ehm/schema';
 import { beginSeason, initScouting, submitOffer, withdrawOffer, type OfferResponse } from '@ehm/core';
-import { generateWorld, migrateWorld, advanceOffseason, ensureChemistry } from '@ehm/data';
+import { generateWorld, migrateWorld, advanceOffseason, ensureChemistry, exportWorldJson, importWorldJson } from '@ehm/data';
 
 const KEY = 'ehm.save.v1';
 
@@ -11,16 +11,27 @@ interface SaveGame {
   clubId: string | null;
 }
 
+/**
+ * Eine Änderung des Managers an der Welt. Alle Eingaben laufen als Aktion über `act`:
+ * Läuft gerade eine Simulation (im Web Worker, auf einer Kopie der Welt), werden die Aktionen
+ * gemerkt und auf das Ergebnis der Simulation erneut angewendet – so geht keine Eingabe verloren.
+ */
+type Action = (world: World, clubId: string | null) => World;
+
 interface Store {
   world: World;
   club: Club | null;
   players: Player[];
   byId: Map<string, Player>;
   clubById: Map<string, Club>;
+  /** Läuft gerade eine Simulation? */
+  simulating: boolean;
+  /** Letzter Fehler beim Speichern im Browser (null = alles gespeichert) */
+  saveError: string | null;
   chooseClub: (id: string) => void;
   setMatchplan: (plan: Matchplan) => void;
-  /** Neue Welt nach gespielten Spieltagen übernehmen (Manager-Änderungen bleiben erhalten) */
-  applyWorld: (w: World) => void;
+  /** Spieltage simulieren: `run` rechnet auf einer Kopie; Eingaben währenddessen werden danach erneut angewendet */
+  simulate: (run: (w: World) => Promise<World>) => Promise<void>;
   /** Sommerpause: zur nächsten Phase (nach der letzten beginnt die Saison) */
   advanceOffseason: () => void;
   newGame: () => void;
@@ -28,6 +39,10 @@ interface Store {
   makeOffer: (playerId: string, terms: Terms) => OfferResponse;
   withdraw: (playerId: string) => void;
   setScoutRegion: (scoutId: string, region: string) => void;
+  /** Spielstand als JSON-Text (zum Herunterladen) */
+  exportSave: () => string;
+  /** Spielstand aus JSON-Text laden; gibt Fehlermeldungen zurück (leer = geladen) */
+  importSave: (json: string) => string[];
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -42,6 +57,9 @@ function withScouting(world: World, clubId: string | null): World {
   return initScouting(world, clubId);
 }
 
+/** Verein des Managers aus der Welt (für importierte Spielstände) */
+const humanClub = (world: World) => world.clubs.find((c) => c.controller.type === 'human')?.id ?? null;
+
 function load(): SaveGame | null {
   try {
     const raw = localStorage.getItem(KEY);
@@ -55,11 +73,16 @@ function load(): SaveGame | null {
   }
 }
 
-function persist(save: SaveGame) {
+/** Speichern; gibt bei Fehler eine Meldung zurück */
+function persist(save: SaveGame): string | null {
   try {
     localStorage.setItem(KEY, JSON.stringify(save));
-  } catch {
-    /* Speichern nicht möglich – Spiel läuft im Speicher weiter */
+    return null;
+  } catch (e) {
+    const quota = e instanceof DOMException && (e.name === 'QuotaExceededError' || e.code === 22);
+    return quota
+      ? 'Der Browser-Speicher ist voll – der Spielstand konnte nicht gespeichert werden. Bitte unter „Verein“ eine Sicherung herunterladen.'
+      : 'Der Spielstand konnte nicht im Browser gespeichert werden (z. B. privates Fenster). Bitte unter „Verein“ eine Sicherung herunterladen.';
   }
 }
 
@@ -69,7 +92,33 @@ function fresh(): SaveGame {
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [save, setSave] = useState<SaveGame>(() => load() ?? fresh());
-  useEffect(() => persist(save), [save]);
+  const [simulating, setSimulating] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  /** Aktionen, die während einer laufenden Simulation ausgeführt wurden */
+  const pending = useRef<Action[] | null>(null);
+  const saveRef = useRef(save);
+  saveRef.current = save;
+
+  useEffect(() => setSaveError(persist(save)), [save]);
+
+  const act = useCallback((a: Action) => {
+    if (pending.current) pending.current.push(a);
+    setSave((s) => ({ ...s, world: a(s.world, s.clubId) }));
+  }, []);
+
+  const simulate = useCallback(async (run: (w: World) => Promise<World>) => {
+    if (pending.current) return; // läuft schon
+    pending.current = [];
+    setSimulating(true);
+    try {
+      const result = await run(saveRef.current.world);
+      const actions = pending.current ?? [];
+      setSave((s) => ({ ...s, world: actions.reduce((w, a) => a(w, s.clubId), result) }));
+    } finally {
+      pending.current = null;
+      setSimulating(false);
+    }
+  }, []);
 
   const store = useMemo<Store>(() => {
     const byId = new Map(save.world.players.map((p) => [p.id, p]));
@@ -80,6 +129,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       club,
       byId,
       clubById,
+      simulating,
+      saveError,
       players: club ? save.world.players.filter((p) => p.contract?.clubId === club.id) : [],
       chooseClub: (id) =>
         setSave((s) => ({
@@ -88,43 +139,37 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           world: withScouting({ ...s.world, clubs: s.world.clubs.map((c) => (c.id === id ? { ...c, controller: { type: 'human' as const } } : c)) }, id),
         })),
       setMatchplan: (plan) =>
-        setSave((s) => ({
-          ...s,
-          world: { ...s.world, clubs: s.world.clubs.map((c) => (c.id === s.clubId ? { ...c, matchplan: plan } : c)) },
-        })),
-      applyWorld: (w) =>
-        setSave((s) => {
-          // Aufstellung des Managers aus dem aktuellen Stand übernehmen (falls während der Simulation geändert)
-          const mine = s.world.clubs.find((c) => c.id === s.clubId);
-          const sc = s.clubId ? s.world.scouting[s.clubId] : undefined;
-          const scouting = sc && s.clubId && w.scouting[s.clubId] ? { ...w.scouting, [s.clubId]: { ...w.scouting[s.clubId], watch: sc.watch } } : w.scouting;
-          const staff = w.staff.map((x) => {
-            const cur = s.world.staff.find((y) => y.id === x.id);
-            return cur && cur.region !== x.region ? { ...x, region: cur.region } : x;
-          });
-          return { ...s, world: { ...w, scouting, staff, clubs: w.clubs.map((c) => (mine && c.id === mine.id ? { ...c, matchplan: mine.matchplan } : c)) } };
-        }),
-      advanceOffseason: () =>
-        setSave((s) => ({ ...s, world: advanceOffseason(s.world) })),
+        act((w, clubId) => ({ ...w, clubs: w.clubs.map((c) => (c.id === clubId ? { ...c, matchplan: plan } : c)) })),
+      simulate,
+      advanceOffseason: () => act((w) => advanceOffseason(w)),
       newGame: () => setSave(fresh()),
       makeOffer: (playerId, terms) => {
         if (!save.clubId) return { kind: 'invalid', text: 'Kein Verein gewählt.' };
+        // Antwort für die Anzeige aus dem aktuellen Stand; die Aktion selbst läuft über die Warteschlange
         const r = submitOffer(save.world, playerId, save.clubId, terms);
-        setSave((s) => ({ ...s, world: r.world }));
+        act((w, clubId) => (clubId ? submitOffer(w, playerId, clubId, terms).world : w));
         return r.response;
       },
-      withdraw: (playerId) => setSave((s) => (s.clubId ? { ...s, world: withdrawOffer(s.world, playerId, s.clubId) } : s)),
+      withdraw: (playerId) => act((w, clubId) => (clubId ? withdrawOffer(w, playerId, clubId) : w)),
       toggleWatch: (playerId) =>
-        setSave((s) => {
-          if (!s.clubId) return s;
-          const st = s.world.scouting[s.clubId];
+        act((w, clubId) => {
+          if (!clubId || !w.scouting[clubId]) return w;
+          const st = w.scouting[clubId];
           const watch = st.watch.includes(playerId) ? st.watch.filter((x) => x !== playerId) : [...st.watch, playerId];
-          return { ...s, world: { ...s.world, scouting: { ...s.world.scouting, [s.clubId]: { ...st, watch } } } };
+          return { ...w, scouting: { ...w.scouting, [clubId]: { ...st, watch } } };
         }),
       setScoutRegion: (scoutId, region) =>
-        setSave((s) => ({ ...s, world: { ...s.world, staff: s.world.staff.map((x) => (x.id === scoutId ? { ...x, region } : x)) } })),
+        act((w) => ({ ...w, staff: w.staff.map((x) => (x.id === scoutId ? { ...x, region } : x)) })),
+      exportSave: () => exportWorldJson(save.world),
+      importSave: (json) => {
+        const res = importWorldJson(json);
+        if (!res.ok) return res.errors;
+        const clubId = humanClub(res.world);
+        setSave({ world: withScouting(withCompetition(res.world), clubId), clubId });
+        return [];
+      },
     };
-  }, [save]);
+  }, [save, simulating, saveError, act, simulate]);
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;
 }

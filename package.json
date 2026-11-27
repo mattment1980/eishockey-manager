@@ -7,7 +7,8 @@
     "typecheck": "tsc --noEmit",
     "sim": "tsx apps/sim-cli/src/main.ts",
     "dev": "pnpm --filter @ehm/web dev",
-    "build": "pnpm --filter @ehm/web build"
+    "build": "pnpm --filter @ehm/web build",
+    "fingerprint": "tsx scripts/fingerprint.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

@@ -78,16 +78,16 @@ export function updateScouting(world: World, newDate: string, results: { home: s
       const pool = world.players.filter((p) => p.contract?.clubId !== clubId && regionOf(p) === region && (st.knowledge[p.id] ?? 0) < 400);
       const watched = pool.filter((p) => st.watch.includes(p.id));
       const rest = pool.filter((p) => !st.watch.includes(p.id)).sort((a, b) => (st.knowledge[a.id] ?? 0) - (st.knowledge[b.id] ?? 0) || overall(b) - overall(a));
-      for (const p of [...watched, ...rest]) {
-        if (bank < S.PER_VISIT) break;
-        add(p.id, S.PER_VISIT);
-        bank -= S.PER_VISIT;
-      }
-      // Beobachtete Spieler außerhalb der Region: Scouts reisen hin (weniger ergiebig)
+      // Beobachtete Spieler außerhalb der Region: Scouts reisen hin (weniger ergiebig), aber vor der Routine-Arbeit
       const away = world.players.filter((p) => st.watch.includes(p.id) && p.contract?.clubId !== clubId && regionOf(p) !== region && (st.knowledge[p.id] ?? 0) < 400);
-      for (const p of away) {
+      const visits: [Player, number][] = [
+        ...watched.map((p): [Player, number] => [p, 1]),
+        ...away.map((p): [Player, number] => [p, S.AWAY_FACTOR]),
+        ...rest.map((p): [Player, number] => [p, 1]),
+      ];
+      for (const [p, factor] of visits) {
         if (bank < S.PER_VISIT) break;
-        add(p.id, S.PER_VISIT * S.AWAY_FACTOR);
+        add(p.id, S.PER_VISIT * factor);
         bank -= S.PER_VISIT;
       }
       st.bank[scout.id] = Math.min(bank, 600);
